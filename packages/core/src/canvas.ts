@@ -64,7 +64,7 @@ export interface AdrawCanvasOptions extends CanvasOptions {
 export interface ToImageOptions {
   background?: boolean
   darkMode?: boolean
-  format?: "png" | "jpeg" | "webp"
+  format?: "png" | "jpeg" | "webp" | "svg"
   padding?: number
   scale?: number
   quality?: number
@@ -1564,6 +1564,9 @@ export class AdrawCanvas {
 
     const bounds = getElementsBounds(this.elements)
     if (!bounds || visibleElements.length === 0) {
+      if (format === "svg") {
+        return new Blob([], { type: "image/svg+xml;charset=utf-8" })
+      }
       const c = document.createElement("canvas")
       c.width = 1
       c.height = 1
@@ -1592,6 +1595,7 @@ export class AdrawCanvas {
       background || format === "jpeg"
         ? computedStyle.getPropertyValue("--adraw-background")
         : undefined
+
     const style = document.createElementNS(svgNamespaceURI, "style")
     const colorScheme = darkMode ? "dark" : "light"
     const strokeColor = computedStyle.getPropertyValue("--adraw-stroke")
@@ -1624,6 +1628,11 @@ export class AdrawCanvas {
     const svgBlob = new Blob([svgStr], {
       type: "image/svg+xml;charset=utf-8",
     })
+
+    if (format === "svg") {
+      return svgBlob
+    }
+
     const url = URL.createObjectURL(svgBlob)
 
     try {
