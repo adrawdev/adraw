@@ -62,8 +62,9 @@ export interface AdrawCanvasOptions extends CanvasOptions {
 }
 
 export interface ToImageOptions {
+  background?: boolean
+  darkMode?: boolean
   format?: "png" | "jpeg" | "webp"
-  background?: string
   padding?: number
   scale?: number
   quality?: number
@@ -1550,10 +1551,11 @@ export class AdrawCanvas {
   async toImage(options: ToImageOptions = {}): Promise<Blob> {
     const {
       format = "png",
-      background,
+      background = false,
       padding = 0,
       scale = 1,
       quality = 0.92,
+      darkMode = false,
     } = options
 
     const visibleElements = [...this.elements.values()]
@@ -1585,21 +1587,23 @@ export class AdrawCanvas {
     const areaW = Math.max(1, bounds.width + padding * 2)
     const areaH = Math.max(1, bounds.height + padding * 2)
 
+    const computedStyle = getComputedStyle(this.container!)
+    const bgColor =
+      background || format === "jpeg"
+        ? computedStyle.getPropertyValue("--adraw-background")
+        : undefined
+    const style = document.createElementNS(svgNamespaceURI, "style")
+    const colorScheme = darkMode ? "dark" : "light"
+    const strokeColor = computedStyle.getPropertyValue("--adraw-stroke")
+    style.textContent = `:root{color-scheme:${colorScheme};--adraw-stroke:${strokeColor};--adraw-fill:transparent}`
+
     const svg = document.createElementNS(svgNamespaceURI, "svg")
     svg.setAttribute("xmlns", svgNamespaceURI)
     svg.setAttribute("viewBox", `${areaX} ${areaY} ${areaW} ${areaH}`)
     svg.setAttribute("width", `${areaW}`)
     svg.setAttribute("height", `${areaH}`)
-
-    const style = document.createElementNS(svgNamespaceURI, "style")
-    style.textContent =
-      ":root{color-scheme:light;--adraw-stroke:#000;--adraw-fill:transparent}"
     svg.appendChild(style)
 
-    const bgColor =
-      format === "jpeg" && (background == null || background === "transparent")
-        ? "#fff"
-        : background
     if (bgColor) {
       const bg = document.createElementNS(svgNamespaceURI, "rect")
       bg.setAttribute("x", `${areaX}`)
