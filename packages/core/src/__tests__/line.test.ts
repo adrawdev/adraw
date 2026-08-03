@@ -16,6 +16,7 @@ function makeContext(elements: CanvasElement[] = []) {
     getCanvasSize: () => ({ height: 600, width: 800 }),
     getElements: () => elementMap,
     getSelectedIds: () => selectedIds,
+    getStrokeColor: () => undefined,
     getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
     historyCount: () => historyCount,
     pushHistory: () => {
