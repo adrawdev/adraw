@@ -29,6 +29,8 @@ test.describe("history", () => {
     const svg = await openCanvas(page)
     await pickTool(page, "rectangle")
     await drag(page, svg, { x: 120, y: 120 }, { x: 240, y: 240 })
+    // Drawing auto-switches to the select tool, so re-pick before the next.
+    await pickTool(page, "rectangle")
     await drag(page, svg, { x: 260, y: 120 }, { x: 380, y: 240 })
 
     await expect(

@@ -68,7 +68,12 @@ test.describe("edge resize", () => {
 
     // The edge-center handles were removed; only the four corners remain.
     await expect(
-      page.locator(".adraw-transform-overlay .adraw-resize-handle"),
+      page.locator(
+        '.adraw-transform-overlay .adraw-resize-handle[data-anchor="top-left"], ' +
+          '.adraw-transform-overlay .adraw-resize-handle[data-anchor="top-right"], ' +
+          '.adraw-transform-overlay .adraw-resize-handle[data-anchor="bottom-left"], ' +
+          '.adraw-transform-overlay .adraw-resize-handle[data-anchor="bottom-right"]',
+      ),
     ).toHaveCount(4)
   })
 })

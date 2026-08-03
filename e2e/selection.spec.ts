@@ -70,6 +70,8 @@ test.describe("selection", () => {
     const svg = await openCanvas(page)
     await pickTool(page, "rectangle")
     await drag(page, svg, { x: 100, y: 100 }, { x: 200, y: 200 })
+    // Drawing auto-switches to the select tool, so re-pick before the next.
+    await pickTool(page, "rectangle")
     await drag(page, svg, { x: 260, y: 120 }, { x: 380, y: 240 })
 
     await pickTool(page, "select")
@@ -91,5 +93,40 @@ test.describe("selection", () => {
 
     await page.keyboard.press("Escape")
     expect(await selectedCount(page)).toBe(0)
+  })
+
+  test("dragging a shape continues past the container edge", async ({
+    page,
+  }) => {
+    const svg = await openCanvas(page)
+    const center = await drawRect(page, svg)
+    await pickTool(page, "select")
+    const box = (await svg.boundingBox())!
+    const viewport = page.viewportSize()!
+
+    // Release the pointer past the container's right edge — and, when the
+    // container reaches the viewport edge, at the very edge of the window.
+    const from = { x: center.x, y: center.y }
+    const to = {
+      x: Math.max(box.width + 40, viewport.width - box.x - 1),
+      y: center.y,
+    }
+    const before = await page.evaluate(() => {
+      const canvas = (window as any).adraw
+      const element = [...canvas.getElements().values()][0]
+      return { x: element.x, y: element.y }
+    })
+    await drag(page, svg, from, to)
+
+    // The drag delta must apply in full — pointer capture keeps move/up
+    // events flowing outside the container, so the shape is not clipped at
+    // its edge.
+    const after = await page.evaluate(() => {
+      const canvas = (window as any).adraw
+      const element = [...canvas.getElements().values()][0]
+      return { x: element.x, y: element.y }
+    })
+    expect(after.x).toBeCloseTo(before.x + (to.x - from.x), 1)
+    expect(after.y).toBeCloseTo(before.y, 1)
   })
 })

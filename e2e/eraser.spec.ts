@@ -28,6 +28,8 @@ test.describe("eraser", () => {
 
     await pickTool(page, "rectangle")
     await drag(page, svg, { x: 100, y: 150 }, { x: 200, y: 260 })
+    // Drawing auto-switches to the select tool, so re-pick before the next.
+    await pickTool(page, "rectangle")
     await drag(page, svg, { x: 300, y: 150 }, { x: 400, y: 260 })
     await expect(
       page.locator(".adraw-elements-group .adraw-element"),

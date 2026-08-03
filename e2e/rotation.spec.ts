@@ -33,6 +33,8 @@ test.describe("rotation", () => {
 
     await pickTool(page, "rectangle")
     await drag(page, svg, { x: 200, y: 200 }, { x: 400, y: 350 })
+    // Drawing auto-switches to the select tool, so re-pick before the next.
+    await pickTool(page, "rectangle")
     await drag(page, svg, { x: 450, y: 200 }, { x: 650, y: 350 })
 
     await pickTool(page, "select")
