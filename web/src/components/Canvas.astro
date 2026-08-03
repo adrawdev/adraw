@@ -50,7 +50,20 @@ const { class: className, ...props } = Astro.props;
     <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="zoom-fit" title="Zoom to Fit">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ratio-icon lucide-ratio"><rect width="12" height="20" x="6" y="2" rx="2"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg>
     </button>
+    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="export" title="Export to image">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image-down-icon lucide-image-down"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"/><path d="m14 19 3 3v-5.5"/><path d="m17 22 3-3"/><circle cx="9" cy="9" r="2"/></svg>
+    </button>
     <input id="file-input" type="file" accept="image/*" hidden multiple />
+  </div>
+  <div class="absolute right-2 top-16 grid grid-cols-4 items-center p-2 gap-2 bg-card rounded-lg shadow-lg shadow-black/5 border">
+    <button data-action="change-color" data-color="var(--adraw-stroke)" class="bg-(--adraw-stroke) size-4 rounded-md"></button>
+    <button data-action="change-color" data-color="#f22" class="bg-[#f22] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#8f8" class="bg-[#8f8] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#08f" class="bg-[#08f] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#ff0" class="bg-[#ff0] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#0ff" class="bg-[#0ff] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#f0f" class="bg-[#f0f] size-4 rounded-md border"></button>
+    <button data-action="change-color" data-color="#fa0" class="bg-[#fa0] size-4 rounded-md border"></button>
   </div>
   <div class="canvas-container size-full"></div>
 </div>
@@ -135,13 +148,22 @@ const { class: className, ...props } = Astro.props;
     })
 
   const actionButtons =
-    toolbar.querySelectorAll<HTMLButtonElement>("[data-action]")
+    document.querySelectorAll<HTMLButtonElement>("[data-action]")
   actionButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const {action} = btn.dataset
       switch (action) {
         case "insert-media": {
           fileInput.click()
+          break
+        }
+        case "change-color": {
+          const {color} = btn.dataset
+          canvas.setStrokeColor(color!)
+          break
+        }
+        case "export": {
+          exportImage()
           break
         }
         case "undo": {
@@ -178,6 +200,23 @@ const { class: className, ...props } = Astro.props;
       "active bg-primary/20 hover:bg-primary/20 text-primary".split(" ").forEach(c => btn.classList.toggle(c, btn.dataset.tool === activeTool))
       btn.ariaPressed = btn.dataset.tool === activeTool ? "true" : null
     })
+  }
+
+  async function exportImage() {
+    const format = "png";
+    const blob = await canvas.toImage({ format });
+    downloadFile(blob, `adraw-${Date.now()}.${format}`);
+  }
+
+  async function downloadFile(data: Blob, fileName: string) {
+    const url = await readFileAsDataURL(data)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.style = "display:none"
+    a.click()
+    a.remove()
   }
 
   updateToolbar()
