@@ -867,6 +867,13 @@ export class AdrawCanvas {
     this.svgElement.addEventListener("pointerdown", (event) => {
       const { x, y } = this.getRelativePoint(event)
       this.handlePointerDown(x, y, event)
+      // Capture the pointer so pointermove/pointerup keep firing while the
+      // cursor leaves the container — or the browser window — mid-drag.
+      try {
+        this.svgElement?.setPointerCapture(event.pointerId)
+      } catch {
+        // Capture unavailable (e.g. synthetic events in tests) — ignore.
+      }
       this.render()
     })
 
@@ -882,9 +889,19 @@ export class AdrawCanvas {
       this.render()
     })
 
-    // Set cursor based on hovered handle
+    // A cancelled pointer (e.g. the OS takes over the drag) still needs the
+    // tool's gesture finalized the same way a pointerup would.
+    this.svgElement.addEventListener("pointercancel", (event) => {
+      const { x, y } = this.getRelativePoint(event)
+      this.handlePointerUp(x, y, event)
+      this.render()
+    })
+
+    // Set cursor based on hovered handle. Skipped mid-drag: with pointer
+    // capture, moves outside the container retarget to the svg (no anchor), and
+    // resetting the cursor would fight the drag cursor.
     this.svgElement.addEventListener("pointermove", (event) => {
-      if (!this.svgElement) {
+      if (event.buttons > 0 || !this.svgElement) {
         return
       }
       const target = event.target as HTMLElement
