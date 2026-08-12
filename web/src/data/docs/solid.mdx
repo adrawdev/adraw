@@ -1,0 +1,125 @@
+---
+title: "Solid"
+description: Documentation for SolidJS
+---
+
+## Installation
+
+```bash
+pnpm add @adraw/solid
+
+# npm
+npm install @adraw/solid
+```
+
+SolidJS 1.0 or later is required as a peer dependency.
+
+## Quick start
+
+Wrap your canvas UI in a `CanvasProvider` and render a `Canvas`.
+
+```tsx
+import { Canvas, CanvasProvider, useTool } from "@adraw/solid"
+
+function Toolbar() {
+  const { tool, setTool } = useTool()
+  return (
+    <div>
+      <button onClick={() => setTool("select")}>Select</button>
+      <button onClick={() => setTool("draw")}>Draw</button>
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <CanvasProvider>
+      <div
+        style={{ display: "flex", "flex-direction": "column", height: "100vh" }}
+      >
+        <Toolbar />
+        <Canvas style={{ flex: "1" }} />
+      </div>
+    </CanvasProvider>
+  )
+}
+```
+
+To render multiple independent canvases, use multiple `CanvasProvider`/`Canvas` pairs:
+
+```tsx
+<div style={{ display: "flex" }}>
+  <CanvasProvider>
+    <Canvas style={{ flex: "1" }} />
+  </CanvasProvider>
+  <CanvasProvider>
+    <Canvas style={{ flex: "1" }} />
+  </CanvasProvider>
+</div>
+```
+
+## API
+
+### `CanvasProvider`
+
+```tsx
+<CanvasProvider options={{ snapping: { snapEnabled: true } }}>
+  {/* ... */}
+</CanvasProvider>
+```
+
+Creates and owns an `AdrawCanvas` instance, scoped to its children via SolidJS context.
+
+### `Canvas`
+
+```tsx
+<Canvas class="my-canvas" style={{ background: "white" }} />
+```
+
+Renders the container element and mounts the `AdrawCanvas` from the nearest `CanvasProvider`.
+
+### `useCanvas()`
+
+Returns the raw context value (`vanillaRef`, reactive accessors, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one.
+
+### `useTool()`
+
+```ts
+const { tool, setTool } = useTool()
+// tool: ToolType — reactive getter
+setTool("rectangle")
+```
+
+### `useViewport()`
+
+```ts
+const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
+  useViewport()
+// viewport: ViewportState — reactive getter
+```
+
+### `useHistory()`
+
+```ts
+const { undo, redo, canUndo, canRedo } = useHistory()
+```
+
+### `useSelection()`
+
+```ts
+const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
+  useSelection()
+// selectedIds / elements: reactive getters
+```
+
+### `useTransformOverlay()`
+
+```ts
+const { hideWhileTransforming, setHideWhileTransforming } =
+  useTransformOverlay()
+// hideWhileTransforming: boolean — reactive getter; whether the selection
+// bounding box + resize/rotation handles are hidden while a resize/rotation
+// gesture is in progress (defaults to true; set via the
+// hideOverlayWhileTransforming option)
+setHideWhileTransforming(false)
+```

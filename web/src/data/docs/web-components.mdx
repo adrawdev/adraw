@@ -1,0 +1,86 @@
+---
+title: "Web Components"
+description: Documentation for Web Components
+---
+
+## Installation
+
+```bash
+pnpm add @adraw/web-components
+
+# npm
+npm install @adraw/web-components
+```
+
+No framework peer dependency — this package ships a native custom element that runs anywhere the DOM Custom Elements API is available.
+
+## Quick start
+
+Register the element once, then use `<adraw-canvas>` anywhere in your markup.
+
+```ts
+import { defineAdrawCanvas } from "@adraw/web-components"
+
+defineAdrawCanvas() // registers <adraw-canvas>
+
+const canvas = document.querySelector("adraw-canvas")!
+
+// Drive the canvas through the underlying core instance (`element.canvas`),
+// which carries the full API: setActiveTool, setViewport, zoomIn/Out,
+// undo/redo, selectAll, deleteSelected, …
+document
+  .querySelector("#draw-btn")!
+  .addEventListener("click", () => canvas.canvas?.setActiveTool("draw"))
+```
+
+```html
+<div style="height: 100dvh">
+  <adraw-canvas></adraw-canvas>
+</div>
+```
+
+Read the current state from the element's mirrored fields (`elements`, `viewport`, `activeTool`, `selectedIds`), and subscribe to its `adraw:*` events:
+
+```ts
+canvas.addEventListener("adraw:toolchange", (e) => {
+  console.log("active tool:", e.detail.tool)
+})
+```
+
+## Custom element
+
+### `<adraw-canvas>`
+
+Mounts the drawing surface. Owns one core `AdrawCanvas`, created on connect and destroyed on disconnect. Fills its parent (`width: 100%; height: 100%`).
+
+| Member        | Type                            | Description                                          |
+| ------------- | ------------------------------- | ---------------------------------------------------- |
+| `options`     | `CanvasWebComponentsOptions`    | Snapping / viewport config; set before it connects   |
+| `canvas`      | `AdrawCanvas \| null`           | Underlying core instance (`null` while disconnected) |
+| `elements`    | `Map<ElementId, CanvasElement>` | Latest mirrored elements                             |
+| `viewport`    | `ViewportState`                 | Latest mirrored viewport                             |
+| `activeTool`  | `ToolType`                      | Latest mirrored active tool                          |
+| `selectedIds` | `Set<ElementId>`                | Latest mirrored selection                            |
+
+Configure before the element connects:
+
+```ts
+const canvas = document.createElement("adraw-canvas")
+canvas.options = { snapping: { snapEnabled: true } }
+container.appendChild(canvas) // connect → mounts with these options
+```
+
+### Events
+
+The element re-dispatches core state changes as `CustomEvent`s:
+
+| Event                   | `event.detail`                    |
+| ----------------------- | --------------------------------- |
+| `adraw:change`          | `{ elements: Map<ElementId, …> }` |
+| `adraw:viewportchange`  | `{ viewport: ViewportState }`     |
+| `adraw:toolchange`      | `{ tool: ToolType }`              |
+| `adraw:selectionchange` | `{ selectedIds: Set<ElementId> }` |
+
+### `defineAdrawCanvas(tagName?)`
+
+Registers `AdrawCanvasElement` under `tagName` (default `adraw-canvas`). Safe to call multiple times — an already-defined name is left untouched.

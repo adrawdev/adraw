@@ -1,108 +1,136 @@
 ---
-title: "@adraw/react"
+title: "React"
 description: Documentation for React JSX/TSX
 ---
 
 ## Installation
 
-```sh
+```bash
 pnpm add @adraw/react
+
+# npm
+npm install @adraw/react
 ```
 
-## Usage
+React 17 or later is required as a peer dependency.
 
-### Basic
+## Quick start
+
+Wrap your app (or the part that needs the canvas) with `CanvasProvider`, then render the `Canvas` component wherever you want the drawing surface.
 
 ```tsx
-import type { ToolType } from "@adraw/core"
-import {
-  Canvas,
-  CanvasProvider,
-  useHistory,
-  useTool,
-  useViewport,
-} from "@adraw/react"
+import { Canvas, CanvasProvider, useTool } from "@adraw/react"
 
 function Toolbar() {
   const { tool, setTool } = useTool()
-  const { zoomIn, zoomOut, zoomToFit, resetZoom } = useViewport()
-  const { undo, redo, canUndo, canRedo } = useHistory()
-
-  const tools: { id: ToolType; label: string; shortcut: string }[] = [
-    { id: "select", label: "Select", shortcut: "V" },
-    { id: "hand", label: "Hand", shortcut: "H" },
-    { id: "rectangle", label: "Rectangle", shortcut: "R" },
-    { id: "ellipse", label: "Ellipse", shortcut: "E" },
-    { id: "draw", label: "Draw", shortcut: "D" },
-    { id: "eraser", label: "Eraser", shortcut: "E" },
-  ]
-
   return (
-    <div style={styles.toolbar}>
-      {tools.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          style={{
-            ...styles.button,
-            ...(tool === t.id ? styles.activeButton : {}),
-          }}
-          onClick={() => setTool(t.id)}
-          title={`${t.label} (${t.shortcut})`}
-        >
-          {t.label}
-        </button>
-      ))}
-      <div style={styles.separator} />
+    <div>
       <button
-        type="button"
-        style={styles.button}
-        onClick={undo}
-        disabled={!canUndo()}
+        onClick={() => setTool("select")}
+        aria-pressed={tool === "select"}
       >
-        Undo
+        Select
+      </button>
+      <button onClick={() => setTool("draw")} aria-pressed={tool === "draw"}>
+        Draw
       </button>
       <button
-        type="button"
-        style={styles.button}
-        onClick={redo}
-        disabled={!canRedo()}
+        onClick={() => setTool("rectangle")}
+        aria-pressed={tool === "rectangle"}
       >
-        Redo
-      </button>
-      <div style={styles.separator} />
-      <button type="button" style={styles.button} onClick={zoomIn}>
-        +
-      </button>
-      <button type="button" style={styles.button} onClick={zoomOut}>
-        -
-      </button>
-      <button type="button" style={styles.button} onClick={zoomToFit}>
-        Fit
-      </button>
-      <button type="button" style={styles.button} onClick={resetZoom}>
-        Reset
+        Rectangle
       </button>
     </div>
   )
 }
 
-function App() {
+export default function App() {
   return (
     <CanvasProvider>
-      <div style={styles.app}>
-        <Toolbar />
-        <Canvas
-          style={{
-            width: "100%",
-            height: "calc(100vh - 50px)",
-            background: "white",
-          }}
-        />
-      </div>
+      <Toolbar />
+      <Canvas style={{ flex: 1 }} />
     </CanvasProvider>
   )
 }
-
-export default App
 ```
+
+## Components
+
+### `<CanvasProvider>`
+
+Context provider that initialises shared canvas state. All hooks and `<Canvas>` must be rendered inside it.
+
+```tsx
+<CanvasProvider options={{ snapping: { snapEnabled: true } }}>
+  {children}
+</CanvasProvider>
+```
+
+| Prop      | Type                 | Description                        |
+| --------- | -------------------- | ---------------------------------- |
+| `options` | `CanvasReactOptions` | Initial snapping / viewport config |
+
+### `<Canvas>`
+
+Mounts the drawing surface. Fills its parent container (`width: 100%; height: 100%`).
+
+```tsx
+<Canvas className="my-canvas" style={{ borderRadius: 8 }} />
+```
+
+| Prop        | Type                  | Description   |
+| ----------- | --------------------- | ------------- |
+| `className` | `string`              | CSS class     |
+| `style`     | `React.CSSProperties` | Inline styles |
+
+## Hooks
+
+All hooks must be called inside `<CanvasProvider>`.
+
+### `useCanvas()`
+
+Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and a ref to the underlying `AdrawCanvas` instance (`vanillaRef`).
+
+### `useTool()`
+
+```ts
+const { tool, setTool } = useTool()
+// tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+setTool("draw")
+```
+
+### `useViewport()`
+
+```ts
+const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
+  useViewport()
+// viewport: ViewportState — { x: number, y: number, zoom: number }
+```
+
+### `useHistory()`
+
+```ts
+const { undo, redo, canUndo, canRedo } = useHistory()
+```
+
+### `useSelection()`
+
+```ts
+const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
+  useSelection()
+```
+
+### `useTransformOverlay()`
+
+```ts
+const { hideWhileTransforming, setHideWhileTransforming } =
+  useTransformOverlay()
+// hideWhileTransforming: boolean — whether the selection bounding box +
+// resize/rotation handles are hidden while a resize/rotation gesture is in
+// progress (defaults to true; set via the hideOverlayWhileTransforming option)
+setHideWhileTransforming(false)
+```
+
+## Server components (Next.js)
+
+All exports are marked `"use client"`. Import them only from client components or use a dynamic import with `ssr: false`.

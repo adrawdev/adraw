@@ -1,0 +1,122 @@
+---
+title: "Vue"
+description: Documentation for Vue 3
+---
+
+## Installation
+
+```bash
+pnpm add @adraw/vue
+
+# npm
+npm install @adraw/vue
+```
+
+Vue 3.0 or later is required as a peer dependency.
+
+## Quick start
+
+Wrap your app (or the part that needs the canvas) with `CanvasProvider`, then render the `Canvas` component wherever you want the drawing surface.
+
+```vue
+<script setup lang="ts">
+import { Canvas, CanvasProvider, useTool } from "@adraw/vue"
+</script>
+
+<template>
+  <CanvasProvider>
+    <Toolbar />
+    <Canvas style="flex: 1" />
+  </CanvasProvider>
+</template>
+```
+
+### Multiple canvases
+
+Each `CanvasProvider` creates its own isolated canvas instance — composables called inside a given subtree always resolve to the nearest ancestor provider.
+
+```vue
+<template>
+  <CanvasProvider>
+    <Canvas />
+  </CanvasProvider>
+  <CanvasProvider>
+    <Canvas />
+  </CanvasProvider>
+</template>
+```
+
+## Components
+
+### `CanvasProvider`
+
+Creates the underlying canvas instance and makes it available to `Canvas` and all composables rendered inside it.
+
+```vue
+<CanvasProvider :options="{ snapping: { snapEnabled: true } }">
+  ...
+</CanvasProvider>
+```
+
+| Prop      | Type               | Description                        |
+| --------- | ------------------ | ---------------------------------- |
+| `options` | `CanvasVueOptions` | Initial snapping / viewport config |
+
+### `Canvas`
+
+Mounts the drawing surface inside a `div` that fills its parent. Must be rendered inside a `CanvasProvider`.
+
+```vue
+<Canvas class="my-canvas" :style="{ borderRadius: '8px' }" />
+```
+
+| Prop    | Type                  | Description   |
+| ------- | --------------------- | ------------- |
+| `class` | `string`              | CSS class     |
+| `style` | `Record<string, any>` | Inline styles |
+
+## Composables
+
+### `useCanvas()`
+
+Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest `CanvasProvider`. Throws if called outside one.
+
+### `useTool()`
+
+```ts
+const { tool, setTool } = useTool()
+// tool: getter — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+setTool("draw")
+```
+
+### `useViewport()`
+
+```ts
+const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
+  useViewport()
+// viewport: getter — { x: number, y: number, zoom: number }
+```
+
+### `useHistory()`
+
+```ts
+const { undo, redo, canUndo, canRedo } = useHistory()
+```
+
+### `useSelection()`
+
+```ts
+const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
+  useSelection()
+```
+
+### `useTransformOverlay()`
+
+```ts
+const { hideWhileTransforming, setHideWhileTransforming } =
+  useTransformOverlay()
+// hideWhileTransforming: getter — whether the selection bounding box +
+// resize/rotation handles are hidden while a resize/rotation gesture is in
+// progress (defaults to true; set via the hideOverlayWhileTransforming option)
+setHideWhileTransforming(false)
+```
