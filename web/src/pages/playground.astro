@@ -4,5 +4,11 @@ import Layout from "@/layouts/Layout.astro";
 ---
 
 <Layout>
-  <Canvas class="h-dvh" />
+  <Canvas class="playground-canvas" />
 </Layout>
+
+<style>
+  :global(.playground-canvas) {
+    height: 100dvh;
+  }
+</style>

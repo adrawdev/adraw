@@ -206,40 +206,40 @@ Full per-task detail (acceptance criteria, verification, files) lives in
 
 ### Phase 1: Foundation
 
-- [ ] Task 1: Capture visual baseline (screenshots of `/`, `/docs/core`,
+- [x] Task 1: Capture visual baseline (screenshots of `/`, `/docs/core`,
       `/playground`, `/examples` in light + dark)
-- [ ] Task 2: Add `reset.css` (verbatim preflight) + native tokens + `base.css`
+- [x] Task 2: Add `reset.css` (verbatim preflight) + native tokens + `base.css`
       rules in `global.css` (Tailwind still active — no visual change)
 
 ### Checkpoint: Foundation
 
-- [ ] `pnpm build:web` succeeds; site pixel-identical to baseline
+- [x] `pnpm build:web` succeeds; site pixel-identical to baseline
 
 ### Phase 2: Component Migration
 
-- [ ] Task 3: Migrate `Layout.astro` + page shells (`index`, `examples`, `playground`)
-- [ ] Task 4: Migrate `Header.astro` (nav, theme switcher, `.visually-hidden`)
-- [ ] Task 5: Migrate `Hero.astro` (incl. `:global(.hero-canvas)` pattern)
-- [ ] Task 6: Migrate `PickYourFramework.astro`
-- [ ] Task 7: Migrate `Sidebar.astro` (`[aria-current="page"]`)
-- [ ] Task 8: Migrate `Canvas.astro` (toolbar, palette, `aria-pressed` styling,
+- [x] Task 3: Migrate `Layout.astro` + page shells (`index`, `examples`, `playground`)
+- [x] Task 4: Migrate `Header.astro` (nav, theme switcher, `.visually-hidden`)
+- [x] Task 5: Migrate `Hero.astro` (incl. `:global(.hero-canvas)` pattern)
+- [x] Task 6: Migrate `PickYourFramework.astro`
+- [x] Task 7: Migrate `Sidebar.astro` (`[aria-current="page"]`)
+- [x] Task 8: Migrate `Canvas.astro` (toolbar, palette, `aria-pressed` styling,
       remove JS class toggling)
-- [ ] Task 9: Write `prose.css` typography replacement
-- [ ] Task 10: Migrate `docs/[...id].astro` (layout grid + `.prose`)
+- [x] Task 9: Write `prose.css` typography replacement
+- [x] Task 10: Migrate `docs/[...id].astro` (layout grid + `.prose`)
 
 ### Checkpoint: Components
 
-- [ ] Zero utility classes remain in `src`; every page matches baseline in
+- [x] Zero utility classes remain in `src`; every page matches baseline in
       light + dark
 
 ### Phase 3: Removal
 
-- [ ] Task 11: Uninstall Tailwind (deps, vite plugin, `@plugin`/`@theme`/`@apply`
+- [x] Task 11: Uninstall Tailwind (deps, vite plugin, `@plugin`/`@theme`/`@apply`
       directives) and verify
 
 ### Checkpoint: Complete
 
-- [ ] `rg -i tailwind web/src web/astro.config.mjs web/package.json` is empty;
+- [x] `rg -i tailwind web/src web/astro.config.mjs web/package.json` is empty;
       `pnpm build:web` clean; visual QA passed; `pnpm lint` clean
 
 ## Risks and Mitigations

@@ -18,12 +18,23 @@ const { Content } = await render(doc);
 
 <Layout>
   <Header />
-  <div class="grid grid-cols-[16rem_minmax(0,1fr)]">
+  <div class="docs-layout">
     <Sidebar />
-    <main class="p-4 flex-1 prose dark:prose-invert">
+    <main class="docs-content prose">
       <h1>{doc.data.title}</h1>
       <p>{doc.data.description}</p>
       <Content />
     </main>
   </div>
 </Layout>
+
+<style>
+  .docs-layout {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+  }
+  .docs-content {
+    padding: 1rem;
+    min-width: 0;
+  }
+</style>

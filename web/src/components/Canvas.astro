@@ -6,70 +6,151 @@ type Props = HTMLAttributes<"div">;
 const { class: className, ...props } = Astro.props;
 ---
 
-<div class:list={["relative", className]} {...props}>
-  <div class="toolbar flex items-center gap-1 p-1 w-fit absolute top-2 left-1/2 -translate-x-1/2 bg-card rounded-lg shadow-lg shadow-black/5 border">
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border bg-primary/20 text-primary size-10 inline-flex items-center justify-center" data-tool="select" title="Select (V)">
+<div class:list={["canvas-root", className]} {...props}>
+  <div class="toolbar">
+    <button class="tool-button" data-tool="select" title="Select (V)" aria-pressed="true">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mouse-pointer-icon lucide-mouse-pointer"><path d="M12.586 12.586 19 19"/><path d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="hand" title="Hand (H)">
+    <button class="tool-button" data-tool="hand" title="Hand (H)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-icon lucide-hand"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="rectangle" title="Rectangle (R)">
+    <button class="tool-button" data-tool="rectangle" title="Rectangle (R)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-icon lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="ellipse" title="Ellipse (E)">
+    <button class="tool-button" data-tool="ellipse" title="Ellipse (E)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-icon lucide-circle"><circle cx="12" cy="12" r="10"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="draw" title="Draw (D)">
+    <button class="tool-button" data-tool="draw" title="Draw (D)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="line" title="Line (L)">
+    <button class="tool-button" data-tool="line" title="Line (L)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus-icon lucide-minus"><path d="M5 12h14"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="text" title="Text (T)">
+    <button class="tool-button" data-tool="text" title="Text (T)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-type-icon lucide-type"><path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-tool="eraser" title="Eraser (E)">
+    <button class="tool-button" data-tool="eraser" title="Eraser (E)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser-icon lucide-eraser"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="insert-media" title="Insert image">
+    <button class="tool-button" data-action="insert-media" title="Insert image">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image-icon lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
     </button>
-    <div class="separator w-px h-6 bg-border"></div>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="undo" title="Undo (Ctrl+Z)">
+    <div class="separator"></div>
+    <button class="tool-button" data-action="undo" title="Undo (Ctrl+Z)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo-icon lucide-undo"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="redo" title="Redo (Ctrl+Shift+Z)">
+    <button class="tool-button" data-action="redo" title="Redo (Ctrl+Shift+Z)">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-redo-icon lucide-redo"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
     </button>
-    <div class="separator w-px h-6 bg-border"></div>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="zoom-in" title="Zoom In">
+    <div class="separator"></div>
+    <button class="tool-button" data-action="zoom-in" title="Zoom In">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border h-10 w-16 inline-flex items-center justify-center tabular-nums" data-action="reset" title="Reset">100%</button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="zoom-out" title="Zoom Out">
+    <button class="tool-button zoom-reset" data-action="reset" title="Reset">100%</button>
+    <button class="tool-button" data-action="zoom-out" title="Zoom Out">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus-icon lucide-minus"><path d="M5 12h14"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="zoom-fit" title="Zoom to Fit">
+    <button class="tool-button" data-action="zoom-fit" title="Zoom to Fit">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ratio-icon lucide-ratio"><rect width="12" height="20" x="6" y="2" rx="2"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg>
     </button>
-    <button class="border border-transparent rounded-md hover:bg-primary/10 active:border-border size-10 inline-flex items-center justify-center" data-action="export" title="Export to image">
+    <button class="tool-button" data-action="export" title="Export to image">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image-down-icon lucide-image-down"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"/><path d="m14 19 3 3v-5.5"/><path d="m17 22 3-3"/><circle cx="9" cy="9" r="2"/></svg>
     </button>
     <input id="file-input" type="file" accept="image/*" hidden multiple />
   </div>
-  <div class="absolute right-2 top-16 grid grid-cols-4 items-center p-2 gap-2 bg-card rounded-lg shadow-lg shadow-black/5 border">
-    <button data-action="change-color" data-color="var(--adraw-stroke)" class="bg-(--adraw-stroke) size-4 rounded-md"></button>
-    <button data-action="change-color" data-color="#f22" class="bg-[#f22] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#8f8" class="bg-[#8f8] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#08f" class="bg-[#08f] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#ff0" class="bg-[#ff0] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#0ff" class="bg-[#0ff] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#f0f" class="bg-[#f0f] size-4 rounded-md border"></button>
-    <button data-action="change-color" data-color="#fa0" class="bg-[#fa0] size-4 rounded-md border"></button>
+  <div class="color-palette">
+    <button data-action="change-color" data-color="var(--adraw-stroke)" class="swatch" style="--swatch: var(--adraw-stroke)"></button>
+    <button data-action="change-color" data-color="#f22" class="swatch swatch-bordered" style="--swatch: #f22"></button>
+    <button data-action="change-color" data-color="#8f8" class="swatch swatch-bordered" style="--swatch: #8f8"></button>
+    <button data-action="change-color" data-color="#08f" class="swatch swatch-bordered" style="--swatch: #08f"></button>
+    <button data-action="change-color" data-color="#ff0" class="swatch swatch-bordered" style="--swatch: #ff0"></button>
+    <button data-action="change-color" data-color="#0ff" class="swatch swatch-bordered" style="--swatch: #0ff"></button>
+    <button data-action="change-color" data-color="#f0f" class="swatch swatch-bordered" style="--swatch: #f0f"></button>
+    <button data-action="change-color" data-color="#fa0" class="swatch swatch-bordered" style="--swatch: #fa0"></button>
   </div>
-  <div class="canvas-container size-full"></div>
+  <div class="canvas-container"></div>
 </div>
+
+<style>
+  .canvas-root {
+    position: relative;
+  }
+  .toolbar {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    width: fit-content;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    box-shadow:
+      0 10px 15px -3px color-mix(in oklab, black 5%, transparent),
+      0 4px 6px -4px color-mix(in oklab, black 5%, transparent);
+  }
+  .tool-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.375rem;
+    &:hover {
+      background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    }
+    &:active {
+      border-color: var(--color-border);
+    }
+    &[aria-pressed="true"] {
+      background: color-mix(in oklab, var(--color-primary) 20%, transparent);
+      color: var(--color-primary);
+    }
+  }
+  .zoom-reset {
+    width: 4rem;
+    height: 2.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .separator {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--color-border);
+  }
+  .color-palette {
+    position: absolute;
+    top: 4rem;
+    right: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    box-shadow:
+      0 10px 15px -3px color-mix(in oklab, black 5%, transparent),
+      0 4px 6px -4px color-mix(in oklab, black 5%, transparent);
+  }
+  .swatch {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.375rem;
+    background: var(--swatch);
+  }
+  .swatch-bordered {
+    border: 1px solid var(--color-border);
+  }
+  .canvas-container {
+    width: 100%;
+    height: 100%;
+  }
+</style>
 
 <script>
   import { AdrawCanvas, type MediaInput, type ToolType } from '@adraw/core'
@@ -200,7 +281,6 @@ const { class: className, ...props } = Astro.props;
   function updateToolbar() {
     const activeTool = canvas.getActiveTool()
     buttons.forEach((btn) => {
-      "active bg-primary/20 hover:bg-primary/20 text-primary".split(" ").forEach(c => btn.classList.toggle(c, btn.dataset.tool === activeTool))
       btn.ariaPressed = btn.dataset.tool === activeTool ? "true" : null
     })
   }

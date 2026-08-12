@@ -16,8 +16,16 @@ import "../styles/global.css";
     </script>
 	</head>
 	<body>
-    <div class="flex flex-col min-h-dvh">
+    <div class="app-shell">
       <slot />
     </div>
 	</body>
 </html>
+
+<style>
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+</style>

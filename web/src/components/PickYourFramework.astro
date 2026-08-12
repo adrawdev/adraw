@@ -17,13 +17,43 @@ const frameworks = [
   { icon: JavaScriptIcon, name: "core", title: "Vanilla" },
 ]
 ---
-<section class="p-8">
-  <h2 class="text-center text-3xl text-balance">Pick your framework</h2>
-  <div class="flex flex-wrap justify-center gap-8 py-8">
+<section class="framework-section">
+  <h2>Pick your framework</h2>
+  <div class="framework-grid">
     {frameworks.map((f) => (
-      <a href={`/docs/${f.name}`} title={f.title} class="grayscale-100 opacity-60 transition hover:grayscale-0 hover:opacity-100">
+      <a href={`/docs/${f.name}`} title={f.title} class="framework-icon">
         <f.icon width="96" height="96" />
       </a>
     ))}
   </div>
 </section>
+
+<style>
+  .framework-section {
+    padding: 2rem;
+    h2 {
+      text-align: center;
+      font-size: 1.875rem;
+      line-height: calc(2.25 / 1.875);
+      text-wrap: balance;
+    }
+  }
+  .framework-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    padding-block: 2rem;
+  }
+  .framework-icon {
+    filter: grayscale(100%);
+    opacity: 0.6;
+    transition:
+      filter 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    &:hover {
+      filter: grayscale(0);
+      opacity: 1;
+    }
+  }
+</style>

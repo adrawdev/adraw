@@ -17,14 +17,39 @@ const frameworks = [
   { icon: WebComponentsIcon, name: "web-components", title: "Web Components" },
 ]
 ---
-<aside class="p-6">
-  <ul class="flex flex-col gap-2">
+<aside class="docs-sidebar">
+  <ul class="docs-nav">
     {frameworks.map((f) => (
       <li>
-        <a href={`/docs/${f.name}`} aria-current={Astro.url.pathname == `/docs/${f.name}` ? "page" : undefined} class="flex gap-2 p-2 items-center aria-[current=page]:bg-primary aria-[current=page]:text-background rounded-xl hover:bg-primary/10">
+        <a href={`/docs/${f.name}`} aria-current={Astro.url.pathname == `/docs/${f.name}` ? "page" : undefined} class="docs-nav-link">
           <f.icon width="24" height="24" /> {f.title}
         </a>
       </li>
     ))}
   </ul>
 </aside>
+
+<style>
+  .docs-sidebar {
+    padding: 1.5rem;
+  }
+  .docs-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .docs-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    &:hover {
+      background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    }
+    &[aria-current="page"] {
+      background: var(--color-primary);
+      color: var(--color-background);
+    }
+  }
+</style>

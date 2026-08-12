@@ -1,12 +1,10 @@
-@import "tailwindcss";
+@import "./reset.css";
 @import "./fonts.css";
-@plugin "@tailwindcss/typography";
+@import "./prose.css";
 
 :root {
   color-scheme: light dark;
-}
 
-@theme {
   --color-background: light-dark(oklch(0.96 0.02 248), oklch(0.22 0.018 248));
   --color-foreground: light-dark(oklch(0.1 0 0), oklch(0.985 0 0));
   --color-card: light-dark(oklch(1 0 0), oklch(0.24 0.02 248));
@@ -33,18 +31,32 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--color-border);
+    outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   }
   body {
-    @apply bg-background text-foreground overscroll-none antialiased;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     --adraw-background: light-dark(oklch(1 0 0), oklch(0.18 0.01 248));
     --adraw-stroke: var(--color-foreground);
     --adraw-selection: var(--color-primary);
   }
-  [role="button"],
-  button {
-    &:not(:disabled) {
-      @apply cursor-pointer;
-    }
+  :is([role="button"], button):not(:disabled) {
+    cursor: pointer;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }
