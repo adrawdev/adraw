@@ -3,7 +3,15 @@ import { expect, test } from "@playwright/test"
 import { openCanvas, pickTool, snapshot } from "./helpers"
 
 test.describe("tool selection", () => {
-  const tools = ["hand", "rectangle", "ellipse", "draw", "eraser", "select"]
+  const tools = [
+    "hand",
+    "rectangle",
+    "ellipse",
+    "draw",
+    "eraser",
+    "text",
+    "select",
+  ]
 
   for (const tool of tools) {
     test(`clicking the ${tool} button activates it`, async ({ page }) => {
@@ -39,6 +47,7 @@ test.describe("tool selection", () => {
       ["d", "draw"],
       ["h", "hand"],
       ["v", "select"],
+      ["t", "text"],
     ]
 
     for (const [key, tool] of shortcuts) {

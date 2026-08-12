@@ -24,6 +24,7 @@ export type ElementType =
   | "line"
   | "path"
   | "media"
+  | "text"
   | "group"
 
 export interface BaseElement {
@@ -86,12 +87,20 @@ export interface GroupElement extends BaseElement {
   children: ElementId[]
 }
 
+export interface TextElement extends BaseElement {
+  type: "text"
+  text: string
+  fontSize: number
+  strokeColor: string
+}
+
 export type CanvasElement =
   | RectangleElement
   | EllipseElement
   | LineElement
   | PathElement
   | MediaElement
+  | TextElement
   | GroupElement
 
 export type ToolType =
@@ -102,6 +111,7 @@ export type ToolType =
   | "rectangle"
   | "ellipse"
   | "line"
+  | "text"
 
 export interface ViewportState {
   x: number

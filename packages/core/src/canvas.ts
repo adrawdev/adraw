@@ -4,12 +4,15 @@ import {
   SELECTION_COLOR,
   STROKE_COLOR,
   STROKE_WIDTH,
+  TEXT_FONT_SIZE,
 } from "./constants"
 import { screenToCanvas } from "./coordinates"
 import {
   createMedia,
   DEFAULT_PATH_SMOOTHING,
+  getElementAtPoint,
   getElementsBounds,
+  measureTextSize,
 } from "./elements"
 import {
   canRedo,
@@ -28,6 +31,8 @@ import {
   createLineTool,
   createRectangleTool,
   createSelectTool,
+  createTextTool,
+  type TextTool,
 } from "./tools"
 import type { Tool, ToolContext } from "./tools/base"
 import type {
@@ -36,6 +41,7 @@ import type {
   LineElement,
   MediaElement,
   Point,
+  TextElement,
   ToolType,
   ViewportState,
 } from "./types"
@@ -103,6 +109,7 @@ const rotationHandleClass = "adraw-rotation-handle"
 const resizeHandleClass = "adraw-resize-handle"
 const resizeEdgeClass = "adraw-resize-edge"
 const selectionBoxClass = "adraw-selection-box"
+const textEditorClass = "adraw-text-editor"
 
 const boundingBoxStrokeWidth = 2
 const resizeHandleSize = 12
@@ -257,9 +264,35 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       group.appendChild(image)
       break
     }
+
+    case "text": {
+      const text = document.createElementNS(svgNamespaceURI, "text")
+      text.setAttribute("dominant-baseline", "hanging")
+      text.setAttribute("font-family", "system-ui, sans-serif")
+      text.setAttribute("font-size", `${element.fontSize}`)
+      text.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+      text.style.whiteSpace = "pre"
+      appendTextLines(text, element)
+      group.appendChild(text)
+      break
+    }
   }
 
   return group
+}
+
+// One tspan per line: SVG text does not lay out "\n" itself, and a tspan per
+// line with a fixed dy also gives the exact line spacing used by
+// `measureTextSize` (1.2em). `dominant-baseline: hanging` on the parent makes
+// the element's (x, y) the top-left of the first line, matching the bbox.
+function appendTextLines(text: SVGTextElement, element: TextElement): void {
+  element.text.split("\n").forEach((line, i) => {
+    const tspan = document.createElementNS(svgNamespaceURI, "tspan")
+    tspan.setAttribute("x", "0")
+    tspan.setAttribute("dy", i === 0 ? "0" : `${element.fontSize * 1.2}`)
+    tspan.textContent = line
+    text.appendChild(tspan)
+  })
 }
 
 export class AdrawCanvas {
@@ -308,6 +341,18 @@ export class AdrawCanvas {
   private selectionBoxNode: SVGRectElement | null = null
   private resizeObserver: ResizeObserver | null = null
 
+  // Inline text editing state. The editor is an absolutely-positioned
+  // `<textarea>` overlay owned by the DOM adapter: it appears when the text
+  // tool places a new element (editing the tool's temporary element) or when a
+  // text element is double-clicked (editing the committed element in place).
+  private textEditor: HTMLTextAreaElement | null = null
+  private textEditPoint: Point | null = null
+  // Non-null while editing an existing element; null while creating a new one
+  // through the text tool's temporary element.
+  private textEditElementId: ElementId | null = null
+  // Snapshot of the element being edited, restored on cancel.
+  private textEditOriginalElement: TextElement | null = null
+
   // Touch gesture state
   private pinchStartDistance: number | null = null
   private pinchStartCenter: Point | null = null
@@ -326,6 +371,7 @@ export class AdrawCanvas {
     this.tools.set("line", createLineTool())
     this.tools.set("draw", createDrawTool())
     this.tools.set("eraser", createEraserTool())
+    this.tools.set("text", createTextTool())
 
     this.activeTool = this.tools.get("select")!
     this.activeTool.onActivate(this.getToolContext())
@@ -378,6 +424,12 @@ export class AdrawCanvas {
     const newTool = this.tools.get(toolType)
     if (!newTool || newTool === this.activeTool) {
       return
+    }
+
+    // A toolbar click or keyboard shortcut switching tools mid-edit must not
+    // leave the editor orphaned; commit whatever was typed.
+    if (this.textEditor) {
+      this.commitTextEditing()
     }
 
     this.activeTool.onDeactivate(this.getToolContext())
@@ -570,6 +622,21 @@ export class AdrawCanvas {
       this.viewport,
       this.canvasSize,
     )
+
+    // Clicking outside the editor while it's open commits the edit and swallows
+    // the click: the next click starts a new gesture.
+    if (this.textEditor) {
+      this.commitTextEditing()
+      return
+    }
+
+    // The text tool places a text element and opens the inline editor; the
+    // element's text is driven by typing, not by pointer movement.
+    if (this.activeTool.type === "text") {
+      this.startTextEditing(point, event)
+      return
+    }
+
     this.activeTool.onPointerDown(this.getToolContext(), point, event)
   }
 
@@ -578,6 +645,10 @@ export class AdrawCanvas {
     screenY: number,
     event: PointerEvent,
   ): void {
+    if (this.textEditor) {
+      return
+    }
+
     const point = screenToCanvas(
       { x: screenX, y: screenY },
       this.viewport,
@@ -587,6 +658,10 @@ export class AdrawCanvas {
   }
 
   handlePointerUp(screenX: number, screenY: number, event: PointerEvent): void {
+    if (this.textEditor) {
+      return
+    }
+
     const point = screenToCanvas(
       { x: screenX, y: screenY },
       this.viewport,
@@ -675,6 +750,10 @@ export class AdrawCanvas {
         }
         case "l": {
           this.setActiveTool("line")
+          break
+        }
+        case "t": {
+          this.setActiveTool("text")
           break
         }
         case "delete":
@@ -897,6 +976,19 @@ export class AdrawCanvas {
       this.render()
     })
 
+    // Double-clicking a text element opens the inline editor for it.
+    this.svgElement.addEventListener("dblclick", (event) => {
+      if (this.textEditor || this.activeTool.type !== "select") {
+        return
+      }
+      const { x, y } = this.getRelativePoint(event)
+      const point = screenToCanvas({ x, y }, this.viewport, this.canvasSize)
+      const element = getElementAtPoint(this.getElements(), point)
+      if (element?.type === "text") {
+        this.startExistingTextEditing(element)
+      }
+    })
+
     // Set cursor based on hovered handle. Skipped mid-drag: with pointer
     // capture, moves outside the container retarget to the svg (no anchor), and
     // resetting the cursor would fight the drag cursor.
@@ -1071,6 +1163,221 @@ export class AdrawCanvas {
     }
   }
 
+  // ── Inline text editing ──
+
+  // Start editing a brand-new text element: the text tool creates its
+  // temporary element, then the editor overlay appears on top of it.
+  private startTextEditing(point: Point, event: PointerEvent): void {
+    if (!this.container) {
+      return
+    }
+    this.activeTool.onPointerDown(this.getToolContext(), point, event)
+    this.textEditPoint = point
+    this.openTextEditor("")
+  }
+
+  // Start editing an existing (committed) text element in place. Live edits
+  // mutate the element directly; commit pushes history, cancel restores it.
+  private startExistingTextEditing(element: TextElement): void {
+    if (!this.container) {
+      return
+    }
+    this.textEditElementId = element.id
+    this.textEditOriginalElement = element
+    this.textEditPoint = { x: element.x, y: element.y }
+    this.openTextEditor(element.text)
+  }
+
+  private openTextEditor(value: string): void {
+    if (!this.container || this.textEditor) {
+      return
+    }
+
+    const textarea = document.createElement("textarea")
+    textarea.classList.add(textEditorClass)
+    textarea.value = value
+    // The editor is absolutely positioned in canvas-screen coordinates, so the
+    // container must act as its positioning context.
+    if (getComputedStyle(this.container).position === "static") {
+      this.container.style.position = "relative"
+    }
+    textarea.style.background = "transparent"
+    textarea.style.border = `1px dashed ${SELECTION_COLOR}`
+    textarea.style.color = STROKE_COLOR
+    textarea.style.fontFamily = "system-ui, sans-serif"
+    textarea.style.margin = "0"
+    textarea.style.outline = "none"
+    textarea.style.overflow = "hidden"
+    textarea.style.padding = "0"
+    textarea.style.position = "absolute"
+    textarea.style.resize = "none"
+    textarea.style.whiteSpace = "pre"
+    textarea.style.zIndex = "10"
+    textarea.setAttribute("wrap", "off")
+
+    textarea.addEventListener("input", () => {
+      const next = textarea.value
+      if (this.textEditElementId) {
+        const element = this.elements.get(this.textEditElementId)
+        if (element?.type === "text") {
+          const size = measureTextSize(next, element.fontSize)
+          this.elements.set(this.textEditElementId, {
+            ...element,
+            height: size.height,
+            text: next,
+            width: size.width,
+          })
+          this.emit("change", { elements: this.elements })
+        }
+      } else {
+        ;(this.activeTool as TextTool).setText(next)
+      }
+      this.positionTextEditor()
+      this.render()
+    })
+
+    textarea.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault()
+        this.commitTextEditing()
+      } else if (event.key === "Escape") {
+        event.preventDefault()
+        this.cancelTextEditing()
+      }
+    })
+
+    // Blur commits (clicking elsewhere). Pointerdown on the canvas commits
+    // first via `handlePointerDown`, so this is only the fallback for clicks
+    // outside the canvas.
+    textarea.addEventListener("blur", () => {
+      this.commitTextEditing()
+    })
+
+    this.container.appendChild(textarea)
+    this.textEditor = textarea
+    this.positionTextEditor()
+    // Focusing synchronously is undone by the pointerdown's own default action
+    // (the click that opened the editor moves focus to body and immediately
+    // blurs it again), so defer to the next frame instead.
+    requestAnimationFrame(() => {
+      if (this.textEditor === textarea) {
+        textarea.focus()
+      }
+    })
+  }
+
+  // Keep the editor anchored to its canvas-space point (and sized to its
+  // content) across zoom/pan/typing.
+  private positionTextEditor(): void {
+    if (!this.textEditor || !this.textEditPoint) {
+      return
+    }
+
+    const viewport = this.viewport
+    const screenX =
+      (this.textEditPoint.x - viewport.x) * viewport.zoom +
+      this.canvasSize.width / 2
+    const screenY =
+      (this.textEditPoint.y - viewport.y) * viewport.zoom +
+      this.canvasSize.height / 2
+
+    const fontSize =
+      (this.textEditElementId
+        ? (this.elements.get(this.textEditElementId) as TextElement | undefined)
+            ?.fontSize
+        : undefined) ?? TEXT_FONT_SIZE
+
+    const style = this.textEditor.style
+    style.fontSize = `${fontSize * viewport.zoom}px`
+    style.lineHeight = `${fontSize * 1.2 * viewport.zoom}px`
+    style.left = `${screenX}px`
+    style.top = `${screenY}px`
+    style.width = "auto"
+    style.width = `${Math.max(60, this.textEditor.scrollWidth + 8)}px`
+    const lines = this.textEditor.value.split("\n").length
+    style.height = `${Math.max(24, lines * fontSize * 1.2 * viewport.zoom + 4)}px`
+  }
+
+  private removeTextEditor(): void {
+    const editor = this.textEditor
+    // Null the ref first so a blur event fired by removal can't re-enter the
+    // commit/cancel paths.
+    this.textEditor = null
+    editor?.remove()
+  }
+
+  private commitTextEditing(): void {
+    if (!this.textEditor) {
+      return
+    }
+
+    const editingExisting = this.textEditElementId !== null
+    const id = this.textEditElementId
+    const point = this.textEditPoint
+    this.removeTextEditor()
+
+    if (editingExisting && id) {
+      this.textEditElementId = null
+      this.textEditOriginalElement = null
+
+      const element = this.elements.get(id)
+      if (element?.type === "text") {
+        if (element.text.trim() === "") {
+          // Deleting all text removes the element.
+          this.elements.delete(id)
+          if (this.selectedIds.has(id)) {
+            const next = new Set(this.selectedIds)
+            next.delete(id)
+            this.selectedIds = next
+            this.emit("selectionChange", { selectedIds: this.selectedIds })
+          }
+        }
+        this.history = pushHistory(
+          this.history,
+          this.elements,
+          this.selectedIds,
+        )
+        this.emit("change", { elements: this.elements })
+      }
+    } else if (point) {
+      // Commit the text tool's temporary element (pushes history, selects,
+      // switches back to select) exactly like a regular tool gesture end.
+      this.activeTool.onPointerUp(
+        this.getToolContext(),
+        point,
+        {} as PointerEvent,
+      )
+    }
+
+    this.textEditPoint = null
+    this.render()
+  }
+
+  private cancelTextEditing(): void {
+    if (!this.textEditor) {
+      return
+    }
+
+    const editingExisting = this.textEditElementId !== null
+    const original = this.textEditOriginalElement
+    const id = this.textEditElementId
+    this.removeTextEditor()
+    this.textEditPoint = null
+    this.textEditElementId = null
+    this.textEditOriginalElement = null
+
+    if (editingExisting && id && original) {
+      this.elements.set(id, original)
+      this.emit("change", { elements: this.elements })
+    } else {
+      // Reset the text tool so its temporary element disappears.
+      const context = this.getToolContext()
+      this.activeTool.onDeactivate(context)
+      this.activeTool.onActivate(context)
+    }
+    this.render()
+  }
+
   private updateCursor(tool: ToolType): void {
     const cursors: Record<ToolType, string> = {
       draw: "crosshair",
@@ -1080,6 +1387,7 @@ export class AdrawCanvas {
       line: "crosshair",
       rectangle: "crosshair",
       select: "default",
+      text: "text",
     }
     if (this.svgElement) {
       this.svgElement.style.cursor = cursors[tool] || "default"
@@ -1101,6 +1409,7 @@ export class AdrawCanvas {
     this.renderTemporary()
     this.renderTransformOverlay()
     this.renderSelectionBox()
+    this.positionTextEditor()
   }
 
   // Draw the active tool's in-progress marquee (rubber-band) selection as a
@@ -1438,9 +1747,14 @@ export class AdrawCanvas {
 
     const tempElement = this.getTemporaryElement()
 
-    // No in-progress element: drop the temporary node if one is lingering.
+    // No in-progress element: drop the temporary node if one is lingering. It
+    // may already have been adopted by `reconcileElements` as a committed
+    // element's node (tools like text commit the same object/id their temporary
+    // element used) — leave those alone.
     if (!tempElement) {
-      this.temporaryNode?.remove()
+      if (this.temporaryNode && !this.elements.has(this.temporaryNode.id)) {
+        this.temporaryNode.remove()
+      }
       this.temporaryNode = null
       this.temporaryType = null
       return
@@ -1515,6 +1829,14 @@ export class AdrawCanvas {
         imageElement.setAttribute("height", `${element.height}`)
         break
       }
+      case "text": {
+        const textElement = group.getElementsByTagName("text")[0]
+        textElement.setAttribute("font-size", `${element.fontSize}`)
+        textElement.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+        textElement.textContent = ""
+        appendTextLines(textElement, element)
+        break
+      }
     }
   }
 
@@ -1562,6 +1884,11 @@ export class AdrawCanvas {
 
   destroy(): void {
     this.resizeObserver?.disconnect()
+    this.textEditor?.remove()
+    this.textEditor = null
+    this.textEditPoint = null
+    this.textEditElementId = null
+    this.textEditOriginalElement = null
     this.svgElement?.remove()
   }
 

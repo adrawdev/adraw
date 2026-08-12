@@ -93,5 +93,6 @@ export class Toolbar {
     { id: "ellipse", label: "Ellipse", shortcut: "O" },
     { id: "draw", label: "Draw", shortcut: "D" },
     { id: "eraser", label: "Eraser", shortcut: "E" },
+    { id: "text", label: "Text", shortcut: "T" },
   ]
 }

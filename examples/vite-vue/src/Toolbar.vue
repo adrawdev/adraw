@@ -15,6 +15,7 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
   { id: "ellipse", label: "Ellipse", shortcut: "E" },
   { id: "draw", label: "Draw", shortcut: "D" },
   { id: "eraser", label: "Eraser", shortcut: "E" },
+  { id: "text", label: "Text", shortcut: "T" },
 ]
 </script>
 

@@ -88,10 +88,11 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 | `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` |
 | `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`               |
 | `"group"`     | `GroupElement`     | `children: ElementId[]`                                |
+| `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`                      |
 
 ### Tool types
 
-`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"`
+`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text"`
 
 ### Coordinate types
 
@@ -188,6 +189,7 @@ select-deactivate.test.ts      — select deactivation
 select-flip.test.ts            — flip/transform
 select-transform-state.test.ts — isResizing, isRotating
 snapping.test.ts               — snapping math
+text.test.ts                  — text tool, measurement, hit-testing
 transform-overlay.test.ts      — transform overlay
 viewport.test.ts               — zoom, pan, zoomToFit
 ```

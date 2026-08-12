@@ -10,6 +10,8 @@ import type {
   Point,
   RectangleElement,
   ResizeAnchor,
+  Size,
+  TextElement,
 } from "./types"
 
 export type ElementFactory<T extends CanvasElement> = Omit<T, "id" | "type"> & {
@@ -66,6 +68,30 @@ export function createMedia(
     ...factory,
     id: factory.id ?? generateId(),
     type: "media",
+  }
+}
+
+export function createText(factory: ElementFactory<TextElement>): TextElement {
+  return {
+    ...factory,
+    id: factory.id ?? generateId(),
+    type: "text",
+  }
+}
+
+// Approximate the rendered size of a text element without a DOM: ~0.6em per
+// character on the longest line, 1.2em line height. The DOM adapter renders
+// text with the same metrics so the bounding box stays close to the glyphs.
+export function measureTextSize(text: string, fontSize: number): Size {
+  const lines = text.split("\n")
+  const lineHeight = fontSize * 1.2
+  let width = 0
+  for (const line of lines) {
+    width = Math.max(width, line.length * fontSize * 0.6)
+  }
+  return {
+    height: Math.max(lineHeight, lines.length * lineHeight),
+    width: Math.max(1, width),
   }
 }
 
