@@ -1,0 +1,30 @@
+---
+import JavaScriptIcon from "@/assets/javascript.svg";
+import ReactIcon from "@/assets/react.svg";
+import VueIcon from "@/assets/vue.svg";
+import SvelteIcon from "@/assets/svelte.svg";
+import SolidIcon from "@/assets/solidjs.svg";
+import AngularIcon from "@/assets/angular.svg";
+import WebComponentsIcon from "@/assets/webcomponents.svg";
+
+const frameworks = [
+  { icon: JavaScriptIcon, name: "core", title: "Vanilla" },
+  { icon: ReactIcon, name: "react", title: "React" },
+  { icon: VueIcon, name: "vue", title: "Vue" },
+  { icon: SvelteIcon, name: "svelte", title: "Svelte" },
+  { icon: SolidIcon, name: "solid", title: "Solid" },
+  { icon: AngularIcon, name: "angular", title: "Angular" },
+  { icon: WebComponentsIcon, name: "web-components", title: "Web Components" },
+]
+---
+<aside class="p-6">
+  <ul class="flex flex-col gap-2">
+    {frameworks.map((f) => (
+      <li>
+        <a href={`/docs/${f.name}`} aria-current={Astro.url.pathname == `/docs/${f.name}` ? "page" : undefined} class="flex gap-2 p-2 items-center aria-[current=page]:bg-primary aria-[current=page]:text-background rounded-xl hover:bg-primary/10">
+          <f.icon width="24" height="24" /> {f.title}
+        </a>
+      </li>
+    ))}
+  </ul>
+</aside>

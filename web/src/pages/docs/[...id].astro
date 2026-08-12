@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
+import Sidebar from "@/components/Sidebar.astro";
 
 export async function getStaticPaths() {
   const docs = await getCollection("docs");
@@ -17,9 +18,12 @@ const { Content } = await render(doc);
 
 <Layout>
   <Header />
-  <article class="p-4 flex-1 prose dark:prose-invert">
-    <h1>{doc.data.title}</h1>
-    <p>{doc.data.description}</p>
-    <Content />
-  </article>
+  <div class="grid grid-cols-[16rem_minmax(0,1fr)]">
+    <Sidebar />
+    <main class="p-4 flex-1 prose dark:prose-invert">
+      <h1>{doc.data.title}</h1>
+      <p>{doc.data.description}</p>
+      <Content />
+    </main>
+  </div>
 </Layout>

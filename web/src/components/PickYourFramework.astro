@@ -1,0 +1,29 @@
+---
+import JavaScriptIcon from "@/assets/javascript.svg";
+import ReactIcon from "@/assets/react.svg";
+import VueIcon from "@/assets/vue.svg";
+import SvelteIcon from "@/assets/svelte.svg";
+import SolidIcon from "@/assets/solidjs.svg";
+import AngularIcon from "@/assets/angular.svg";
+import WebComponentsIcon from "@/assets/webcomponents.svg";
+
+const frameworks = [
+  { icon: ReactIcon, name: "react", title: "React" },
+  { icon: VueIcon, name: "vue", title: "Vue" },
+  { icon: SvelteIcon, name: "svelte", title: "Svelte" },
+  { icon: SolidIcon, name: "solid", title: "Solid" },
+  { icon: AngularIcon, name: "angular", title: "Angular" },
+  { icon: WebComponentsIcon, name: "web-components", title: "Web Components" },
+  { icon: JavaScriptIcon, name: "core", title: "Vanilla" },
+]
+---
+<section class="p-8">
+  <h2 class="text-center text-3xl text-balance">Pick your framework</h2>
+  <div class="flex flex-wrap justify-center gap-8 py-8">
+    {frameworks.map((f) => (
+      <a href={`/docs/${f.name}`} title={f.title} class="grayscale-100 opacity-60 transition hover:grayscale-0 hover:opacity-100">
+        <f.icon width="96" height="96" />
+      </a>
+    ))}
+  </div>
+</section>
