@@ -13,7 +13,7 @@
     "build:angular": "pnpm --filter=angular build",
     "build:web-components": "pnpm --filter=web-components build",
     "build:examples": "pnpm --filter=examples build",
-    "build:web": "pnpm --filter=web build",
+    "build:web": "pnpm build:core && pnpm --filter=web build",
     "dev:all": "pnpm -r --parallel dev",
     "dev:core": "pnpm --filter=core dev",
     "dev:react": "pnpm --filter=react dev",
@@ -45,5 +45,5 @@
     "typescript": "5.9.3",
     "vitest": "^4.0.18"
   },
-  "packageManager": "pnpm@11.17.0"
+  "packageManager": "pnpm@11.20.0"
 }
