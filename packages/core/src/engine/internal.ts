@@ -1,3 +1,8 @@
+import { measureTextSize } from "../elements"
+import type { TextTool } from "../tools"
+import type { BoundingBox, ElementId, TextElement } from "../types"
+import type { EngineInternal } from "./engine"
+
 export {
   applyPan,
   applyWheelTransform,
@@ -10,10 +15,6 @@ export {
   dispatchPointerUpAt,
   toCanvasPoint,
 } from "./pointer"
-import { measureTextSize } from "../elements"
-import type { TextTool } from "../tools"
-import type { BoundingBox, ElementId, TextElement } from "../types"
-import type { EngineInternal } from "./engine"
 
 // The minimal internal surface a `CanvasEngine` exposes to its DOM-adapter
 // hooks (see the functions below). Everything here is `/** @internal */` on
