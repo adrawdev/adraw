@@ -1,6 +1,6 @@
 import { STROKE_COLOR, TEXT_FONT_SIZE } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
-import type { CanvasElement } from "../types"
+import type { CanvasElement, TextElement } from "../types"
 import { renderTransformOverlay } from "./render/overlay"
 import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"

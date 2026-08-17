@@ -14,20 +14,7 @@ import {
   dispatchPointerMoveAt,
   dispatchPointerUpAt,
 } from "./engine/internal"
-import type {
-  AdrawCanvasOptions,
-  CanvasEventMap,
-  MediaInput,
-  ToImageOptions,
-} from "./options"
-import type { SnappingConfig } from "./snapping"
-import type {
-  CanvasElement,
-  ElementId,
-  MediaElement,
-  ToolType,
-  ViewportState,
-} from "./types"
+import type { AdrawCanvasOptions, ToImageOptions } from "./options"
 
 export type {
   AdrawCanvasOptions,
@@ -38,86 +25,18 @@ export type {
 } from "./options"
 export { createElementGroup, pointsToPath } from "./dom/svg"
 
-// Facade: composes the headless `CanvasEngine` (state, tools, history, events)
-// with the DOM adapter in `dom/` (SVG mount, event wiring, text editor, render).
-export class AdrawCanvas {
-  private engine: CanvasEngine
+// AdrawCanvas is the engine with a DOM adapter attached: all state/tools/
+// history/events API is inherited from `CanvasEngine`; this class adds the
+// mount lifecycle, DOM event wiring and rendering (see `dom/`).
+export class AdrawCanvas extends CanvasEngine {
   private mounted: MountedDom | null = null
 
   constructor(options: AdrawCanvasOptions = {}) {
-    this.engine = new CanvasEngine(options)
+    super(options)
 
     if (options.container) {
       this.mount(options.container)
     }
-  }
-
-  setCanvasSize(width: number, height: number): void {
-    this.engine.setCanvasSize(width, height)
-  }
-
-  setActiveTool(toolType: ToolType): void {
-    this.engine.setActiveTool(toolType)
-  }
-
-  getActiveTool(): ToolType {
-    return this.engine.getActiveTool()
-  }
-
-  getViewport(): ViewportState {
-    return this.engine.getViewport()
-  }
-
-  setViewport(viewport: ViewportState): void {
-    this.engine.setViewport(viewport)
-  }
-
-  getElements(): Map<ElementId, CanvasElement> {
-    return this.engine.getElements()
-  }
-
-  insertMedia(descriptors: MediaInput | MediaInput[]): MediaElement[] {
-    return this.engine.insertMedia(descriptors)
-  }
-
-  getSelectedIds(): Set<ElementId> {
-    return this.engine.getSelectedIds()
-  }
-
-  getSnappingConfig(): SnappingConfig {
-    return this.engine.getSnappingConfig()
-  }
-
-  setSnappingConfig(config: Partial<SnappingConfig>): void {
-    this.engine.setSnappingConfig(config)
-  }
-
-  setStrokeColor(color: string): void {
-    this.engine.setStrokeColor(color)
-  }
-
-  getHideOverlayWhileTransforming(): boolean {
-    return this.engine.getHideOverlayWhileTransforming()
-  }
-
-  setHideOverlayWhileTransforming(hide: boolean): void {
-    this.engine.setHideOverlayWhileTransforming(hide)
-  }
-
-  canUndo(): boolean {
-    return this.engine.canUndo()
-  }
-
-  canRedo(): boolean {
-    return this.engine.canRedo()
-  }
-
-  undo(): boolean {
-    return this.engine.undo()
-  }
-
-  redo(): boolean {
-    return this.engine.redo()
   }
 
   handlePointerDown(
@@ -126,16 +45,10 @@ export class AdrawCanvas {
     event: PointerEvent,
   ): void {
     if (this.mounted) {
-      handlePointerDown(
-        this.mounted.state,
-        this.engine,
-        screenX,
-        screenY,
-        event,
-      )
+      handlePointerDown(this.mounted.state, this, screenX, screenY, event)
       return
     }
-    dispatchPointerDownAt(this.engine, screenX, screenY, event)
+    dispatchPointerDownAt(this, screenX, screenY, event)
   }
 
   handlePointerMove(
@@ -144,78 +57,22 @@ export class AdrawCanvas {
     event: PointerEvent,
   ): void {
     if (this.mounted) {
-      handlePointerMove(
-        this.mounted.state,
-        this.engine,
-        screenX,
-        screenY,
-        event,
-      )
+      handlePointerMove(this.mounted.state, this, screenX, screenY, event)
       return
     }
-    dispatchPointerMoveAt(this.engine, screenX, screenY, event)
+    dispatchPointerMoveAt(this, screenX, screenY, event)
   }
 
   handlePointerUp(screenX: number, screenY: number, event: PointerEvent): void {
     if (this.mounted) {
-      handlePointerUp(this.mounted.state, this.engine, screenX, screenY, event)
+      handlePointerUp(this.mounted.state, this, screenX, screenY, event)
       return
     }
-    dispatchPointerUpAt(this.engine, screenX, screenY, event)
+    dispatchPointerUpAt(this, screenX, screenY, event)
   }
 
   handleWheel(event: WheelEvent, screenX?: number, screenY?: number): void {
-    applyWheelTransform(this.engine, event, screenX, screenY)
-  }
-
-  handleKeyDown(event: KeyboardEvent): void {
-    this.engine.handleKeyDown(event)
-  }
-
-  selectAll(): void {
-    this.engine.selectAll()
-  }
-
-  clearSelection(): void {
-    this.engine.clearSelection()
-  }
-
-  deleteSelected(): void {
-    this.engine.deleteSelected()
-  }
-
-  zoomIn(): void {
-    this.engine.zoomIn()
-  }
-
-  zoomOut(): void {
-    this.engine.zoomOut()
-  }
-
-  resetZoom(): void {
-    this.engine.resetZoom()
-  }
-
-  zoomToFit(): void {
-    this.engine.zoomToFit()
-  }
-
-  getTemporaryElement(): CanvasElement | null {
-    return this.engine.getTemporaryElement()
-  }
-
-  on<K extends keyof CanvasEventMap>(
-    event: K,
-    listener: (payload: CanvasEventMap[K]) => void,
-  ): void {
-    this.engine.on(event, listener)
-  }
-
-  off<K extends keyof CanvasEventMap>(
-    event: K,
-    listener: (payload: CanvasEventMap[K]) => void,
-  ): void {
-    this.engine.off(event, listener)
+    applyWheelTransform(this, event, screenX, screenY)
   }
 
   // ── DOM adapter ──
@@ -226,13 +83,13 @@ export class AdrawCanvas {
     if (this.mounted) {
       return
     }
-    this.mounted = mountDom(this.engine, container)
-    renderAll(this.mounted.state, this.engine)
+    this.mounted = mountDom(this, container)
+    renderAll(this.mounted.state, this)
   }
 
   render(): void {
     if (this.mounted) {
-      renderAll(this.mounted.state, this.engine)
+      renderAll(this.mounted.state, this)
     }
   }
 
@@ -245,6 +102,6 @@ export class AdrawCanvas {
     if (!this.mounted) {
       throw new Error("toImage requires a mounted canvas")
     }
-    return toImage(this.mounted.state, this.engine, options)
+    return toImage(this.mounted.state, this, options)
   }
 }

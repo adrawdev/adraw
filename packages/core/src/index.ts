@@ -1,6 +1,8 @@
 export * from "./canvas"
 export * from "./coordinates"
 export * from "./elements"
+export { CanvasEngine } from "./engine/engine"
+export type { Tool, ToolContext } from "./tools/base"
 export * from "./history"
 export * from "./snapping"
 export * from "./tools/index"

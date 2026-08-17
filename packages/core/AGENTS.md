@@ -15,7 +15,7 @@ pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 
 ## Main entry point: `AdrawCanvas` class
 
-`src/canvas.ts` is a facade that composes two parts — the headless `CanvasEngine` (`src/engine/engine.ts`) and the DOM adapter (`src/dom/`). Constructed headless or with a container:
+`src/canvas.ts` defines `AdrawCanvas extends CanvasEngine` — the engine is the base class (state, tools, history, events), and this subclass composes the DOM adapter (`src/dom/`). Constructed headless or with a container:
 
 ```ts
 import { AdrawCanvas } from "@adraw/core"
@@ -31,7 +31,7 @@ const canvas = new AdrawCanvas({ container: divElement })
 
 ```
 src/
-  canvas.ts          facade — composes engine + DOM adapter, delegates every public method
+  canvas.ts          AdrawCanvas extends CanvasEngine — adds mount/render/destroy + DOM event handling
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
@@ -59,6 +59,8 @@ src/
 ```
 
 Rules: `dom/*` and `engine/*` never import each other cyclically — `engine.ts` exports the narrow `EngineInternal` interface that `engine/internal.ts` / `engine/pointer.ts` and the DOM modules consume. The engine stays DOM-free; the adapter subscribes to engine events and renders.
+
+Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own) and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
 
 ### Key methods
 
