@@ -15,17 +15,50 @@ pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 
 ## Main entry point: `AdrawCanvas` class
 
-File: `src/canvas.ts`. Constructed headless or with a container:
+`src/canvas.ts` is a facade that composes two parts — the headless `CanvasEngine` (`src/engine/engine.ts`) and the DOM adapter (`src/dom/`). Constructed headless or with a container:
 
 ```ts
 import { AdrawCanvas } from "@adraw/core"
 
-// headless (for SSR / testing)
+// headless (for SSR / testing) — engine only, no DOM
 const canvas = new AdrawCanvas()
 
-// with container (auto-mounts to DOM)
+// with container (auto-mounts to DOM — engine + DOM adapter)
 const canvas = new AdrawCanvas({ container: divElement })
 ```
+
+### Source layout
+
+```
+src/
+  canvas.ts          facade — composes engine + DOM adapter, delegates every public method
+  options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
+  engine/            headless core (no DOM imports)
+    engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
+    media.ts         insertMedia sizing math (createMediaElements)
+    selection.ts     selectAllIds, deleteSelectedElements, computeZoomToFitViewport
+    shortcuts.ts     handleShortcutKey (pure keyboard-shortcut function)
+    internal.ts      text-editing + overlay hooks over EngineInternal
+    pointer.ts       screen→canvas dispatch, wheel zoom/pan (headless pointer paths)
+  dom/               DOM adapter (imports engine/*, never the reverse)
+    adapter.ts       mountDom: SVG layers, engine event wiring, destroy
+    events.ts        setupEventListeners (pointer/wheel/dblclick/cursor/keyboard)
+    touch.ts         pinch/touch listeners
+    pointer.ts       mounted pointer handlers + getRelativePoint
+    text-editor.ts   inline <textarea> editing lifecycle
+    render.ts        renderAll, renderTemporary, updateElementGeometry, positionTextEditor
+    render/elements.ts     reconcileElements, renderSelectElements
+    render/overlay.ts      renderTransformOverlay
+    render/overlay-nodes.ts ensureOverlayNodes, renderSelectionBox
+    to-image.ts       toImage
+    svg.ts            pure SVG node helpers + CSS-class constants
+    state.ts          DomState (mutable DOM adapter state)
+  elements/          factories (elements.ts) + hit-testing (hit-test.ts)
+  tools/<tool>/      one directory per tool; index.ts exports the factory
+  coordinates.ts, history.ts, snapping.ts, viewport.ts, types.ts, constants.ts
+```
+
+Rules: `dom/*` and `engine/*` never import each other cyclically — `engine.ts` exports the narrow `EngineInternal` interface that `engine/internal.ts` / `engine/pointer.ts` and the DOM modules consume. The engine stays DOM-free; the adapter subscribes to engine events and renders.
 
 ### Key methods
 
@@ -34,7 +67,6 @@ const canvas = new AdrawCanvas({ container: divElement })
 | `mount(container)`                                      | Attach DOM adapter to an element                     |
 | `destroy()`                                             | Tear down DOM, remove event listeners                |
 | `render()`                                              | Full re-render of the SVG                            |
-| `setElements(elements)`                                 | Replace all elements                                 |
 | `getElements()`                                         | Get current elements `Map<ElementId, CanvasElement>` |
 | `setActiveTool(tool)`                                   | Switch active tool                                   |
 | `getActiveTool()`                                       | Get current tool `ToolType`                          |
@@ -52,7 +84,7 @@ const canvas = new AdrawCanvas({ container: divElement })
 
 ### Events
 
-`canvas.on(event, handler)` / `canvas.off(event, handler)` / `canvas.emit(event, payload)`
+`canvas.on(event, handler)` / `canvas.off(event, handler)` — emitted by the engine:
 
 | Event               | Payload                                       |
 | ------------------- | --------------------------------------------- |
@@ -100,7 +132,7 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 
 ## Tool system
 
-Each tool file in `src/tools/` exports a factory function (e.g. `createSelectTool()`). Implement the `Tool` interface from `src/tools/base.ts`:
+Each tool lives in `src/tools/<tool>/` and its `index.ts` exports a factory function (e.g. `createSelectTool()`). Tools with separable logic split further: `tools/select/` has `brush.ts`, `rotate.ts`, `resize.ts`, `resize-rotated.ts`, `move.ts`, `state.ts`; `tools/draw/` has `geometry.ts`. Implement the `Tool` interface from `src/tools/base.ts`:
 
 ```ts
 interface Tool {
@@ -122,22 +154,23 @@ interface Tool {
 
 ### Adding a new tool
 
-1. Create `src/tools/<name>.ts` exporting `create<Name>Tool(): Tool`
+1. Create `src/tools/<name>/index.ts` exporting `create<Name>Tool(): Tool`
 2. Export it from `src/tools/index.ts`
 3. Add it to the `ToolType` union in `src/types.ts`
-4. Add it to the tool factory map in `src/canvas.ts`
-5. Add keyboard shortcut handling in `canvas.ts` if needed
+4. Register it in the tool factory map in `src/engine/engine.ts` (constructor)
+5. Add keyboard shortcut handling in `src/engine/shortcuts.ts` if needed
 6. Update e2e tests if applicable
 
 ## Coordinate utilities
 
 File: `src/coordinates.ts`.
 
-- `screenToCanvas(screenX, screenY, svgEl, viewport)` — convert screen coords to canvas space
-- `canvasToScreen(canvasX, canvasY, svgEl, viewport)` — reverse
+- `screenToCanvas(screenPoint, viewport, canvasSize)` — convert screen coords to canvas space
+- `canvasToScreen(canvasPoint, viewport, canvasSize)` — reverse
 - `getElementBounds(element)` — get `BoundingBox` accounting for rotation
-- `getElementAtPoint(point, elements)` — hit-test (z-ordered)
-- `distance(a, b)` — Euclidean distance
+- `pointInBounds(point, bounds)` — point-in-rect test
+- `distanceBetweenPoints(a, b)` — Euclidean distance
+- `clamp(value, min, max)`
 - `generateId()` — unique ID string
 
 ## Element factories
@@ -154,7 +187,7 @@ createGroup({ children })
 cloneElement(element, overrides?)
 ```
 
-Also: `moveElement`, `resizeElement`, `rotateElement`, `getElementsBounds`, `getElementAtPoint`.
+Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection bounds live in `src/elements/hit-test.ts`: `getElementAtPoint`, `getElementsBounds` (re-exported from `elements.ts`).
 
 ## History
 
@@ -166,12 +199,14 @@ File: `src/snapping.ts`. Config via `SnappingConfig`. `calculateSnap()` snaps a 
 
 ## Rendering
 
-`AdrawCanvas` renders to an `<svg>` with two `<g>` child layers: `.adraw-elements-group` and transform overlay. Rendering is incremental (never `innerHTML = ""`):
+The DOM adapter renders to an `<svg>` with two `<g>` child layers: `.adraw-elements-group` and transform overlay. Rendering is incremental (never `innerHTML = ""`):
 
-- `reconcileElements()` — DOM diff for non-select tools
-- `renderSelectElements()` — DOM diff for select tool (only re-geometries selected)
-- `updateElementGeometry(group, element)` — in-place attrs update
-- `renderTemporary()` — renders `getTemporaryElement()` as last child with `.adraw-temporary` class
+- `src/dom/render.ts` — `renderAll()` (full render: temporary element, transform overlay, marquee, editor position), `renderTemporary()`, `updateElementGeometry()`, `positionTextEditor()`
+- `src/dom/render/elements.ts` — `reconcileElements()` (DOM diff for non-select tools), `renderSelectElements()` (DOM diff for select tool, only re-geometries selected)
+- `src/dom/render/overlay.ts` — `renderTransformOverlay()`
+- `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
+
+The adapter subscribes to the engine's four events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes.
 
 Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-background`, `--adraw-selection`. Defaults in `src/constants.ts`.
 

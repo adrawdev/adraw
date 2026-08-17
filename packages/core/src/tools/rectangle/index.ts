@@ -1,6 +1,6 @@
-import { STROKE_COLOR, STROKE_WIDTH } from "../constants"
-import { createRectangle } from "../elements"
-import type { Point, RectangleElement, ToolType } from "../types"
+import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
+import { createRectangle } from "../../elements"
+import type { Point, RectangleElement, ToolType } from "../../types"
 import {
   calculateBounds,
   createBaseToolState,
@@ -9,7 +9,7 @@ import {
   type ToolContext,
   type ToolOptions,
   type ToolState,
-} from "./base"
+} from "../base"
 
 export interface RectangleToolOptions extends ToolOptions {
   cornerRadius?: number

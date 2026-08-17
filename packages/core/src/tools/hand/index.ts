@@ -1,11 +1,11 @@
-import type { Point, ToolType } from "../types"
-import { panViewport } from "../viewport"
+import type { Point, ToolType } from "../../types"
+import { panViewport } from "../../viewport"
 import {
   createBaseToolState,
   type Tool,
   type ToolContext,
   type ToolState,
-} from "./base"
+} from "../base"
 
 export function createHandTool(): Tool {
   const state: ToolState = createBaseToolState()

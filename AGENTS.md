@@ -108,12 +108,12 @@ distrobox enter pw -- bash -lc \
 
 ### Core design (`packages/core`)
 
-A single `AdrawCanvas` class (`src/canvas.ts`) holds both the pure logic and the DOM adapter:
+`AdrawCanvas` (`src/canvas.ts`) is a thin facade composing a headless `CanvasEngine` with a DOM adapter:
 
-- **State/logic**: elements, viewport, tool state, and history. Emits typed events (`change`, `viewportChange`, `toolChange`, `selectionChange`) via `on`/`off`/`emit`. This part works headless.
-- **DOM adapter**: creates and manages an `<svg>` inside a container `HTMLElement`, wires pointer/wheel/touch/keyboard events, and updates SVG on every state change.
+- **`src/engine/`** — headless core: elements, viewport, tool state, and history. Emits typed events (`change`, `viewportChange`, `toolChange`, `selectionChange`) via `on`/`off`. Works without any DOM. Modules: `engine.ts` (the class), `media.ts` (insertMedia sizing), `selection.ts` (select/delete/zoom-to-fit math), `shortcuts.ts` (keyboard shortcuts as a pure function), `internal.ts` + `pointer.ts` (adapter-facing hooks over the narrow `EngineInternal` interface exported by `engine.ts`).
+- **`src/dom/`** — DOM adapter: creates and manages an `<svg>` inside a container `HTMLElement`, wires pointer/wheel/touch/keyboard events, and updates the SVG on every state change. Modules: `adapter.ts` (mount lifecycle + engine event wiring), `events.ts` / `touch.ts` / `pointer.ts` (event handlers), `text-editor.ts` (inline `<textarea>` editing), `render.ts` + `render/elements.ts` + `render/overlay.ts` + `render/overlay-nodes.ts` (SVG rendering), `to-image.ts`, `svg.ts` (pure SVG node helpers), `state.ts` (mutable DOM state).
 
-Construct with `new AdrawCanvas({ container })` to mount immediately, or `new AdrawCanvas()` for a headless instance and call `mount(container)` later. `destroy()` tears down the DOM.
+Construct with `new AdrawCanvas({ container })` to mount immediately, or `new AdrawCanvas()` for a headless instance and call `mount(container)` later. `destroy()` tears down the DOM. Dependency direction is strictly acyclic: `dom/* → engine/*`; `engine.ts` never imports DOM code.
 
 ### Framework bindings
 

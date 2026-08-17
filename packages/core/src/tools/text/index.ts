@@ -1,6 +1,6 @@
-import { STROKE_COLOR, TEXT_FONT_SIZE } from "../constants"
-import { createText, measureTextSize } from "../elements"
-import type { Point, TextElement, ToolType } from "../types"
+import { STROKE_COLOR, TEXT_FONT_SIZE } from "../../constants"
+import { createText, measureTextSize } from "../../elements"
+import type { Point, TextElement, ToolType } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
@@ -8,7 +8,7 @@ import {
   type ToolContext,
   type ToolOptions,
   type ToolState,
-} from "./base"
+} from "../base"
 
 export interface TextToolOptions extends ToolOptions {
   fontSize?: number

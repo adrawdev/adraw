@@ -1,19 +1,22 @@
-import { STROKE_COLOR, STROKE_WIDTH } from "../constants"
-import { createLine } from "../elements"
-import type { LineElement, Point, ToolType } from "../types"
+import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
+import { createEllipse } from "../../elements"
+import type { EllipseElement, Point, ToolType } from "../../types"
 import {
+  calculateBounds,
   createBaseToolState,
   getDefaultToolOptions,
   type Tool,
   type ToolContext,
   type ToolOptions,
   type ToolState,
-} from "./base"
+} from "../base"
 
-export function createLineTool(options: ToolOptions = {}): Tool {
+export type EllipseToolOptions = ToolOptions
+
+export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
   const toolOptions = { ...getDefaultToolOptions(), ...options }
-  let temporaryElement: LineElement | null = null
+  let temporaryElement: EllipseElement | null = null
 
   return {
     cursor: "crosshair",
@@ -40,26 +43,19 @@ export function createLineTool(options: ToolOptions = {}): Tool {
 
       state.currentPoint = point
 
-      const x = Math.min(state.startPoint.x, point.x)
-      const y = Math.min(state.startPoint.y, point.y)
-      const width = Math.abs(point.x - state.startPoint.x)
-      const height = Math.abs(point.y - state.startPoint.y)
+      const bounds = calculateBounds(state.startPoint, point)
 
-      temporaryElement = createLine({
-        endX: point.x,
-        endY: point.y,
-        height: Math.max(height, 1),
+      temporaryElement = createEllipse({
+        height: bounds.height,
         locked: false,
         rotation: 0,
-        startX: state.startPoint.x,
-        startY: state.startPoint.y,
         strokeColor:
           context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
         strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
         visible: true,
-        width: Math.max(width, 1),
-        x,
-        y,
+        width: bounds.width,
+        x: bounds.x,
+        y: bounds.y,
         zIndex: 0,
       })
     },
@@ -68,30 +64,20 @@ export function createLineTool(options: ToolOptions = {}): Tool {
         return
       }
 
-      const dx = state.currentPoint.x - state.startPoint.x
-      const dy = state.currentPoint.y - state.startPoint.y
+      const bounds = calculateBounds(state.startPoint, state.currentPoint)
 
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        const x = Math.min(state.startPoint.x, state.currentPoint.x)
-        const y = Math.min(state.startPoint.y, state.currentPoint.y)
-        const width = Math.abs(dx)
-        const height = Math.abs(dy)
-
-        const element = createLine({
-          endX: state.currentPoint.x,
-          endY: state.currentPoint.y,
-          height: Math.max(height, 1),
+      if (bounds.width > 5 && bounds.height > 5) {
+        const element = createEllipse({
+          height: bounds.height,
           locked: false,
           rotation: 0,
-          startX: state.startPoint.x,
-          startY: state.startPoint.y,
           strokeColor:
             context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
           strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
           visible: true,
-          width: Math.max(width, 1),
-          x,
-          y,
+          width: bounds.width,
+          x: bounds.x,
+          y: bounds.y,
           zIndex: context.getElements().size,
         })
 
@@ -107,6 +93,6 @@ export function createLineTool(options: ToolOptions = {}): Tool {
       state.currentPoint = null
       temporaryElement = null
     },
-    type: "line" as ToolType,
+    type: "ellipse" as ToolType,
   }
 }

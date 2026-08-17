@@ -1,11 +1,11 @@
-import { getElementAtPoint } from "../elements"
-import type { Point, ToolType } from "../types"
+import { getElementAtPoint } from "../../elements"
+import type { Point, ToolType } from "../../types"
 import {
   createBaseToolState,
   type Tool,
   type ToolContext,
   type ToolState,
-} from "./base"
+} from "../base"
 
 export function createEraserTool(): Tool {
   const state: ToolState = createBaseToolState()

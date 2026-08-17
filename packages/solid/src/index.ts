@@ -1,10 +1,9 @@
+export { Canvas, CanvasProvider } from "./components"
 export {
-  Canvas,
-  CanvasProvider,
   useCanvas,
   useHistory,
   useSelection,
   useTool,
   useTransformOverlay,
   useViewport,
-} from "./components"
+} from "./hooks"

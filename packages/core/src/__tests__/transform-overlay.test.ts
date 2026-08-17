@@ -6,7 +6,7 @@ import { createRectangle } from "../elements"
 import type { CanvasElement, ElementId } from "../types"
 
 function getOverlayGroupTransform(canvas: AdrawCanvas): string | null {
-  const svg = (canvas as any).svgElement as SVGSVGElement | null
+  const svg = (canvas as any).mounted.state.svgElement as SVGSVGElement | null
   if (!svg) {
     return null
   }
@@ -28,13 +28,13 @@ describe("transform overlay rotation with multi-selection", () => {
   let canvas: AdrawCanvas
 
   function setElements(elements: CanvasElement[]) {
-    ;(canvas as any).elements = new Map<ElementId, CanvasElement>(
+    ;(canvas as any).engine.elements = new Map<ElementId, CanvasElement>(
       elements.map((el) => [el.id, el]),
     )
   }
 
   function setSelectedIds(ids: ElementId[]) {
-    ;(canvas as any).selectedIds = new Set(ids)
+    ;(canvas as any).engine.selectedIds = new Set(ids)
   }
 
   beforeEach(() => {
