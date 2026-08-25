@@ -19,6 +19,9 @@ test.describe("text tool", () => {
     const editor = page.locator("textarea.adraw-text-editor")
     await expect(editor).toBeVisible()
     await editor.fill("Hello adraw")
+    await expect(
+      page.locator(".adraw-elements-group .adraw-temporary"),
+    ).toHaveCSS("visibility", "hidden")
     await page.keyboard.press("Enter")
 
     const state = await snapshot(page)

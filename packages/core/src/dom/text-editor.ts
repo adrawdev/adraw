@@ -10,7 +10,11 @@ import {
   updateTextElement,
 } from "../engine/internal"
 import type { Point, TextElement } from "../types"
-import { positionTextEditor, renderAll } from "./render"
+import {
+  positionTextEditor,
+  renderAll,
+  setTextElementVisibility,
+} from "./render"
 import type { DomState } from "./state"
 import { textEditorClass } from "./svg"
 
@@ -44,6 +48,7 @@ export function startExistingTextEditing(
   state.textEditOriginalElement = element
   state.textEditPoint = { x: element.x, y: element.y }
   openTextEditor(state, engine, element.text)
+  renderAll(state, engine)
 }
 
 function openTextEditor(
@@ -55,14 +60,14 @@ function openTextEditor(
     return
   }
 
-  const textarea = document.createElement("textarea")
+  const body = state.container.ownerDocument.body
+  if (!body) {
+    return
+  }
+
+  const textarea = state.container.ownerDocument.createElement("textarea")
   textarea.classList.add(textEditorClass)
   textarea.value = value
-  // The editor is absolutely positioned in canvas-screen coordinates, so the
-  // container must act as its positioning context.
-  if (getComputedStyle(state.container).position === "static") {
-    state.container.style.position = "relative"
-  }
   textarea.style.background = "transparent"
   textarea.style.border = `1px dashed ${SELECTION_COLOR}`
   textarea.style.color = STROKE_COLOR
@@ -105,7 +110,9 @@ function openTextEditor(
     commitTextEditing(state, engine)
   })
 
-  state.container.appendChild(textarea)
+  // Keep the editor outside the canvas container so it cannot change the
+  // stacking order of controls that are siblings of the canvas.
+  body.appendChild(textarea)
   state.textEditor = textarea
   positionTextEditor(state, engine)
   // Focusing synchronously is undone by the pointerdown's own default action
@@ -120,6 +127,7 @@ function openTextEditor(
 
 function removeTextEditor(state: DomState): void {
   const editor = state.textEditor
+  setTextElementVisibility(state, true)
   // Null the ref first so a blur event fired by removal can't re-enter the
   // commit/cancel paths.
   state.textEditor = null

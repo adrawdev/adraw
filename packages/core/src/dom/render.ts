@@ -25,6 +25,7 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
   }
 
   renderTemporary(state, engine)
+  setTextElementVisibility(state, !state.textEditor)
   renderTransformOverlay(state, engine)
   renderSelectionBox(state, engine)
   positionTextEditor(state, engine)
@@ -47,6 +48,8 @@ export function renderTemporary(state: DomState, engine: CanvasEngine): void {
       !engine.getElements().has(state.temporaryNode.id)
     ) {
       state.temporaryNode.remove()
+    } else if (state.temporaryNode) {
+      state.temporaryNode.style.visibility = ""
     }
     state.temporaryNode = null
     state.temporaryType = null
@@ -68,6 +71,26 @@ export function renderTemporary(state: DomState, engine: CanvasEngine): void {
   }
 
   updateElementGeometry(state.temporaryNode, tempElement)
+}
+
+export function setTextElementVisibility(
+  state: DomState,
+  visible: boolean,
+): void {
+  if (state.temporaryNode) {
+    state.temporaryNode.style.visibility = visible ? "" : "hidden"
+  }
+  if (!state.textEditElementId || !state.elementsGroup) {
+    return
+  }
+
+  for (const child of state.elementsGroup.children) {
+    if (child.id === state.textEditElementId) {
+      const group = child as SVGGElement
+      group.style.visibility = visible ? "" : "hidden"
+      break
+    }
+  }
 }
 
 // Update an existing element's DOM node (transform + type-specific geometry)
@@ -130,8 +153,8 @@ export function updateElementGeometry(
   }
 }
 
-// Keep the editor anchored to its canvas-space point (and sized to its
-// content) across zoom/pan/typing.
+// Keep the document-positioned editor anchored to its canvas-space point (and
+// sized to its content) across zoom/pan/typing.
 export function positionTextEditor(
   state: DomState,
   engine: CanvasEngine,
@@ -142,10 +165,25 @@ export function positionTextEditor(
 
   const viewport = engine.getViewport()
   const canvasSize = engine.getCanvasSize()
+  const container = state.container
+  const canvasRect = state.svgElement?.getBoundingClientRect()
+  if (!canvasRect || !container) {
+    return
+  }
+  const canvasWidth = canvasRect.width || canvasSize.width
+  const canvasHeight = canvasRect.height || canvasSize.height
+  const scrollX = container.ownerDocument.defaultView?.scrollX ?? 0
+  const scrollY = container.ownerDocument.defaultView?.scrollY ?? 0
   const screenX =
-    (state.textEditPoint.x - viewport.x) * viewport.zoom + canvasSize.width / 2
+    canvasRect.left +
+    scrollX +
+    (state.textEditPoint.x - viewport.x) * viewport.zoom +
+    canvasWidth / 2
   const screenY =
-    (state.textEditPoint.y - viewport.y) * viewport.zoom + canvasSize.height / 2
+    canvasRect.top +
+    scrollY +
+    (state.textEditPoint.y - viewport.y) * viewport.zoom +
+    canvasHeight / 2
 
   const fontSize =
     (state.textEditElementId
