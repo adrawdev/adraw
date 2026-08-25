@@ -1,0 +1,40 @@
+{
+  "skill_name": "adraw-release",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I am preparing a release of this public pnpm monorepo. Explain how to review pending Changesets, choose version bumps, run validation, and generate the version commit safely.",
+      "expected_output": "The response gives the repository preflight, Changesets review and semver guidance, validation commands, changeset versioning command, and generated-diff review before commit.",
+      "files": [],
+      "expectations": [
+        "Requires a clean, up-to-date main checkout without discarding unrelated changes",
+        "Uses pnpm exec changeset status and pnpm ci:version",
+        "Includes pnpm lint, pnpm test, and pnpm build:all before versioning",
+        "Requires reviewing generated package manifests and changelogs before committing"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "What exactly does the adraw publish command do, and what should I verify before and after running it?",
+      "expected_output": "The response explains ci:release's install/build/login/publish sequence, npm authentication and clean-tree checks, local tag creation, and post-publish verification.",
+      "files": [],
+      "expectations": [
+        "Identifies pnpm ci:release as the canonical publish command",
+        "Describes npm login and changeset publish in its sequence",
+        "Says to inspect partial publish results before retrying",
+        "Says changeset publish creates local package tags"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "After publishing, how do I make the package tags create GitHub releases in this repository?",
+      "expected_output": "The response explains that tags must be pushed, uses git push origin main --tags, and identifies the @adraw/* tag workflow trigger.",
+      "files": [],
+      "expectations": [
+        "Uses git push origin main --tags rather than only --follow-tags",
+        "Identifies @adraw/* as the release tag pattern",
+        "Connects pushed tags to .github/workflows/release.yml"
+      ]
+    }
+  ]
+}
