@@ -15,6 +15,7 @@ function makeContext(elements: CanvasElement[]) {
     getCanvasSize: () => ({ height: 600, width: 800 }),
     getElements: () => elementMap,
     getSelectedIds: () => selectedIds,
+    getStrokeColor: () => "#000",
     getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
     historyCount: () => historyCount,
     pushHistory: () => {
@@ -54,6 +55,8 @@ function rect(x: number, y: number, id: string): CanvasElement {
     id,
     locked: false,
     rotation: 0,
+    strokeColor: "#000",
+    strokeWidth: 2,
     visible: true,
     width: 40,
     x,

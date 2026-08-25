@@ -17,6 +17,8 @@ function makeRect(overrides: Partial<RectangleElement> = {}): RectangleElement {
     height: 100,
     locked: false,
     rotation: 0,
+    strokeColor: "#000",
+    strokeWidth: 2,
     visible: true,
     width: 100,
     x: 0,
