@@ -11,10 +11,9 @@
   },
   "dependencies": {
     "@adraw/core": "workspace:*",
-    "@astrojs/mdx": "^7.0.0",
+    "@astrojs/mdx": "^7.0.8",
     "@fontsource-variable/outfit": "^5.2.8",
     "@lucide/astro": "^1.25.0",
-    "astro": "7.0.3"
-  },
-  "devDependencies": {}
+    "astro": "7.2.7"
+  }
 }

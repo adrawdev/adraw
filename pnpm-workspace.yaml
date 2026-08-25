@@ -7,7 +7,7 @@ allowBuilds:
   svelte-preprocess: true
 
 minimumReleaseAgeExclude:
-  - astro@7.0.3
+  - astro@7.0.3 || 7.2.7
   - "@rollup/rollup-android-arm-eabi@4.63.0"
   - "@rollup/rollup-android-arm64@4.63.0"
   - "@rollup/rollup-darwin-arm64@4.63.0"
