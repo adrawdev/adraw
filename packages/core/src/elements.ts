@@ -19,6 +19,14 @@ export type ElementFactory<T extends CanvasElement> = Omit<T, "id" | "type"> & {
   id?: string
 }
 
+export function getNextZIndex(elements: Iterable<CanvasElement>): number {
+  let maxZIndex = 0
+  for (const element of elements) {
+    maxZIndex = Math.max(maxZIndex, element.zIndex)
+  }
+  return maxZIndex + 1
+}
+
 // Default spline tension for freehand paths (0 = straight segments, 1 = full
 // Catmull-Rom curve). Shared by the draw tool and the renderer so a path always
 // looks the same regardless of how it was constructed.

@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 
+function pointerEvent(): PointerEvent {
+  return {
+    ctrlKey: false,
+    shiftKey: false,
+    target: {
+      getAttribute: () => null,
+    },
+  } as unknown as PointerEvent
+}
+
 describe("insertMedia", () => {
   it("returns an empty array for an empty input array", () => {
     const canvas = new AdrawCanvas()
@@ -51,6 +61,40 @@ describe("insertMedia", () => {
 
     expect(result[0].zIndex).toBe(1)
     expect(result[1].zIndex).toBe(2)
+  })
+
+  it("moves a newly drawn element instead of the image underneath it", () => {
+    const canvas = new AdrawCanvas()
+    const [image] = canvas.insertMedia({
+      height: 100,
+      mimeType: "image/png",
+      naturalHeight: 100,
+      naturalWidth: 100,
+      src: "data:image/png,1",
+      width: 100,
+      x: 0,
+      y: 0,
+    })
+
+    canvas.setActiveTool("rectangle")
+    canvas.handlePointerDown(10, 10, pointerEvent())
+    canvas.handlePointerMove(90, 90, pointerEvent())
+    canvas.handlePointerUp(90, 90, pointerEvent())
+
+    const rectangle = [...canvas.getElements().values()].find(
+      (element) => element.type === "rectangle",
+    )!
+
+    expect(rectangle.zIndex).toBeGreaterThan(image.zIndex)
+
+    canvas.handlePointerDown(50, 50, pointerEvent())
+    canvas.handlePointerMove(70, 70, pointerEvent())
+    canvas.handlePointerUp(70, 70, pointerEvent())
+
+    expect(canvas.getElements().get(image.id)?.x).toBe(0)
+    expect(canvas.getElements().get(image.id)?.y).toBe(0)
+    expect(canvas.getElements().get(rectangle.id)?.x).toBe(30)
+    expect(canvas.getElements().get(rectangle.id)?.y).toBe(30)
   })
 
   describe("width and height defaults", () => {

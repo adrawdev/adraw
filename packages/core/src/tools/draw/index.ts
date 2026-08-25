@@ -1,3 +1,4 @@
+import { getNextZIndex } from "../../elements"
 import type { PathElement, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
@@ -66,7 +67,7 @@ export function createDrawTool(options: DrawToolOptions = {}): Tool {
         currentPoints,
         { ...toolOptions, strokeColor: color },
         {
-          zIndex: context.getElements().size,
+          zIndex: getNextZIndex(context.getElements().values()),
         },
       )
 

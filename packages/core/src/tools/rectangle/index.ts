@@ -1,5 +1,5 @@
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
-import { createRectangle } from "../../elements"
+import { createRectangle, getNextZIndex } from "../../elements"
 import type { Point, RectangleElement, ToolType } from "../../types"
 import {
   calculateBounds,
@@ -82,7 +82,7 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
           width: bounds.width,
           x: bounds.x,
           y: bounds.y,
-          zIndex: context.getElements().size,
+          zIndex: getNextZIndex(context.getElements().values()),
         })
 
         const elements = context.getElements()

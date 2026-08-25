@@ -1,5 +1,5 @@
 import { STROKE_COLOR, TEXT_FONT_SIZE } from "../../constants"
-import { createText, measureTextSize } from "../../elements"
+import { createText, getNextZIndex, measureTextSize } from "../../elements"
 import type { Point, TextElement, ToolType } from "../../types"
 import {
   createBaseToolState,
@@ -91,7 +91,10 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
       if (pendingText.trim() !== "" && temporaryElement) {
         const element = temporaryElement
         const elements = context.getElements()
-        elements.set(element.id, { ...element, zIndex: elements.size })
+        elements.set(element.id, {
+          ...element,
+          zIndex: getNextZIndex(elements.values()),
+        })
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()

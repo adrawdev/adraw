@@ -1,5 +1,5 @@
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
-import { createEllipse } from "../../elements"
+import { createEllipse, getNextZIndex } from "../../elements"
 import type { EllipseElement, Point, ToolType } from "../../types"
 import {
   calculateBounds,
@@ -78,7 +78,7 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
           width: bounds.width,
           x: bounds.x,
           y: bounds.y,
-          zIndex: context.getElements().size,
+          zIndex: getNextZIndex(context.getElements().values()),
         })
 
         const elements = context.getElements()

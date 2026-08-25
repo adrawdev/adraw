@@ -1,5 +1,5 @@
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
-import { createLine } from "../../elements"
+import { createLine, getNextZIndex } from "../../elements"
 import type { LineElement, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
@@ -92,7 +92,7 @@ export function createLineTool(options: ToolOptions = {}): Tool {
           width: Math.max(width, 1),
           x,
           y,
-          zIndex: context.getElements().size,
+          zIndex: getNextZIndex(context.getElements().values()),
         })
 
         const elements = context.getElements()

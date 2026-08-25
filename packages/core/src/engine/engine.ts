@@ -1,5 +1,5 @@
 import { STROKE_COLOR } from "../constants"
-import { getElementsBounds } from "../elements"
+import { getElementsBounds, getNextZIndex } from "../elements"
 import {
   canRedo,
   canUndo,
@@ -183,15 +183,11 @@ export class CanvasEngine {
       return []
     }
 
-    const maxZ = Math.max(
-      0,
-      ...[...this.elements.values()].map((el) => el.zIndex),
-    )
     const elements = createMediaElements(
       inputs,
       this.viewport,
       this.canvasSize,
-      maxZ + 1,
+      getNextZIndex(this.elements.values()),
     )
 
     this.history = pushHistory(this.history, this.elements, this.selectedIds)
