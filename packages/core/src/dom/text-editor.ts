@@ -78,6 +78,7 @@ function openTextEditor(
   textarea.style.padding = "0"
   textarea.style.position = "absolute"
   textarea.style.resize = "none"
+  textarea.style.userSelect = "text"
   textarea.style.whiteSpace = "pre"
   textarea.style.zIndex = "10"
   textarea.setAttribute("wrap", "off")

@@ -22,6 +22,9 @@ test.describe("text tool", () => {
     await expect(
       page.locator(".adraw-elements-group .adraw-temporary"),
     ).toHaveCSS("visibility", "hidden")
+    await expect(
+      page.locator(".adraw-elements-group .adraw-temporary text"),
+    ).toHaveCSS("user-select", "none")
     await page.keyboard.press("Enter")
 
     const state = await snapshot(page)

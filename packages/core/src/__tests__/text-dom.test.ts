@@ -38,12 +38,14 @@ describe("text editor DOM integration", () => {
     expect(editor).not.toBeNull()
     expect(container.style.position).toBe("")
     expect(editor!.parentElement).toBe(document.body)
+    expect(editor!.style.userSelect).toBe("text")
 
     editor!.value = "Hello"
     editor!.dispatchEvent(new Event("input", { bubbles: true }))
 
     const textGroup = container.querySelector(".adraw-temporary") as SVGGElement
     expect(textGroup.textContent).toBe("Hello")
+    expect(textGroup.querySelector("text")?.style.userSelect).toBe("none")
     expect(getComputedStyle(textGroup).visibility).toBe("hidden")
 
     editor!.dispatchEvent(

@@ -175,6 +175,7 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       text.setAttribute("font-family", "system-ui, sans-serif")
       text.setAttribute("font-size", `${element.fontSize}`)
       text.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+      text.style.userSelect = "none"
       text.style.whiteSpace = "pre"
       appendTextLines(text, element)
       group.appendChild(text)
