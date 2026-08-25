@@ -31,7 +31,12 @@ export function startTextEditing(
   }
   dispatchPointerDown(engine, point, event)
   state.textEditPoint = point
-  openTextEditor(state, engine, "")
+  const temporaryElement = engine.getTemporaryElement()
+  const color =
+    temporaryElement?.type === "text"
+      ? temporaryElement.strokeColor || STROKE_COLOR
+      : undefined
+  openTextEditor(state, engine, "", color)
 }
 
 // Start editing an existing (committed) text element in place. Live edits
@@ -47,7 +52,12 @@ export function startExistingTextEditing(
   state.textEditElementId = element.id
   state.textEditOriginalElement = element
   state.textEditPoint = { x: element.x, y: element.y }
-  openTextEditor(state, engine, element.text)
+  openTextEditor(
+    state,
+    engine,
+    element.text,
+    element.strokeColor || STROKE_COLOR,
+  )
   renderAll(state, engine)
 }
 
@@ -55,6 +65,7 @@ function openTextEditor(
   state: DomState,
   engine: CanvasEngine,
   value: string,
+  color = STROKE_COLOR,
 ): void {
   if (!state.container || state.textEditor) {
     return
@@ -70,7 +81,7 @@ function openTextEditor(
   textarea.value = value
   textarea.style.background = "transparent"
   textarea.style.border = `1px dashed ${SELECTION_COLOR}`
-  textarea.style.color = STROKE_COLOR
+  textarea.style.color = color
   textarea.style.fontFamily = "system-ui, sans-serif"
   textarea.style.margin = "0"
   textarea.style.outline = "none"

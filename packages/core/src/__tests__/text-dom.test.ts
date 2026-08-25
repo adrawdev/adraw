@@ -22,6 +22,7 @@ describe("text editor DOM integration", () => {
     const container = document.createElement("div")
     document.body.appendChild(container)
     const canvas = new AdrawCanvas({ container })
+    canvas.setStrokeColor("#ff00aa")
     canvas.setActiveTool("text")
 
     const svg = container.querySelector("svg")!
@@ -36,6 +37,7 @@ describe("text editor DOM integration", () => {
 
     const editor = document.querySelector<HTMLTextAreaElement>("textarea")
     expect(editor).not.toBeNull()
+    expect(editor!.style.color).toBe("#ff00aa")
     expect(container.style.position).toBe("")
     expect(editor!.parentElement).toBe(document.body)
     expect(editor!.style.userSelect).toBe("text")
@@ -68,6 +70,7 @@ describe("text editor DOM integration", () => {
     const container = document.createElement("div")
     document.body.appendChild(container)
     const canvas = new AdrawCanvas({ container })
+    canvas.setStrokeColor("#ff00aa")
     canvas.setActiveTool("text")
 
     const svg = container.querySelector("svg")!
@@ -98,6 +101,7 @@ describe("text editor DOM integration", () => {
       document.querySelector<HTMLTextAreaElement>("textarea")
     const textGroup = container.querySelector(".adraw-temporary") as SVGGElement
     expect(existingEditor?.value).toBe("Hello")
+    expect(existingEditor?.style.color).toBe("#ff00aa")
     expect(getComputedStyle(textGroup).visibility).toBe("hidden")
 
     existingEditor!.dispatchEvent(
