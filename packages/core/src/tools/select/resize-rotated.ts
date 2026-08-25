@@ -18,6 +18,7 @@ export function resizeRotatedElement(
   point: Point,
   singleId: ElementId,
   constrainProportions = false,
+  fromCenter = false,
 ): void {
   const bounds = state.originalBounds
   const singleOriginal = state.originalPositions.get(singleId)
@@ -46,21 +47,34 @@ export function resizeRotatedElement(
   const localX = cx + px * cos + py * sin
   const localY = cy - px * sin + py * cos
 
-  // Opposite edge stays fixed in local space.
-  let anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
-  let anchorY = movesTop ? bounds.y + bounds.height : bounds.y
+  // Alt keeps the element center fixed; otherwise the opposite edge stays
+  // fixed in local space.
+  let anchorX = fromCenter
+    ? bounds.x + bounds.width / 2
+    : movesLeft
+      ? bounds.x + bounds.width
+      : bounds.x
+  let anchorY = fromCenter
+    ? bounds.y + bounds.height / 2
+    : movesTop
+      ? bounds.y + bounds.height
+      : bounds.y
 
   // Left signed so a handle dragged past the opposite edge yields a negative
   // size, which flips the element across the anchor.
   let newWidth = changesWidth
-    ? movesLeft
-      ? anchorX - localX
-      : localX - anchorX
+    ? fromCenter
+      ? 2 * (movesLeft ? anchorX - localX : localX - anchorX)
+      : movesLeft
+        ? anchorX - localX
+        : localX - anchorX
     : bounds.width
   let newHeight = changesHeight
-    ? movesTop
-      ? anchorY - localY
-      : localY - anchorY
+    ? fromCenter
+      ? 2 * (movesTop ? anchorY - localY : localY - anchorY)
+      : movesTop
+        ? anchorY - localY
+        : localY - anchorY
     : bounds.height
 
   if (constrainProportions) {
@@ -171,11 +185,12 @@ export function resizeRotatedElement(
 
   // World position of the anchor stays fixed: world = C + R(theta)*d.
   // newDx/newDy carry the (possibly negative) sign so the center lands on the
-  // correct side when the box flips past the anchor.
+  // correct side when the box flips past the anchor. Alt keeps the center in
+  // place instead.
   const anchorWorldX = cx + origDx * cos - origDy * sin
   const anchorWorldY = cy + origDx * sin + origDy * cos
-  const newCx = anchorWorldX - (newDx * cos - newDy * sin)
-  const newCy = anchorWorldY - (newDx * sin + newDy * cos)
+  const newCx = fromCenter ? cx : anchorWorldX - (newDx * cos - newDy * sin)
+  const newCy = fromCenter ? cy : anchorWorldY - (newDx * sin + newDy * cos)
 
   // Store positive dimensions about the same center; a rectangle mirrored about
   // its own center is identical, so abs() is all the flip needs here.

@@ -76,6 +76,7 @@ export function resizeSelection(
   point: Point,
   selectedIds: Set<ElementId>,
   constrainProportions = false,
+  fromCenter = false,
 ): void {
   const bounds = state.originalBounds
   const dragHandle = state.dragHandle
@@ -96,25 +97,45 @@ export function resizeSelection(
     selectedIds.size === 1 ? state.originalPositions.get(singleId) : undefined
 
   if (singleOriginal && singleOriginal.rotation % 360 !== 0) {
-    resizeRotatedElement(state, context, point, singleId, constrainProportions)
+    resizeRotatedElement(
+      state,
+      context,
+      point,
+      singleId,
+      constrainProportions,
+      fromCenter,
+    )
     return
   }
 
   const elements = context.getElements()
 
-  // The corner/edge opposite the dragged handle stays fixed.
-  let anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
-  let anchorY = movesTop ? bounds.y + bounds.height : bounds.y
+  // Alt keeps the selection center fixed; otherwise the corner/edge opposite
+  // the dragged handle stays fixed.
+  let anchorX = fromCenter
+    ? bounds.x + bounds.width / 2
+    : movesLeft
+      ? bounds.x + bounds.width
+      : bounds.x
+  let anchorY = fromCenter
+    ? bounds.y + bounds.height / 2
+    : movesTop
+      ? bounds.y + bounds.height
+      : bounds.y
 
   let newWidth = changesWidth
-    ? movesLeft
-      ? anchorX - point.x
-      : point.x - anchorX
+    ? fromCenter
+      ? 2 * (movesLeft ? anchorX - point.x : point.x - anchorX)
+      : movesLeft
+        ? anchorX - point.x
+        : point.x - anchorX
     : bounds.width
   let newHeight = changesHeight
-    ? movesTop
-      ? anchorY - point.y
-      : point.y - anchorY
+    ? fromCenter
+      ? 2 * (movesTop ? anchorY - point.y : point.y - anchorY)
+      : movesTop
+        ? anchorY - point.y
+        : point.y - anchorY
     : bounds.height
 
   if (constrainProportions) {

@@ -187,7 +187,14 @@ export function createSelectTool(
         state.dragHandle === "line-start" ||
         state.dragHandle === "line-end"
       ) {
-        resizeSelection(state, context, point, selectedIds, event.shiftKey)
+        resizeSelection(
+          state,
+          context,
+          point,
+          selectedIds,
+          event.shiftKey,
+          event.altKey,
+        )
         return
       }
 
@@ -196,7 +203,14 @@ export function createSelectTool(
         state.dragHandle !== "rotation" &&
         state.originalBounds
       ) {
-        resizeSelection(state, context, point, selectedIds, event.shiftKey)
+        resizeSelection(
+          state,
+          context,
+          point,
+          selectedIds,
+          event.shiftKey,
+          event.altKey,
+        )
         return
       }
 

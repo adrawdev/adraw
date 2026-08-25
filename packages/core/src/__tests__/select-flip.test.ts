@@ -32,9 +32,10 @@ function makeContext(elements: CanvasElement[]) {
 // the modifier flags the select tool reads.
 function pointerEvent(
   anchor: string | null,
-  modifiers: { shiftKey?: boolean } = {},
+  modifiers: { altKey?: boolean; shiftKey?: boolean } = {},
 ): PointerEvent {
   return {
+    altKey: modifiers.altKey ?? false,
     ctrlKey: false,
     shiftKey: modifiers.shiftKey ?? false,
     target: {
@@ -49,9 +50,9 @@ function dragHandle(
   anchor: string,
   from: Point,
   to: Point,
-  modifiers: { shiftKey?: boolean } = {},
+  modifiers: { altKey?: boolean; shiftKey?: boolean } = {},
 ) {
-  tool.onPointerDown(context, from, pointerEvent(anchor))
+  tool.onPointerDown(context, from, pointerEvent(anchor, modifiers))
   tool.onPointerMove(context, to, pointerEvent(anchor, modifiers))
   tool.onPointerUp(context, to, pointerEvent(null))
 }
@@ -264,6 +265,120 @@ describe("select tool resize flipping", () => {
     expect(result.width).toBeCloseTo(200)
   })
 
+  it("resizes a corner from the selection center when Alt is held", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    dragHandle(
+      tool,
+      context,
+      "top-left",
+      { x: 0, y: 0 },
+      { x: -50, y: -50 },
+      { altKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(-50)
+    expect(result.y).toBeCloseTo(-50)
+    expect(result.width).toBeCloseTo(200)
+    expect(result.height).toBeCloseTo(200)
+  })
+
+  it("resizes an edge from the selection center when Alt is held", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    dragHandle(
+      tool,
+      context,
+      "right-center",
+      { x: 100, y: 50 },
+      { x: 200, y: 50 },
+      { altKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(-100)
+    expect(result.width).toBeCloseTo(300)
+    expect(result.y).toBeCloseTo(0)
+    expect(result.height).toBeCloseTo(100)
+  })
+
+  it("scales every selected element around the selection center when Alt is held", () => {
+    const first = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      id: "first",
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const second = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      id: "second",
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 200,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([first, second])
+    context.setSelectedIds(new Set([first.id, second.id]))
+
+    // Selection bounds are 300x100 with center (150, 50). Doubling its size
+    // around the center gives bounds x=-150, width=600.
+    dragHandle(
+      tool,
+      context,
+      "bottom-right",
+      { x: 300, y: 100 },
+      { x: 450, y: 150 },
+      { altKey: true },
+    )
+
+    const resultFirst = context.getElements().get(first.id)!
+    expect(resultFirst.x).toBeCloseTo(-150)
+    expect(resultFirst.width).toBeCloseTo(200)
+    expect(resultFirst.y).toBeCloseTo(-50)
+    expect(resultFirst.height).toBeCloseTo(200)
+
+    const resultSecond = context.getElements().get(second.id)!
+    expect(resultSecond.x).toBeCloseTo(250)
+    expect(resultSecond.width).toBeCloseTo(200)
+    expect(resultSecond.y).toBeCloseTo(-50)
+    expect(resultSecond.height).toBeCloseTo(200)
+  })
+
   it("constrains a corner resize to the original proportions while Shift is held", () => {
     const rect = createRectangle({
       cornerRadius: 0,
@@ -360,5 +475,38 @@ describe("select tool resize flipping", () => {
     expect(result.y).toBeCloseTo(-225)
     expect(result.width).toBeCloseTo(500)
     expect(result.height).toBeCloseTo(250)
+  })
+
+  it("resizes a rotated corner around the element center when Alt is held", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 90,
+      visible: true,
+      width: 200,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    // The rotated top-left handle starts at (150, -50). In local space, move
+    // it to (-150, -50), doubling both dimensions around the center (100, 50).
+    dragHandle(
+      tool,
+      context,
+      "top-left",
+      { x: 150, y: -50 },
+      { x: 200, y: -200 },
+      { altKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(-150)
+    expect(result.y).toBeCloseTo(-50)
+    expect(result.width).toBeCloseTo(500)
+    expect(result.height).toBeCloseTo(200)
   })
 })
