@@ -1,7 +1,12 @@
 import type { ElementId, Point } from "../../types"
 import { type ToolContext } from "../base"
 import { resizeRotatedElement } from "./resize-rotated"
-import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
+import {
+  constrainResizeDimensions,
+  getPointsBounds,
+  getResizeAxes,
+  type SelectToolState,
+} from "./state"
 
 // Drag a line's endpoint handle — move that endpoint and update bbox.
 function resizeLineEndpoint(
@@ -70,6 +75,7 @@ export function resizeSelection(
   context: ToolContext,
   point: Point,
   selectedIds: Set<ElementId>,
+  constrainProportions = false,
 ): void {
   const bounds = state.originalBounds
   const dragHandle = state.dragHandle
@@ -90,29 +96,51 @@ export function resizeSelection(
     selectedIds.size === 1 ? state.originalPositions.get(singleId) : undefined
 
   if (singleOriginal && singleOriginal.rotation % 360 !== 0) {
-    resizeRotatedElement(state, context, point, singleId)
+    resizeRotatedElement(state, context, point, singleId, constrainProportions)
     return
   }
 
   const elements = context.getElements()
 
   // The corner/edge opposite the dragged handle stays fixed.
-  const anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
-  const anchorY = movesTop ? bounds.y + bounds.height : bounds.y
+  let anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
+  let anchorY = movesTop ? bounds.y + bounds.height : bounds.y
 
-  const newWidth = changesWidth
+  let newWidth = changesWidth
     ? movesLeft
       ? anchorX - point.x
       : point.x - anchorX
     : bounds.width
-  const newHeight = changesHeight
+  let newHeight = changesHeight
     ? movesTop
       ? anchorY - point.y
       : point.y - anchorY
     : bounds.height
 
-  const scaleX = changesWidth ? newWidth / bounds.width : 1
-  const scaleY = changesHeight ? newHeight / bounds.height : 1
+  if (constrainProportions) {
+    const constrained = constrainResizeDimensions(
+      newWidth,
+      newHeight,
+      bounds.width,
+      bounds.height,
+      changesWidth,
+      changesHeight,
+    )
+    newWidth = constrained.width
+    newHeight = constrained.height
+
+    // An edge constraint fixes the opposite edge's midpoint, rather than its
+    // corner, so the derived dimension grows equally on both sides.
+    if (!changesWidth) {
+      anchorX = bounds.x + bounds.width / 2
+    }
+    if (!changesHeight) {
+      anchorY = bounds.y + bounds.height / 2
+    }
+  }
+
+  const scaleX = newWidth / bounds.width
+  const scaleY = newHeight / bounds.height
 
   for (const id of selectedIds) {
     const original = state.originalPositions.get(id)

@@ -165,7 +165,7 @@ export function createSelectTool(
         }
       }
     },
-    onPointerMove(context: ToolContext, point: Point, _event: PointerEvent) {
+    onPointerMove(context: ToolContext, point: Point, event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
@@ -187,7 +187,7 @@ export function createSelectTool(
         state.dragHandle === "line-start" ||
         state.dragHandle === "line-end"
       ) {
-        resizeSelection(state, context, point, selectedIds)
+        resizeSelection(state, context, point, selectedIds, event.shiftKey)
         return
       }
 
@@ -196,7 +196,7 @@ export function createSelectTool(
         state.dragHandle !== "rotation" &&
         state.originalBounds
       ) {
-        resizeSelection(state, context, point, selectedIds)
+        resizeSelection(state, context, point, selectedIds, event.shiftKey)
         return
       }
 

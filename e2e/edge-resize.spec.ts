@@ -60,6 +60,27 @@ test.describe("edge resize", () => {
     expect(after.width).toBeCloseTo(before.width, 0)
   })
 
+  test("holding Shift constrains a corner resize to the original proportions", async ({
+    page,
+  }) => {
+    const svg = await openCanvas(page)
+    const { to } = await drawAndSelect(page, svg)
+    const before = await elementSize(page)
+
+    // The horizontal drag is dominant, so the resized height follows the
+    // original width/height ratio instead of the pointer's exact y position.
+    await page.keyboard.down("Shift")
+    await drag(page, svg, { x: to.x, y: to.y }, { x: to.x + 100, y: to.y + 20 })
+    await page.keyboard.up("Shift")
+
+    const after = await elementSize(page)
+    expect(after.width).toBeCloseTo(before.width + 100, 0)
+    expect(after.height).toBeCloseTo(
+      (before.width + 100) * (before.height / before.width),
+      0,
+    )
+  })
+
   test("the transform overlay renders four corner handles", async ({
     page,
   }) => {

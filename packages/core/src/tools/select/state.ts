@@ -90,3 +90,39 @@ export function getResizeAxes(handle: string): {
   const changesHeight = handle !== "left-center" && handle !== "right-center"
   return { changesHeight, changesWidth, movesLeft, movesTop }
 }
+
+export function constrainResizeDimensions(
+  width: number,
+  height: number,
+  originalWidth: number,
+  originalHeight: number,
+  changesWidth: boolean,
+  changesHeight: boolean,
+): { height: number; width: number } {
+  if (changesWidth && changesHeight) {
+    const scale = Math.max(
+      Math.abs(width) / originalWidth,
+      Math.abs(height) / originalHeight,
+    )
+    return {
+      height: (Math.sign(height) || 1) * originalHeight * scale,
+      width: (Math.sign(width) || 1) * originalWidth * scale,
+    }
+  }
+
+  if (changesWidth) {
+    return {
+      height: originalHeight * (Math.abs(width) / originalWidth),
+      width,
+    }
+  }
+
+  if (changesHeight) {
+    return {
+      height,
+      width: originalWidth * (Math.abs(height) / originalHeight),
+    }
+  }
+
+  return { height, width }
+}

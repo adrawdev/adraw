@@ -30,10 +30,13 @@ function makeContext(elements: CanvasElement[]) {
 
 // Pointer events in tests only need `target.getAttribute("data-anchor")` and
 // the modifier flags the select tool reads.
-function pointerEvent(anchor: string | null): PointerEvent {
+function pointerEvent(
+  anchor: string | null,
+  modifiers: { shiftKey?: boolean } = {},
+): PointerEvent {
   return {
     ctrlKey: false,
-    shiftKey: false,
+    shiftKey: modifiers.shiftKey ?? false,
     target: {
       getAttribute: (name: string) => (name === "data-anchor" ? anchor : null),
     },
@@ -46,9 +49,10 @@ function dragHandle(
   anchor: string,
   from: Point,
   to: Point,
+  modifiers: { shiftKey?: boolean } = {},
 ) {
   tool.onPointerDown(context, from, pointerEvent(anchor))
-  tool.onPointerMove(context, to, pointerEvent(anchor))
+  tool.onPointerMove(context, to, pointerEvent(anchor, modifiers))
   tool.onPointerUp(context, to, pointerEvent(null))
 }
 
@@ -258,5 +262,103 @@ describe("select tool resize flipping", () => {
     const result = context.getElements().get(rect.id)!
     expect(result.x).toBeCloseTo(0)
     expect(result.width).toBeCloseTo(200)
+  })
+
+  it("constrains a corner resize to the original proportions while Shift is held", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 200,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    // Shift is pressed during the move, rather than at pointer-down. The
+    // horizontal drag is dominant, so the 2:1 ratio gives a 300x150 box.
+    dragHandle(
+      tool,
+      context,
+      "top-left",
+      { x: 0, y: 0 },
+      { x: -100, y: -25 },
+      { shiftKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(-100)
+    expect(result.y).toBeCloseTo(-50)
+    expect(result.width).toBeCloseTo(300)
+    expect(result.height).toBeCloseTo(150)
+  })
+
+  it("constrains an edge resize around the opposite edge midpoint", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 200,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    dragHandle(
+      tool,
+      context,
+      "right-center",
+      { x: 200, y: 50 },
+      { x: 400, y: 50 },
+      { shiftKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(0)
+    expect(result.y).toBeCloseTo(-50)
+    expect(result.width).toBeCloseTo(400)
+    expect(result.height).toBeCloseTo(200)
+  })
+
+  it("constrains a rotated corner resize in the element's local frame", () => {
+    const rect = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 90,
+      visible: true,
+      width: 200,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const context = makeContext([rect])
+    context.setSelectedIds(new Set([rect.id]))
+
+    // The rotated top-left handle is at (150, -50). In the local frame the
+    // target has a 500px width and 200px height request, so width dominates
+    // and the constrained result is 500x250.
+    dragHandle(
+      tool,
+      context,
+      "top-left",
+      { x: 150, y: -50 },
+      { x: 250, y: -350 },
+      { shiftKey: true },
+    )
+
+    const result = context.getElements().get(rect.id)!
+    expect(result.x).toBeCloseTo(-75)
+    expect(result.y).toBeCloseTo(-225)
+    expect(result.width).toBeCloseTo(500)
+    expect(result.height).toBeCloseTo(250)
   })
 })

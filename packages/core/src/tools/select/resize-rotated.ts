@@ -1,6 +1,11 @@
 import type { ElementId, Point } from "../../types"
 import { type ToolContext } from "../base"
-import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
+import {
+  constrainResizeDimensions,
+  getPointsBounds,
+  getResizeAxes,
+  type SelectToolState,
+} from "./state"
 
 // Resize a single element whose rotation is a non-zero multiple of 90°. The
 // handles live in the element's rotated frame, so the resize must be computed
@@ -12,6 +17,7 @@ export function resizeRotatedElement(
   context: ToolContext,
   point: Point,
   singleId: ElementId,
+  constrainProportions = false,
 ): void {
   const bounds = state.originalBounds
   const singleOriginal = state.originalPositions.get(singleId)
@@ -41,21 +47,41 @@ export function resizeRotatedElement(
   const localY = cy - px * sin + py * cos
 
   // Opposite edge stays fixed in local space.
-  const anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
-  const anchorY = movesTop ? bounds.y + bounds.height : bounds.y
+  let anchorX = movesLeft ? bounds.x + bounds.width : bounds.x
+  let anchorY = movesTop ? bounds.y + bounds.height : bounds.y
 
   // Left signed so a handle dragged past the opposite edge yields a negative
   // size, which flips the element across the anchor.
-  const newWidth = changesWidth
+  let newWidth = changesWidth
     ? movesLeft
       ? anchorX - localX
       : localX - anchorX
     : bounds.width
-  const newHeight = changesHeight
+  let newHeight = changesHeight
     ? movesTop
       ? anchorY - localY
       : localY - anchorY
     : bounds.height
+
+  if (constrainProportions) {
+    const constrained = constrainResizeDimensions(
+      newWidth,
+      newHeight,
+      bounds.width,
+      bounds.height,
+      changesWidth,
+      changesHeight,
+    )
+    newWidth = constrained.width
+    newHeight = constrained.height
+
+    if (!changesWidth) {
+      anchorX = bounds.x + bounds.width / 2
+    }
+    if (!changesHeight) {
+      anchorY = bounds.y + bounds.height / 2
+    }
+  }
 
   if (element.type === "path" && singleOriginal.points) {
     // Scale the points about the fixed edge in the element's local (unrotated)
@@ -63,8 +89,8 @@ export function resizeRotatedElement(
     // space. The rotation pivot is the bbox center, which shifts as the box
     // resizes; t = (I - R(theta)) * (Cold - Cnew) cancels the world-space drift
     // that shift introduces.
-    const scaleX = changesWidth ? newWidth / bounds.width : 1
-    const scaleY = changesHeight ? newHeight / bounds.height : 1
+    const scaleX = newWidth / bounds.width
+    const scaleY = newHeight / bounds.height
     const scaled = singleOriginal.points.map((p) => ({
       x: anchorX + (p.x - anchorX) * scaleX,
       y: anchorY + (p.y - anchorY) * scaleY,
@@ -93,8 +119,8 @@ export function resizeRotatedElement(
     singleOriginal.lineStart &&
     singleOriginal.lineEnd
   ) {
-    const scaleX = changesWidth ? newWidth / bounds.width : 1
-    const scaleY = changesHeight ? newHeight / bounds.height : 1
+    const scaleX = newWidth / bounds.width
+    const scaleY = newHeight / bounds.height
     const scaledStart = {
       x: anchorX + (singleOriginal.lineStart.x - anchorX) * scaleX,
       y: anchorY + (singleOriginal.lineStart.y - anchorY) * scaleY,
