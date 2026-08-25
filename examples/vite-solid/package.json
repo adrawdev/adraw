@@ -11,12 +11,13 @@
   "dependencies": {
     "@adraw/core": "workspace:*",
     "@adraw/solid": "workspace:*",
-    "solid-js": "^1.9.10"
+    "solid-js": "^1.9.15"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "typescript": "5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-solid": "^2.11.10"
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.0.0",
+    "vite-plugin-solid": "^2.11.14"
   }
 }

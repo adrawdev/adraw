@@ -11,16 +11,17 @@
   "dependencies": {
     "@adraw/core": "workspace:*",
     "@adraw/react": "workspace:*",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitejs/plugin-react": "^6.1.0",
     "globals": "^16.5.0",
-    "typescript": "5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.0.0"
   }
 }

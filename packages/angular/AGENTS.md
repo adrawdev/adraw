@@ -8,7 +8,7 @@ Angular uses `ng-packagr` (not tsdown) and has special build requirements.
 
 ## Important: Angular is special
 
-- **Build tool is `ng-packagr`, not tsdown.** Build command: `ng-packagr -p ng-package.json`
+- **Build tool is `ng-packagr`, not tsdown.** Build command: `ng-packagr -p ng-package.json -c tsconfig.json`
 - **`tsconfig.json` does NOT extend `../../tsconfig.json`** — root config's `erasableSyntaxOnly`, `verbatimModuleSyntax`, `noEmit`, and `allowImportingTsExtensions` conflict with Angular decorators / ng-packagr emit
 - **`tslib` is a required runtime `dependency`** — ng-packagr forces `importHelpers: true`, so the compiler emits helper refs that need `tslib`. Do NOT remove it even if the bundle appears not to use it
 - Source `package.json` must carry `module` + `typings` pointing at `./dist/...` for pnpm consumers (don't add `exports` map — ng-packagr regenerates it and warns)
@@ -66,8 +66,8 @@ All hooks return signals for reactive values — read by calling them.
 ## Build
 
 ```bash
-pnpm build:angular    # ng-packagr -p ng-package.json
-pnpm dev:angular      # ng-packagr -p ng-package.json --watch
+pnpm build:angular    # ng-packagr -p ng-package.json -c tsconfig.json
+pnpm dev:angular      # ng-packagr -p ng-package.json -c tsconfig.json --watch
 ```
 
 Build produces partial-Ivy output in `dist/`. The `scripts/finalize-dist.mjs` post-build step handles any required dist adjustments.
@@ -75,8 +75,8 @@ Build produces partial-Ivy output in `dist/`. The `scripts/finalize-dist.mjs` po
 ## Dependencies
 
 - `@adraw/core`: `workspace:*`
-- `@angular/common`, `@angular/core`, `@angular/compiler`, `@angular/compiler-cli`: `^21.0.0`
-- `ng-packagr`: `^21.0.0`
+- `@angular/common`, `@angular/core`, `@angular/compiler`, `@angular/compiler-cli`: `^22.0.0`
+- `ng-packagr`: `^22.0.0`
 - `tslib`: `^2.8.1` (required runtime dependency)
 - Peer deps: `@angular/common` >=17.0.0, `@angular/core` >=17.0.0
 

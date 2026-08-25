@@ -31,19 +31,19 @@
     "linkDirectory": false
   },
   "scripts": {
-    "build": "ng-packagr -p ng-package.json && node scripts/finalize-dist.mjs",
-    "dev": "ng-packagr -p ng-package.json --watch"
+    "build": "ng-packagr -p ng-package.json -c tsconfig.json && node scripts/finalize-dist.mjs",
+    "dev": "ng-packagr -p ng-package.json -c tsconfig.json --watch"
   },
   "dependencies": {
     "@adraw/core": "workspace:*",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@angular/common": "^21.0.0",
-    "@angular/compiler": "^21.0.0",
-    "@angular/compiler-cli": "^21.0.0",
-    "@angular/core": "^21.0.0",
-    "ng-packagr": "^21.0.0"
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/compiler-cli": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "ng-packagr": "^22.0.0"
   },
   "peerDependencies": {
     "@angular/common": ">=17.0.0",

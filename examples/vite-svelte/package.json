@@ -14,12 +14,13 @@
     "@adraw/svelte": "workspace:*"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^6.2.1",
-    "@tsconfig/svelte": "^5.0.6",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.10.1",
-    "svelte": "^5.45.2",
-    "svelte-check": "^4.3.4",
-    "typescript": "5.9.3",
-    "vite": "^7.3.1"
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "svelte": "^5.56.10",
+    "svelte-check": "^4.7.6",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.0.0"
   }
 }
