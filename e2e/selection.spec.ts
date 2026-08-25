@@ -83,6 +83,34 @@ test.describe("selection", () => {
     ).toHaveCount(2)
   })
 
+  test("dragging inside a multi-selection box moves all selected shapes", async ({
+    page,
+  }) => {
+    const svg = await openCanvas(page)
+    await pickTool(page, "rectangle")
+    await drag(page, svg, { x: 100, y: 100 }, { x: 180, y: 180 })
+    await pickTool(page, "rectangle")
+    await drag(page, svg, { x: 300, y: 100 }, { x: 380, y: 180 })
+
+    await pickTool(page, "select")
+    await page.keyboard.press("ControlOrMeta+a")
+    expect(await selectedCount(page)).toBe(2)
+
+    // Start in the gap between the shapes, but inside their combined bounds.
+    await drag(page, svg, { x: 240, y: 140 }, { x: 270, y: 170 })
+
+    const positions = await page.evaluate(() =>
+      [...(window as any).adraw.getElements().values()]
+        .map((element: any) => ({ x: element.x, y: element.y }))
+        .toSorted((a, b) => a.x - b.x),
+    )
+    expect(positions).toHaveLength(2)
+    expect(positions[0].x).toBeCloseTo(130, 1)
+    expect(positions[0].y).toBeCloseTo(130, 1)
+    expect(positions[1].x).toBeCloseTo(330, 1)
+    expect(positions[1].y).toBeCloseTo(130, 1)
+  })
+
   test("Escape clears the selection", async ({ page }) => {
     const svg = await openCanvas(page)
     const center = await drawRect(page, svg)

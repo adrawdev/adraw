@@ -131,3 +131,43 @@ describe("select tool isResizing / isRotating", () => {
     expect(tool.isResizing?.()).toBe(false)
   })
 })
+
+describe("select tool multi-selection move", () => {
+  it("moves selected elements when dragging from empty space inside their bounds", () => {
+    const first = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const second = createRectangle({
+      cornerRadius: 0,
+      height: 100,
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 100,
+      x: 200,
+      y: 0,
+      zIndex: 1,
+    })
+    const context = makeContext([first, second])
+    context.setSelectedIds(new Set([first.id, second.id]))
+    const tool = createSelectTool()
+
+    tool.onPointerDown(context, { x: 150, y: 50 }, pointerEvent(null))
+    tool.onPointerMove(context, { x: 175, y: 75 }, pointerEvent(null))
+    tool.onPointerUp(context, { x: 175, y: 75 }, pointerEvent(null))
+
+    expect(context.getElements().get(first.id)).toMatchObject({ x: 25, y: 25 })
+    expect(context.getElements().get(second.id)).toMatchObject({
+      x: 225,
+      y: 25,
+    })
+  })
+})

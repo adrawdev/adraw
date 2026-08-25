@@ -1,3 +1,4 @@
+import { pointInBounds } from "../../coordinates"
 import { getElementAtPoint, getElementsBounds } from "../../elements"
 import type { Point, ToolType } from "../../types"
 import { type Tool, type ToolContext } from "../base"
@@ -62,25 +63,45 @@ export function createSelectTool(
       state.dragHandle = target.getAttribute("data-anchor")
 
       if (!state.dragHandle) {
-        const element = getElementAtPoint(elements, point)
-
         const isMultiSelect =
           (options.multiSelectModifier === "shift" && event.shiftKey) ||
           (options.multiSelectModifier === "ctrl" && event.ctrlKey)
 
-        if (element) {
-          if (isMultiSelect) {
-            if (selectedIds.has(element.id)) {
-              const newSelected = new Set(selectedIds)
-              newSelected.delete(element.id)
-              context.setSelectedIds(newSelected)
-            } else {
-              const newSelected = new Set(selectedIds)
-              newSelected.add(element.id)
-              context.setSelectedIds(newSelected)
+        const selectionBounds =
+          selectedIds.size > 1 ? getElementsBounds(elements, selectedIds) : null
+        const isInsideSelection =
+          selectionBounds !== null && pointInBounds(point, selectionBounds)
+
+        let element = isInsideSelection
+          ? null
+          : getElementAtPoint(elements, point)
+        if (isInsideSelection) {
+          // The gap between selected elements is part of the selection box, so
+          // it should start moving the selection instead of starting a marquee.
+          for (const id of selectedIds) {
+            const selectedElement = elements.get(id)
+            if (selectedElement) {
+              element = selectedElement
+              break
             }
-          } else if (!selectedIds.has(element.id)) {
-            context.setSelectedIds(new Set([element.id]))
+          }
+        }
+
+        if (element) {
+          if (!isInsideSelection) {
+            if (isMultiSelect) {
+              if (selectedIds.has(element.id)) {
+                const newSelected = new Set(selectedIds)
+                newSelected.delete(element.id)
+                context.setSelectedIds(newSelected)
+              } else {
+                const newSelected = new Set(selectedIds)
+                newSelected.add(element.id)
+                context.setSelectedIds(newSelected)
+              }
+            } else if (!selectedIds.has(element.id)) {
+              context.setSelectedIds(new Set([element.id]))
+            }
           }
 
           state.dragStartElement = element
