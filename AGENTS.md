@@ -87,12 +87,46 @@ pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 ### E2E tests (Playwright)
 
 ```bash
-pnpm test:e2e:install # download browsers + OS deps (one-time)
-pnpm test:e2e         # run all e2e specs
-pnpm test:e2e:ui      # run with Playwright UI
+pnpm test:e2e:install             # download browsers (one-time)
+pnpm test:e2e:install --with-deps # download browsers + OS deps (one-time)
+pnpm test:e2e                     # run all e2e specs
+pnpm test:e2e:ui                  # run with Playwright UI
 ```
 
 E2E specs target `examples/vite-vanilla` (exposes `window.adraw`). Playwright config in `playwright.config.ts` — three desktop projects (chromium, firefox, webkit), mobile viewports intentionally omitted.
+
+**Testing with WebKit on native Arch Linux:**
+
+```bash
+pnpm test:e2e:install webkit       # download the WebKit browser
+sudo pacman -S flite libxml2-legacy
+paru -S flite-voices-extra icu74   # or yay -S ...
+```
+
+These package installations require root permissions. WebKit's WPE MiniBrowser
+loads Flite voice libraries, so both `flite` and `flite-voices-extra` are
+needed. The legacy `icu74` and `libxml2-legacy` packages provide the sonames
+expected by the Playwright build. The Playwright download already bundles WPE
+WebKit, WPE, JPEG XL, and libbacktrace; do not use a plain `ldd` result to
+install system replacements for those bundled libraries.
+
+To diagnose a WebKit launch error, include Playwright's bundled library paths
+when checking dependencies. Replace `<version>` with the installed
+`webkit-*` directory name:
+
+```bash
+WEBKIT_DIR="$HOME/.cache/ms-playwright/webkit-<version>/minibrowser-wpe"
+LD_LIBRARY_PATH="$WEBKIT_DIR/lib:$WEBKIT_DIR/sys/lib" \
+  ldd "$WEBKIT_DIR/bin/MiniBrowser" | rg "not found"
+pacman -F <missing-soname>                  # use `sudo pacman -Fy` first if needed
+```
+
+Run a single WebKit spec before the full project:
+
+```bash
+pnpm test:e2e -- e2e/edge-resize.spec.ts --project=webkit
+pnpm test:e2e -- --project=webkit --reporter=list --workers=2
+```
 
 **On Arch/Fedora (via distrobox):**
 

@@ -31,7 +31,7 @@
     "lint:github": "oxlint --format=github",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:install": "playwright install --with-deps",
+    "test:e2e:install": "playwright install",
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
