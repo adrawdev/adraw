@@ -77,66 +77,11 @@ pnpm lint:fix       # auto-fix
 
 Linter is **oxlint** (config: `.oxlintrc.json`) with plugins for import, typescript, unicorn, oxc, react, jsx-a11y. Formatter is **oxfmt** (config: `.oxfmtrc.json`) — 2-space indent, double quotes, no trailing semicolons, trailing commas, sorted imports.
 
-### Tests
+### Testing
 
-```bash
-pnpm test           # all unit tests (Vitest, scoped to packages/**)
-pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
-```
-
-### E2E tests (Playwright)
-
-```bash
-pnpm test:e2e:install             # download browsers (one-time)
-pnpm test:e2e:install --with-deps # download browsers + OS deps (one-time)
-pnpm test:e2e                     # run all e2e specs
-pnpm test:e2e:ui                  # run with Playwright UI
-```
-
-E2E specs target `examples/vite-vanilla` (exposes `window.adraw`). Playwright config in `playwright.config.ts` — three desktop projects (chromium, firefox, webkit), mobile viewports intentionally omitted.
-
-**Testing with WebKit on native Arch Linux:**
-
-```bash
-pnpm test:e2e:install webkit       # download the WebKit browser
-sudo pacman -S flite libxml2-legacy
-paru -S flite-voices-extra icu74   # or yay -S ...
-```
-
-These package installations require root permissions. WebKit's WPE MiniBrowser
-loads Flite voice libraries, so both `flite` and `flite-voices-extra` are
-needed. The legacy `icu74` and `libxml2-legacy` packages provide the sonames
-expected by the Playwright build. The Playwright download already bundles WPE
-WebKit, WPE, JPEG XL, and libbacktrace; do not use a plain `ldd` result to
-install system replacements for those bundled libraries.
-
-To diagnose a WebKit launch error, include Playwright's bundled library paths
-when checking dependencies. Replace `<version>` with the installed
-`webkit-*` directory name:
-
-```bash
-WEBKIT_DIR="$HOME/.cache/ms-playwright/webkit-<version>/minibrowser-wpe"
-LD_LIBRARY_PATH="$WEBKIT_DIR/lib:$WEBKIT_DIR/sys/lib" \
-  ldd "$WEBKIT_DIR/bin/MiniBrowser" | rg "not found"
-pacman -F <missing-soname>                  # use `sudo pacman -Fy` first if needed
-```
-
-Run a single WebKit spec before the full project:
-
-```bash
-pnpm test:e2e -- e2e/edge-resize.spec.ts --project=webkit
-pnpm test:e2e -- --project=webkit --reporter=list --workers=2
-```
-
-**On Arch/Fedora (via distrobox):**
-
-```bash
-distrobox create --name pw --image ubuntu:24.04   # first time only
-distrobox enter pw -- bash -lc \
-  'node node_modules/@playwright/test/cli.js test --reporter=list --workers=2'
-```
-
-**If port 5173 is in use:** `pkill -f vite` on the host first.
+Repository-specific unit-test, Playwright, WebKit, and test-environment
+instructions are in `.agents/skills/adraw-testing/SKILL.md`. Use that skill
+when running or troubleshooting tests.
 
 ## Architecture
 
@@ -210,7 +155,7 @@ No hooks — the custom element is the whole public surface. Drive via `element.
 ## Pull request guidelines
 
 - Title format: `[package-name] Brief description`
-- Run `pnpm lint` and `pnpm test` before submitting
+- Follow `.agents/skills/adraw-testing/SKILL.md` for test and lint checks before submitting
 - Update or add tests for changed code
 - Use changesets for versioning bumps when introducing new features or fixes
 

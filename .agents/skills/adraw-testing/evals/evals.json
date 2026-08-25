@@ -1,0 +1,37 @@
+{
+  "skill_name": "adraw-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I changed the coordinate math in packages/core and want the fastest way to run only its unit tests, then one specific test file.",
+      "expected_output": "The response identifies the repository-root pnpm commands for all unit tests and for a single Vitest file.",
+      "files": [],
+      "expectations": [
+        "Uses pnpm test for the unit-test suite",
+        "Shows the pnpm test run <path> form for one test file"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Playwright's WebKit browser will not launch on my native Arch Linux machine. Tell me what to install and how to diagnose missing libraries without replacing bundled Playwright libraries.",
+      "expected_output": "The response gives the WebKit setup packages, bundled-library ldd command, and the warning about not replacing Playwright-bundled libraries.",
+      "files": [],
+      "expectations": [
+        "Includes flite, flite-voices-extra, icu74, and libxml2-legacy guidance",
+        "Uses LD_LIBRARY_PATH with the minibrowser-wpe lib and sys/lib directories",
+        "Warns against using plain ldd output to install replacements for bundled libraries"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to run the adraw browser tests, but port 5173 is occupied and the native environment still cannot launch Playwright. What is the supported fallback workflow?",
+      "expected_output": "The response explains stopping the host Vite process and running Playwright from the Ubuntu distrobox fallback.",
+      "files": [],
+      "expectations": [
+        "Suggests pkill -f vite on the host when port 5173 is occupied",
+        "Includes the distrobox create command using ubuntu:24.04",
+        "Includes the distrobox Playwright command with list reporter and two workers"
+      ]
+    }
+  ]
+}
