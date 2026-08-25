@@ -121,36 +121,10 @@ Pattern per framework:
 
 ## Creating a new adapter package
 
-### Package scaffolding
-
-- `package.json`: name `@adraw/<framework>`, `@adraw/core` as `"workspace:*"` dep, framework pinned in `devDependencies`, loosely in `peerDependencies`. Copy `main`/`module`/`types`/`exports` from existing adapter.
-- `scripts`: `"build": "tsdown --minify"`, `"dev": "tsdown --watch"`
-- `tsconfig.json`: `"extends": "../../tsconfig.json"`, plus jsx config if needed
-- `tsdown.config.ts`: `export default tsdownConfig()` from `../../config/index.ts` — don't override `entry`/`format`
-- No workspace registration needed — `pnpm-workspace.yaml` globs `packages/*`
-
-### Wrapping `AdrawCanvas`
-
-- One canvas per instance, headless (`new AdrawCanvas(options)`) then `mount(container)` once DOM exists
-- Keep instance outside reactive state (ref/plain variable)
-- Mirror all four core events, always copying the payload (`new Map(newElements)`, `new Set(newSelectedIds)`)
-- Expose all six hooks (useCanvas, useTool, useViewport, useHistory, useSelection, useTransformOverlay)
-- Provide a `Canvas` component that renders mount container and creates/destroys the canvas
-- Context-based adapters (React, Solid, Vue) support multiple independent instances; singleton-based (Svelte) don't
-- Add client-only directive `"use client"` for React SSR
-
-### Verifying
-
-- Add an `examples/vite-<framework>` app following existing example layouts
-- Run `pnpm --filter=<framework> build` and `pnpm lint`
-
-### Angular is special
-
-Uses `ng-packagr`, not tsdown. Build: `ng-packagr -p ng-package.json`. `tsconfig.json` does NOT extend root (no `erasableSyntaxOnly`). `tslib` is a required runtime dependency. See `packages/angular/` for full details.
-
-### Web Components is special
-
-No hooks — the custom element is the whole public surface. Drive via `element.canvas` (AdrawCanvas instance) and read mirrored fields directly. Listen to `adraw:*` CustomEvents. No peer dependencies (native DOM).
+Detailed scaffolding, lifecycle, framework-specific exceptions, and
+verification instructions are in
+`.agents/skills/adraw-adapter-package/SKILL.md`. Use that skill when creating
+or changing an adapter package.
 
 ## Pull request guidelines
 

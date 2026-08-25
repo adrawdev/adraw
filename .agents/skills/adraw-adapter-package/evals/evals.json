@@ -1,0 +1,40 @@
+{
+  "skill_name": "adraw-adapter-package",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to add a new Solid adapter under packages/ and an example app. What package files, scripts, and workspace registration should I use?",
+      "expected_output": "The response gives the standard adapter package scaffolding and explains that pnpm-workspace.yaml already covers packages/*.",
+      "files": [],
+      "expectations": [
+        "Uses @adraw/<framework> and @adraw/core workspace dependency guidance",
+        "Includes tsdown build and dev scripts",
+        "Says no workspace registration is needed"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I am implementing a Vue binding around AdrawCanvas. Explain the lifecycle, event mirroring, hooks, and instance behavior it must support.",
+      "expected_output": "The response describes headless construction followed by mount, copied event payloads, all six hooks, a Canvas component, and multiple instances for context-based adapters.",
+      "files": [],
+      "expectations": [
+        "Requires mounting one headless AdrawCanvas per adapter instance",
+        "Requires copying Map and Set event payloads",
+        "Lists all six hooks",
+        "States Vue supports multiple independent instances through context"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What changes for Angular and Web Components adapters compared with the normal tsdown and hook-based adapter pattern?",
+      "expected_output": "The response distinguishes Angular's ng-packagr and tslib requirements from Web Components' native custom-element surface and lack of peer dependencies or hooks.",
+      "files": [],
+      "expectations": [
+        "Uses ng-packagr for Angular and notes its separate tsconfig behavior",
+        "Identifies tslib as an Angular runtime dependency",
+        "Explains that Web Components exposes element.canvas and mirrored fields",
+        "Explains that Web Components has no hooks or peer dependencies"
+      ]
+    }
+  ]
+}
