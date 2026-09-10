@@ -1,6 +1,6 @@
 {
   "name": "@adraw/vue",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Vue bindings for adraw — composables and components for building canvas-based drawing and whiteboard UIs.",
   "keywords": [
     "canvas",

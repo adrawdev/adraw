@@ -1,5 +1,33 @@
 # @adraw/core
 
+## 0.3.0
+
+### Minor Changes
+
+- Resize elements from the center while holding the Alt key.
+
+- [`6d5962e`](https://github.com/adrawdev/adraw/commit/6d5962e5577fe1138a557136e76666f5c78cfcfa) Constrain element proportions while resizing with the Shift key.
+
+- [`ab7567d`](https://github.com/adrawdev/adraw/commit/ab7567d058310627b9fb046ea6804af731ef37c2) Add pointer capture on drag start so drawing, moving, resizing, and rotating keep working when the pointer leaves the container or the browser window. A cancelled pointer (e.g. an OS gesture taking over) now finalizes the in-progress tool action instead of leaving it stuck.
+
+- Add `toImage()` to export the canvas as an image blob (PNG or SVG), with options for background, pixel ratio, dark mode, and dynamic styling.
+
+- Split the canvas into a headless `CanvasEngine` and a DOM adapter. `AdrawCanvas` now extends `CanvasEngine` and can be constructed headless with deferred `mount(container)` and `destroy()` lifecycle methods.
+
+- Add `insertMedia()` for inserting image and media elements, with automatic viewport fitting, z-index layer management, and auto-selection of inserted elements.
+
+- Show per-element bounding boxes for multi-selections in the transform overlay, in addition to the group bounds.
+
+- Add global stroke color management via `setStrokeColor()`, customizable stroke properties for rectangles and ellipses, and round stroke caps and joins for line and path elements.
+
+- Add a text tool and `TextElement` type with inline editing. Click with the text tool to create editable multi-line text rendered as SVG, with an inline textarea overlay for editing.
+
+### Patch Changes
+
+- Fix text editor and selection behavior: keep the text editor and toolbar visible during editing, prevent native text selection from interfering with canvas gestures, and match the text editor stroke color to the active stroke.
+
+- [`4b50663`](https://github.com/adrawdev/adraw/commit/4b50663cbfd1f8e71f6e5ff960eb248ea41e426a) Allow dragging multiple selected elements from empty space inside their selection bounds.
+
 ## 0.2.0
 
 ### Minor Changes

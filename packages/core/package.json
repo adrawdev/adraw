@@ -1,6 +1,6 @@
 {
   "name": "@adraw/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic core for adraw — canvas state, drawing tools and viewport.",
   "keywords": [
     "canvas",

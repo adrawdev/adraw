@@ -1,6 +1,6 @@
 {
   "name": "@adraw/web-components",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Web Components bindings for adraw — a framework-agnostic custom element and hooks for building canvas-based drawing and whiteboard UIs.",
   "keywords": [
     "canvas",
