@@ -11,15 +11,15 @@
     "typescript",
     "whiteboard"
   ],
-  "homepage": "https://github.com/vladiantio/adraw/tree/main/packages/angular#readme",
+  "homepage": "https://github.com/adrawdev/adraw/tree/main/packages/angular#readme",
   "bugs": {
-    "url": "https://github.com/vladiantio/adraw/issues"
+    "url": "https://github.com/adrawdev/adraw/issues"
   },
   "license": "MIT",
   "author": "Vladimir Antonio F. C.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladiantio/adraw.git",
+    "url": "git+https://github.com/adrawdev/adraw.git",
     "directory": "packages/angular"
   },
   "type": "module",
