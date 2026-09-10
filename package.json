@@ -25,7 +25,7 @@
     "dev:examples": "pnpm --filter=examples dev",
     "dev:web": "pnpm --filter=web dev",
     "ci:version": "changeset version",
-    "ci:release": "pnpm install && pnpm build:all && npm login && pnpm release:core && changeset publish",
+    "ci:release": "pnpm install && pnpm build:all && npm login && pnpm release:core && changeset publish && git push origin main --tags",
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "(oxlint --fix || true) && oxfmt",
     "lint:github": "oxlint --format=github",
