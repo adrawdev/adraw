@@ -4,6 +4,7 @@ import { getSelectionBox } from "../../engine/internal"
 import type { DomState } from "../state"
 import {
   boundingBoxStrokeWidth,
+  multiSelectionBoxClass,
   resizeEdgeClass,
   resizeHandleClass,
   resizeHandleSize,
@@ -142,4 +143,84 @@ export function ensureOverlayNodes(state: DomState) {
     rotationHandle,
   }
   return state.overlayNodes
+}
+
+// Draw one outline box per selected element when multiple elements are
+// selected, alongside the union bounding box + handles. Reconciles persistent
+// rects keyed by element id: new selections get a node, deselected/deleted or
+// hidden elements drop theirs, and existing ones update in place.
+export function renderMultiSelectionBoxes(
+  state: DomState,
+  engine: CanvasEngine,
+  suppressed: boolean,
+): void {
+  if (!state.transformOverlay) {
+    return
+  }
+
+  if (!state.multiSelectionGroup) {
+    state.multiSelectionGroup = document.createElementNS(svgNamespaceURI, "g")
+  }
+
+  const selectedIds = engine.getSelectedIds()
+  const elements = engine.getElements()
+  const showMulti = !suppressed && selectedIds.size > 1
+
+  if (!showMulti) {
+    for (const node of state.multiSelectionNodes.values()) {
+      node.remove()
+    }
+    state.multiSelectionNodes.clear()
+    state.multiSelectionGroup.remove()
+    return
+  }
+
+  if (state.multiSelectionGroup.parentNode !== state.transformOverlay) {
+    state.transformOverlay.appendChild(state.multiSelectionGroup)
+  }
+
+  for (const [id, node] of state.multiSelectionNodes) {
+    const element = elements.get(id)
+    if (!selectedIds.has(id) || !element || !element.visible) {
+      node.remove()
+      state.multiSelectionNodes.delete(id)
+    }
+  }
+
+  const handleSize = resizeHandleSize / engine.getViewport().zoom
+  for (const id of selectedIds) {
+    const element = elements.get(id)
+    if (!element || !element.visible) {
+      continue
+    }
+
+    let rect = state.multiSelectionNodes.get(id)
+    if (!rect) {
+      rect = document.createElementNS(svgNamespaceURI, "rect")
+      rect.classList.add(multiSelectionBoxClass)
+      rect.setAttribute("fill", "none")
+      rect.setAttribute("stroke", SELECTION_COLOR)
+      rect.setAttribute("stroke-width", `${boundingBoxStrokeWidth}`)
+      rect.setAttribute("vector-effect", "non-scaling-stroke")
+      rect.setAttribute("pointer-events", "none")
+      state.multiSelectionNodes.set(id, rect)
+      state.multiSelectionGroup.appendChild(rect)
+    }
+
+    rect.setAttribute("x", `${element.x}`)
+    rect.setAttribute("y", `${element.y}`)
+    rect.setAttribute("width", `${element.width}`)
+    rect.setAttribute("height", `${element.height}`)
+    rect.setAttribute("rx", `${handleSize / 4}`)
+    if (element.rotation) {
+      const cx = element.x + element.width / 2
+      const cy = element.y + element.height / 2
+      rect.setAttribute(
+        "transform",
+        `rotate(${element.rotation}, ${cx}, ${cy})`,
+      )
+    } else {
+      rect.removeAttribute("transform")
+    }
+  }
 }

@@ -51,6 +51,7 @@ export function mountDom(
 
   engine.on("selectionChange", () => {
     renderSelectElements(state, engine)
+    renderTransformOverlay(state, engine)
   })
 
   return {
@@ -92,6 +93,8 @@ function initDom(state: DomState, engine: CanvasEngine): void {
   // so they're rebuilt into it on the next render (e.g. after a re-mount).
   state.overlayNodes = null
   state.selectionBoxNode = null
+  state.multiSelectionGroup = null
+  state.multiSelectionNodes.clear()
 
   state.svgElement.appendChild(state.elementsGroup)
   state.svgElement.appendChild(state.guidesGroup)

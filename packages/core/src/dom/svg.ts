@@ -13,6 +13,7 @@ export const rotationHandleClass = "adraw-rotation-handle"
 export const resizeHandleClass = "adraw-resize-handle"
 export const resizeEdgeClass = "adraw-resize-edge"
 export const selectionBoxClass = "adraw-selection-box"
+export const multiSelectionBoxClass = "adraw-multi-selection-box"
 export const textEditorClass = "adraw-text-editor"
 
 export const boundingBoxStrokeWidth = 2

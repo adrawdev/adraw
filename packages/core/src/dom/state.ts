@@ -29,6 +29,11 @@ export interface DomState {
   // no selection and re-attached otherwise, so it stays absent (not just hidden)
   // when nothing is selected.
   overlayNodes: OverlayNodes | null
+  // Per-element selection outlines shown when multiple elements are selected.
+  // The group lives inside `transformOverlay`; individual rects are keyed by
+  // element id and reconciled on every render, like `reconcileElements`.
+  multiSelectionGroup: SVGGElement | null
+  multiSelectionNodes: Map<ElementId, SVGRectElement>
   // Persistent marquee (rubber-band) node, likewise reused across renders.
   selectionBoxNode: SVGRectElement | null
   resizeObserver: ResizeObserver | null
@@ -54,6 +59,8 @@ export function createDomState(): DomState {
     container: null,
     elementsGroup: null,
     guidesGroup: null,
+    multiSelectionGroup: null,
+    multiSelectionNodes: new Map(),
     overlayNodes: null,
     pinchStartCenter: null,
     pinchStartDistance: null,

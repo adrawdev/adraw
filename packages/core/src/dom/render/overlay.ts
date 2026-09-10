@@ -8,7 +8,7 @@ import {
   rotationHandleRadio,
   rotationHandleSpacing,
 } from "../svg"
-import { ensureOverlayNodes } from "./overlay-nodes"
+import { ensureOverlayNodes, renderMultiSelectionBoxes } from "./overlay-nodes"
 
 export function renderTransformOverlay(
   state: DomState,
@@ -36,6 +36,7 @@ export function renderTransformOverlay(
       : getElementsBounds(elements, selectedIds)
   if (!bounds) {
     nodes.group.remove()
+    renderMultiSelectionBoxes(state, engine, true)
     return
   }
   // Attach the cached group when needed; no-op while it's already attached.
@@ -158,4 +159,6 @@ export function renderTransformOverlay(
       square.setAttribute("height", `${handleSize}`)
     }
   }
+
+  renderMultiSelectionBoxes(state, engine, suppressed)
 }
