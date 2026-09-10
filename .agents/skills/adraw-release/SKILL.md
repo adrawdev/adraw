@@ -18,7 +18,7 @@ the owner first.
 - `examples/*` and `web` are ignored by Changesets and are not published packages.
 - Published packages use tags named `@adraw/<package>@<version>`.
 - `pnpm ci:version` runs `changeset version` and does not commit changes (`commit: false` in the config).
-- `pnpm ci:release` runs `pnpm install`, `pnpm build:all`, `npm login`, and `changeset publish`.
+- `pnpm ci:release` runs `pnpm install`, `pnpm build:all`, `npm login`, publishes `@adraw/core` first via `pnpm release:core` (which also creates the core tag), then `changeset publish` for the remaining packages.
 - The GitHub workflow at `.github/workflows/release.yml` creates a GitHub release when an `@adraw/*` tag is pushed.
 
 ## Preflight
@@ -130,11 +130,16 @@ pnpm ci:release
 ```
 
 `pnpm ci:release` may prompt for npm credentials because it runs `npm login`.
-`changeset publish` publishes unpublished package versions and creates the
-corresponding package tags locally. If installation or building fails, fix the
-cause and rerun after verification. If publishing partially succeeds, inspect
-npm and local tags before retrying; do not run `ci:version` again just to retry
-publishing.
+`pnpm release:core` publishes `@adraw/core` first and creates its
+`@adraw/core@<version>` tag, because every adapter hard-depends on the new
+core version (`workspace:*` becomes exact on publish) and `changeset publish`
+fires all unpublished packages concurrently in workspace order. `changeset
+publish` then sees core as already published, publishes the remaining
+packages, and creates their tags locally. If installation or building fails,
+fix the cause and rerun after verification. If publishing partially succeeds,
+inspect npm and local tags before retrying; do not run `ci:version` again just
+to retry publishing. If the core phase already succeeded, retry with
+`changeset publish` directly instead of the full `ci:release`.
 
 ## 6. Push Tags and Verify
 
