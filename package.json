@@ -29,7 +29,7 @@
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "(oxlint --fix || true) && oxfmt",
     "lint:github": "oxlint --format=github",
-    "release:core": "pnpm --filter @adraw/core publish --access public && git tag \"@adraw/core@$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"packages/core/package.json\", \"utf8\")).version')\"",
+    "release:core": "pnpm --filter @adraw/core publish --access public --no-git-checks && git tag \"@adraw/core@$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"packages/core/package.json\", \"utf8\")).version')\"",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install",
