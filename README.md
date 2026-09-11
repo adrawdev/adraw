@@ -1,8 +1,9 @@
 # adraw
 
-> **Development version** — APIs and features are unstable and subject to change without notice.
-
 A lightweight, framework-agnostic infinity canvas library built on SVG. Supports pan, zoom, freehand drawing, shapes, and multi-element selection out of the box.
+
+> [!IMPORTANT]
+> **adraw** is young and actively evolving. It is usable today, but API and features may change between releases, and rough edges remain. Current defaults are opinions, not stability promises.
 
 ## Features
 
