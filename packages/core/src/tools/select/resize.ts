@@ -1,12 +1,7 @@
 import type { ElementId, Point } from "../../types"
-import { type ToolContext } from "../base"
+import { calculateShapeBounds, type ToolContext } from "../base"
 import { resizeRotatedElement } from "./resize-rotated"
-import {
-  constrainResizeDimensions,
-  getPointsBounds,
-  getResizeAxes,
-  type SelectToolState,
-} from "./state"
+import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
 
 // Drag a line's endpoint handle — move that endpoint and update bbox.
 function resizeLineEndpoint(
@@ -112,56 +107,40 @@ export function resizeSelection(
 
   // Alt keeps the selection center fixed; otherwise the corner/edge opposite
   // the dragged handle stays fixed.
-  let anchorX = fromCenter
-    ? bounds.x + bounds.width / 2
-    : movesLeft
-      ? bounds.x + bounds.width
-      : bounds.x
-  let anchorY = fromCenter
-    ? bounds.y + bounds.height / 2
-    : movesTop
-      ? bounds.y + bounds.height
-      : bounds.y
-
-  let newWidth = changesWidth
-    ? fromCenter
-      ? 2 * (movesLeft ? anchorX - point.x : point.x - anchorX)
+  const anchor = {
+    x: fromCenter
+      ? bounds.x + bounds.width / 2
       : movesLeft
-        ? anchorX - point.x
-        : point.x - anchorX
-    : bounds.width
-  let newHeight = changesHeight
-    ? fromCenter
-      ? 2 * (movesTop ? anchorY - point.y : point.y - anchorY)
+        ? bounds.x + bounds.width
+        : bounds.x,
+    y: fromCenter
+      ? bounds.y + bounds.height / 2
       : movesTop
-        ? anchorY - point.y
-        : point.y - anchorY
-    : bounds.height
-
-  if (constrainProportions) {
-    const constrained = constrainResizeDimensions(
-      newWidth,
-      newHeight,
-      bounds.width,
-      bounds.height,
-      changesWidth,
-      changesHeight,
-    )
-    newWidth = constrained.width
-    newHeight = constrained.height
-
-    // An edge constraint fixes the opposite edge's midpoint, rather than its
-    // corner, so the derived dimension grows equally on both sides.
-    if (!changesWidth) {
-      anchorX = bounds.x + bounds.width / 2
-    }
-    if (!changesHeight) {
-      anchorY = bounds.y + bounds.height / 2
-    }
+        ? bounds.y + bounds.height
+        : bounds.y,
   }
 
-  const scaleX = newWidth / bounds.width
-  const scaleY = newHeight / bounds.height
+  const shape = calculateShapeBounds(anchor, point, {
+    base: bounds,
+    changes: { height: changesHeight, width: changesWidth },
+    constrainProportions,
+    direction: { x: movesLeft ? -1 : 1, y: movesTop ? -1 : 1 },
+    fromCenter,
+  })
+
+  const scaleX = shape.signedWidth / bounds.width
+  const scaleY = shape.signedHeight / bounds.height
+
+  // An edge constraint derives the other axis around the opposite edge's
+  // midpoint rather than pivoting on a corner.
+  const anchorX =
+    constrainProportions && !changesWidth
+      ? bounds.x + bounds.width / 2
+      : anchor.x
+  const anchorY =
+    constrainProportions && !changesHeight
+      ? bounds.y + bounds.height / 2
+      : anchor.y
 
   for (const id of selectedIds) {
     const original = state.originalPositions.get(id)

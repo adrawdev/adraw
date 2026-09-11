@@ -2,7 +2,7 @@ import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createEllipse, getNextZIndex } from "../../elements"
 import type { EllipseElement, Point, ToolType } from "../../types"
 import {
-  calculateBounds,
+  calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
   type Tool,
@@ -36,14 +36,17 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
       state.startPoint = point
       state.currentPoint = point
     },
-    onPointerMove(context: ToolContext, point: Point, _event: PointerEvent) {
+    onPointerMove(context: ToolContext, point: Point, event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
 
       state.currentPoint = point
 
-      const bounds = calculateBounds(state.startPoint, point)
+      const bounds = calculateShapeBounds(state.startPoint, point, {
+        constrainProportions: event.shiftKey,
+        fromCenter: event.altKey,
+      })
 
       temporaryElement = createEllipse({
         height: bounds.height,
@@ -59,12 +62,19 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
         zIndex: 0,
       })
     },
-    onPointerUp(context: ToolContext, _point: Point, _event: PointerEvent) {
+    onPointerUp(context: ToolContext, _point: Point, event: PointerEvent) {
       if (!state.startPoint || !state.currentPoint) {
         return
       }
 
-      const bounds = calculateBounds(state.startPoint, state.currentPoint)
+      const bounds = calculateShapeBounds(
+        state.startPoint,
+        state.currentPoint,
+        {
+          constrainProportions: event.shiftKey,
+          fromCenter: event.altKey,
+        },
+      )
 
       if (bounds.width > 5 && bounds.height > 5) {
         const element = createEllipse({

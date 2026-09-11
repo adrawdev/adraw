@@ -1,11 +1,6 @@
 import type { ElementId, Point } from "../../types"
-import { type ToolContext } from "../base"
-import {
-  constrainResizeDimensions,
-  getPointsBounds,
-  getResizeAxes,
-  type SelectToolState,
-} from "./state"
+import { calculateShapeBounds, type ToolContext } from "../base"
+import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
 
 // Resize a single element whose rotation is a non-zero multiple of 90°. The
 // handles live in the element's rotated frame, so the resize must be computed
@@ -49,53 +44,43 @@ export function resizeRotatedElement(
 
   // Alt keeps the element center fixed; otherwise the opposite edge stays
   // fixed in local space.
-  let anchorX = fromCenter
-    ? bounds.x + bounds.width / 2
-    : movesLeft
-      ? bounds.x + bounds.width
-      : bounds.x
-  let anchorY = fromCenter
-    ? bounds.y + bounds.height / 2
-    : movesTop
-      ? bounds.y + bounds.height
-      : bounds.y
-
-  // Left signed so a handle dragged past the opposite edge yields a negative
-  // size, which flips the element across the anchor.
-  let newWidth = changesWidth
-    ? fromCenter
-      ? 2 * (movesLeft ? anchorX - localX : localX - anchorX)
+  const anchor = {
+    x: fromCenter
+      ? bounds.x + bounds.width / 2
       : movesLeft
-        ? anchorX - localX
-        : localX - anchorX
-    : bounds.width
-  let newHeight = changesHeight
-    ? fromCenter
-      ? 2 * (movesTop ? anchorY - localY : localY - anchorY)
+        ? bounds.x + bounds.width
+        : bounds.x,
+    y: fromCenter
+      ? bounds.y + bounds.height / 2
       : movesTop
-        ? anchorY - localY
-        : localY - anchorY
-    : bounds.height
-
-  if (constrainProportions) {
-    const constrained = constrainResizeDimensions(
-      newWidth,
-      newHeight,
-      bounds.width,
-      bounds.height,
-      changesWidth,
-      changesHeight,
-    )
-    newWidth = constrained.width
-    newHeight = constrained.height
-
-    if (!changesWidth) {
-      anchorX = bounds.x + bounds.width / 2
-    }
-    if (!changesHeight) {
-      anchorY = bounds.y + bounds.height / 2
-    }
+        ? bounds.y + bounds.height
+        : bounds.y,
   }
+
+  // Signed extents: a handle dragged past the opposite edge yields a negative
+  // size, which flips the element across the anchor.
+  const shape = calculateShapeBounds(
+    anchor,
+    { x: localX, y: localY },
+    {
+      base: bounds,
+      changes: { height: changesHeight, width: changesWidth },
+      constrainProportions,
+      direction: { x: movesLeft ? -1 : 1, y: movesTop ? -1 : 1 },
+      fromCenter,
+    },
+  )
+  const newWidth = shape.signedWidth
+  const newHeight = shape.signedHeight
+
+  const anchorX =
+    constrainProportions && !changesWidth
+      ? bounds.x + bounds.width / 2
+      : anchor.x
+  const anchorY =
+    constrainProportions && !changesHeight
+      ? bounds.y + bounds.height / 2
+      : anchor.y
 
   if (element.type === "path" && singleOriginal.points) {
     // Scale the points about the fixed edge in the element's local (unrotated)

@@ -2,7 +2,7 @@ import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createRectangle, getNextZIndex } from "../../elements"
 import type { Point, RectangleElement, ToolType } from "../../types"
 import {
-  calculateBounds,
+  calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
   type Tool,
@@ -38,14 +38,17 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
       state.startPoint = point
       state.currentPoint = point
     },
-    onPointerMove(context: ToolContext, point: Point, _event: PointerEvent) {
+    onPointerMove(context: ToolContext, point: Point, event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
 
       state.currentPoint = point
 
-      const bounds = calculateBounds(state.startPoint, point)
+      const bounds = calculateShapeBounds(state.startPoint, point, {
+        constrainProportions: event.shiftKey,
+        fromCenter: event.altKey,
+      })
 
       temporaryElement = createRectangle({
         cornerRadius: toolOptions.cornerRadius ?? 0,
@@ -62,12 +65,19 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
         zIndex: 0,
       })
     },
-    onPointerUp(context: ToolContext, _point: Point, _event: PointerEvent) {
+    onPointerUp(context: ToolContext, _point: Point, event: PointerEvent) {
       if (!state.startPoint || !state.currentPoint) {
         return
       }
 
-      const bounds = calculateBounds(state.startPoint, state.currentPoint)
+      const bounds = calculateShapeBounds(
+        state.startPoint,
+        state.currentPoint,
+        {
+          constrainProportions: event.shiftKey,
+          fromCenter: event.altKey,
+        },
+      )
 
       if (bounds.width > 5 && bounds.height > 5) {
         const element = createRectangle({
