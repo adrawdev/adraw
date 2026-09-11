@@ -194,6 +194,7 @@ export function createSelectTool(
           selectedIds,
           event.shiftKey,
           event.altKey,
+          event,
         )
         return
       }
@@ -210,12 +211,13 @@ export function createSelectTool(
           selectedIds,
           event.shiftKey,
           event.altKey,
+          event,
         )
         return
       }
 
       if (state.dragStartElement && state.dragStartPoint) {
-        moveSelection(state, context, point)
+        moveSelection(state, context, point, event)
       }
     },
     onPointerUp(context: ToolContext, _point: Point, _event: PointerEvent) {

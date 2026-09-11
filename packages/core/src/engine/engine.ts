@@ -25,6 +25,7 @@ import type {
   CanvasElement,
   ElementId,
   MediaElement,
+  SnapGuide,
   ToolType,
   ViewportState,
 } from "../types"
@@ -51,6 +52,7 @@ export interface EngineInternal {
   getViewport: () => ViewportState
   setViewport: (viewport: ViewportState) => void
   setSelectedIds: (ids: Set<ElementId>) => void
+  setSnapGuides: (guides: SnapGuide[]) => void
   pushHistory: () => void
   emit: <K extends keyof CanvasEventMap>(
     event: K,
@@ -67,6 +69,8 @@ export class CanvasEngine {
   private viewport: ViewportState
   private activeTool: Tool
   private snappingConfig: SnappingConfig
+  private isSnapMode: boolean
+  private snapGuides: SnapGuide[] = []
   private strokeColor: string = STROKE_COLOR
   private hideOverlayWhileTransforming: boolean
   private history = createHistoryState()
@@ -89,6 +93,7 @@ export class CanvasEngine {
   constructor(options: CanvasOptions = {}) {
     this.viewport = createViewport(options.initialViewport)
     this.snappingConfig = createSnappingConfig(options.snapping)
+    this.isSnapMode = options.isSnapMode ?? false
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
 
@@ -114,7 +119,9 @@ export class CanvasEngine {
     return {
       getCanvasSize: () => this.canvasSize,
       getElements: () => this.elements,
+      getIsSnapMode: () => this.isSnapMode,
       getSelectedIds: () => this.selectedIds,
+      getSnappingConfig: () => this.snappingConfig,
       getStrokeColor: () => this.strokeColor,
       getViewport: () => this.viewport,
       pushHistory: () => {
@@ -132,6 +139,9 @@ export class CanvasEngine {
       setSelectedIds: (ids) => {
         this.selectedIds = ids
         this.emit("selectionChange", { selectedIds: this.selectedIds })
+      },
+      setSnapGuides: (guides) => {
+        this.snapGuides = guides
       },
       setViewport: (viewport) => {
         this.viewport = viewport
@@ -156,6 +166,7 @@ export class CanvasEngine {
 
     this.activeTool.onDeactivate(this.createToolContext())
     this.activeTool = newTool
+    this.snapGuides = []
     this.activeTool.onActivate(this.createToolContext())
     this.emit("toolChange", { tool: toolType })
   }
@@ -215,6 +226,22 @@ export class CanvasEngine {
 
   setSnappingConfig(config: Partial<SnappingConfig>): void {
     this.snappingConfig = { ...this.snappingConfig, ...config }
+  }
+
+  // Snapping stays active without a modifier when `true`; otherwise it is
+  // activated per-gesture by holding Ctrl/Cmd.
+  getIsSnapMode(): boolean {
+    return this.isSnapMode
+  }
+
+  setIsSnapMode(isSnapMode: boolean): void {
+    this.isSnapMode = isSnapMode
+  }
+
+  // Guides from the in-progress snap gesture (empty when not snapped); the DOM
+  // adapter renders them and headless consumers can read them.
+  getSnapGuides(): SnapGuide[] {
+    return this.snapGuides
   }
 
   setStrokeColor(color: string): void {
@@ -396,5 +423,10 @@ export class CanvasEngine {
   /** @internal */
   pushHistory(): void {
     this.history = pushHistory(this.history, this.elements, this.selectedIds)
+  }
+
+  /** @internal */
+  setSnapGuides(guides: SnapGuide[]): void {
+    this.snapGuides = guides
   }
 }

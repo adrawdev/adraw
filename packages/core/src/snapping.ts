@@ -7,12 +7,10 @@ import type {
 } from "./types"
 
 export interface SnappingConfig {
-  enabled: boolean
   threshold: number
 }
 
 const DEFAULT_SNAPPING_CONFIG: SnappingConfig = {
-  enabled: false,
   threshold: 5,
 }
 
@@ -23,6 +21,21 @@ export function createSnappingConfig(
     ...DEFAULT_SNAPPING_CONFIG,
     ...partial,
   }
+}
+
+// Modifier keys that temporarily activate snapping when `isSnapMode` is off.
+export interface SnapModifiers {
+  ctrlKey: boolean
+  metaKey: boolean
+}
+
+// Snapping is on when `isSnapMode` keeps it always on or the user holds
+// Ctrl/Cmd for the duration of the gesture.
+export function isSnapActive(
+  isSnapMode: boolean,
+  event: SnapModifiers,
+): boolean {
+  return isSnapMode || event.ctrlKey || event.metaKey
 }
 
 export interface SnapPoint {
@@ -112,6 +125,48 @@ export function snapPointToGuides(point: Point, guides: SnapGuide[]): Point {
   return { x: snappedX, y: snappedY }
 }
 
+// A single axis feature of the moving bounds (its left/right/center or
+// top/bottom/middle) paired with the offset needed to place the bounds so that
+// feature lands on a guide position.
+interface AxisFeature {
+  offset: number
+  position: number
+}
+
+interface AxisSnap {
+  delta: number
+  elementId: ElementId
+  offset: number
+  position: number
+}
+
+function nearestAxisSnap(
+  features: AxisFeature[],
+  snapPoints: SnapPoint[],
+  axis: "x" | "y",
+  threshold: number,
+): AxisSnap | null {
+  let best: AxisSnap | null = null
+
+  for (const feature of features) {
+    for (const snapPoint of snapPoints) {
+      const position = snapPoint[axis]
+      const delta = Math.abs(feature.position - position)
+
+      if (delta < threshold && (!best || delta < best.delta)) {
+        best = {
+          delta,
+          elementId: snapPoint.elementId,
+          offset: feature.offset,
+          position,
+        }
+      }
+    }
+  }
+
+  return best
+}
+
 export function snapBoundsToElements(
   bounds: { x: number; y: number; width: number; height: number },
   elements: Map<ElementId, CanvasElement>,
@@ -127,67 +182,97 @@ export function snapBoundsToElements(
   const snapPoints = getAllSnapPoints(elements, excludeIds)
   const guides: SnapGuide[] = []
 
-  const leftPoints = snapPoints.filter((p) => p.type === "left")
-  const rightPoints = snapPoints.filter((p) => p.type === "right")
-  const topPoints = snapPoints.filter((p) => p.type === "top")
-  const bottomPoints = snapPoints.filter((p) => p.type === "bottom")
+  // Align the moving bounds' left/right/center with any target edge or center,
+  // snapping the closest feature on each axis.
+  const xSnap = nearestAxisSnap(
+    [
+      { offset: 0, position: bounds.x },
+      { offset: -bounds.width, position: bounds.x + bounds.width },
+      { offset: -bounds.width / 2, position: bounds.x + bounds.width / 2 },
+    ],
+    snapPoints,
+    "x",
+    threshold,
+  )
+  const ySnap = nearestAxisSnap(
+    [
+      { offset: 0, position: bounds.y },
+      { offset: -bounds.height, position: bounds.y + bounds.height },
+      { offset: -bounds.height / 2, position: bounds.y + bounds.height / 2 },
+    ],
+    snapPoints,
+    "y",
+    threshold,
+  )
 
-  let newX = bounds.x
-  let newY = bounds.y
-
-  for (const point of leftPoints) {
-    if (Math.abs(bounds.x - point.x) < threshold) {
-      newX = point.x
-      guides.push({
-        elements: [point.elementId],
-        position: point.x,
-        type: "vertical",
-      })
-      break
-    }
+  if (xSnap) {
+    guides.push({
+      elements: [xSnap.elementId],
+      position: xSnap.position,
+      type: "vertical",
+    })
   }
-
-  for (const point of rightPoints) {
-    if (Math.abs(bounds.x + bounds.width - point.x) < threshold) {
-      newX = point.x - bounds.width
-      guides.push({
-        elements: [point.elementId],
-        position: point.x,
-        type: "vertical",
-      })
-      break
-    }
-  }
-
-  for (const point of topPoints) {
-    if (Math.abs(bounds.y - point.y) < threshold) {
-      newY = point.y
-      guides.push({
-        elements: [point.elementId],
-        position: point.y,
-        type: "horizontal",
-      })
-      break
-    }
-  }
-
-  for (const point of bottomPoints) {
-    if (Math.abs(bounds.y + bounds.height - point.y) < threshold) {
-      newY = point.y - bounds.height
-      guides.push({
-        elements: [point.elementId],
-        position: point.y,
-        type: "horizontal",
-      })
-      break
-    }
+  if (ySnap) {
+    guides.push({
+      elements: [ySnap.elementId],
+      position: ySnap.position,
+      type: "horizontal",
+    })
   }
 
   return {
     guides,
     height: bounds.height,
     width: bounds.width,
-    x: newX,
-    y: newY,
+    x: xSnap ? xSnap.position + xSnap.offset : bounds.x,
+    y: ySnap ? ySnap.position + ySnap.offset : bounds.y,
+  }
+}
+
+// Snap a single point (a resize handle / drawing cursor) to the nearest target
+// edge or center on each axis, returning the snapped point and its guides.
+export function snapPointToElements(
+  point: Point,
+  elements: Map<ElementId, CanvasElement>,
+  excludeIds: Set<ElementId>,
+  threshold: number,
+): { point: Point; guides: SnapGuide[] } {
+  const snapPoints = getAllSnapPoints(elements, excludeIds)
+  const guides: SnapGuide[] = []
+
+  const xSnap = nearestAxisSnap(
+    [{ offset: 0, position: point.x }],
+    snapPoints,
+    "x",
+    threshold,
+  )
+  const ySnap = nearestAxisSnap(
+    [{ offset: 0, position: point.y }],
+    snapPoints,
+    "y",
+    threshold,
+  )
+
+  if (xSnap) {
+    guides.push({
+      elements: [xSnap.elementId],
+      position: xSnap.position,
+      type: "vertical",
+    })
+  }
+  if (ySnap) {
+    guides.push({
+      elements: [ySnap.elementId],
+      position: ySnap.position,
+      type: "horizontal",
+    })
+  }
+
+  return {
+    guides,
+    point: {
+      x: xSnap ? xSnap.position : point.x,
+      y: ySnap ? ySnap.position : point.y,
+    },
   }
 }

@@ -52,7 +52,7 @@ Wrap the part of your app that needs the canvas with `CanvasProvider`, then rend
 Sets up an isolated canvas context (via Svelte's context API) for its children. All composables and `<Canvas>` must be rendered inside it.
 
 ```svelte
-<CanvasProvider options={{ snapping: { snapEnabled: true } }}>
+<CanvasProvider options={{ snapping: { threshold: 8 } }}>
   {@render children()}
 </CanvasProvider>
 ```

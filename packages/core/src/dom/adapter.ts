@@ -3,6 +3,7 @@ import type { CanvasEngine } from "../engine/engine"
 import { setupEventListeners, updateCursor } from "./events"
 import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
+import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
 import { createDomState, type DomState } from "./state"
 import {
@@ -38,6 +39,7 @@ export function mountDom(
       renderSelectElements(state, engine)
     }
     reconcileElements(state, engine)
+    renderGuides(state, engine)
   })
 
   engine.on("viewportChange", () => {
@@ -45,6 +47,7 @@ export function mountDom(
   })
 
   engine.on("toolChange", ({ tool }) => {
+    renderGuides(state, engine)
     renderTransformOverlay(state, engine)
     updateCursor(state, tool)
   })

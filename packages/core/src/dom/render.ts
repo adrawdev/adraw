@@ -1,6 +1,7 @@
 import { STROKE_COLOR, TEXT_FONT_SIZE } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import type { CanvasElement, TextElement } from "../types"
+import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
 import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"
@@ -20,12 +21,17 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
   const viewport = engine.getViewport()
   const transform = `translate(${state.container.clientWidth / 2}, ${state.container.clientHeight / 2}) scale(${viewport.zoom}) translate(${-viewport.x}, ${-viewport.y})`
 
-  for (const group of [state.elementsGroup, state.transformOverlay]) {
+  for (const group of [
+    state.elementsGroup,
+    state.guidesGroup,
+    state.transformOverlay,
+  ]) {
     group?.setAttribute("transform", transform)
   }
 
   renderTemporary(state, engine)
   setTextElementVisibility(state, !state.textEditor)
+  renderGuides(state, engine)
   renderTransformOverlay(state, engine)
   renderSelectionBox(state, engine)
   positionTextEditor(state, engine)

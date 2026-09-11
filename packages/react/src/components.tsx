@@ -104,6 +104,7 @@ export function Canvas({ className, style }: CanvasProps) {
       container: containerRef.current,
       hideOverlayWhileTransforming: options?.hideOverlayWhileTransforming,
       initialViewport: options?.initialViewport,
+      isSnapMode: options?.isSnapMode,
       snapping: options?.snapping,
     })
 
@@ -148,6 +149,7 @@ export function Canvas({ className, style }: CanvasProps) {
   }, [
     options?.hideOverlayWhileTransforming,
     options?.initialViewport,
+    options?.isSnapMode,
     options?.snapping,
     setActiveTool,
     setElements,

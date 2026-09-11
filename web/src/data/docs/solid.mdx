@@ -63,7 +63,7 @@ To render multiple independent canvases, use multiple `CanvasProvider`/`Canvas` 
 ### `CanvasProvider`
 
 ```tsx
-<CanvasProvider options={{ snapping: { snapEnabled: true } }}>
+<CanvasProvider options={{ snapping: { threshold: 8 } }}>
   {/* ... */}
 </CanvasProvider>
 ```

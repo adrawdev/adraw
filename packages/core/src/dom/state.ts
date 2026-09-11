@@ -22,6 +22,9 @@ export interface DomState {
   // can update it in place while the type is unchanged instead of recreating it.
   temporaryType: string | null
   guidesGroup: SVGGElement | null
+  // Persistent snap-guide lines rendered into `guidesGroup`, reused across
+  // renders (usually at most two: one vertical, one horizontal).
+  guideNodes: SVGLineElement[]
   transformOverlay: SVGGElement | null
   // Persistent transform-overlay nodes. Built once and updated in place on every
   // render (rather than wiping `transformOverlay` and recreating ~10 SVG nodes
@@ -58,6 +61,7 @@ export function createDomState(): DomState {
   return {
     container: null,
     elementsGroup: null,
+    guideNodes: [],
     guidesGroup: null,
     multiSelectionGroup: null,
     multiSelectionNodes: new Map(),

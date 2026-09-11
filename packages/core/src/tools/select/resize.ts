@@ -1,5 +1,6 @@
 import type { ElementId, Point } from "../../types"
 import { calculateShapeBounds, type ToolContext } from "../base"
+import { snapToolPoint } from "../snap"
 import { resizeRotatedElement } from "./resize-rotated"
 import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
 
@@ -72,6 +73,7 @@ export function resizeSelection(
   selectedIds: Set<ElementId>,
   constrainProportions = false,
   fromCenter = false,
+  event?: PointerEvent,
 ): void {
   const bounds = state.originalBounds
   const dragHandle = state.dragHandle
@@ -79,23 +81,38 @@ export function resizeSelection(
     return
   }
 
-  if (dragHandle === "line-start" || dragHandle === "line-end") {
-    resizeLineEndpoint(state, context, point, dragHandle)
-    return
-  }
-
-  const { changesHeight, changesWidth, movesLeft, movesTop } =
-    getResizeAxes(dragHandle)
-
   const [singleId] = selectedIds
   const singleOriginal =
     selectedIds.size === 1 ? state.originalPositions.get(singleId) : undefined
+  const rotated = Boolean(singleOriginal && singleOriginal.rotation % 360 !== 0)
+  const { changesHeight, changesWidth, movesLeft, movesTop } =
+    getResizeAxes(dragHandle)
 
-  if (singleOriginal && singleOriginal.rotation % 360 !== 0) {
+  // The dragged corner/edge follows the pointer, so snapping the pointer snaps
+  // the edge being resized. Rotated elements resize in their local frame,
+  // where axis-aligned guides don't apply; guides for axes the handle doesn't
+  // drive are dropped so they never show without an effect.
+  const snapped =
+    event && !rotated ? snapToolPoint(context, point, event, selectedIds) : null
+  const dragPoint = snapped?.point ?? point
+  context.setSnapGuides(
+    snapped
+      ? snapped.guides.filter((guide) =>
+          guide.type === "vertical" ? changesWidth : changesHeight,
+        )
+      : [],
+  )
+
+  if (dragHandle === "line-start" || dragHandle === "line-end") {
+    resizeLineEndpoint(state, context, dragPoint, dragHandle)
+    return
+  }
+
+  if (rotated) {
     resizeRotatedElement(
       state,
       context,
-      point,
+      dragPoint,
       singleId,
       constrainProportions,
       fromCenter,
@@ -120,7 +137,7 @@ export function resizeSelection(
         : bounds.y,
   }
 
-  const shape = calculateShapeBounds(anchor, point, {
+  const shape = calculateShapeBounds(anchor, dragPoint, {
     base: bounds,
     changes: { height: changesHeight, width: changesWidth },
     constrainProportions,

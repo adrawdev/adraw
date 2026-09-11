@@ -90,7 +90,7 @@ export class App {}
 Returns the providers that register a component-scoped `CanvasService`. Add it to the `providers` array of the component that hosts `<adraw-canvas>` and its controls.
 
 ```ts
-provideCanvas({ snapping: { snapEnabled: true } })
+provideCanvas({ snapping: { threshold: 8 } })
 ```
 
 | Argument  | Type                   | Description                        |

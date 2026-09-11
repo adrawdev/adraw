@@ -24,6 +24,9 @@ export function dispatchPointerDown(
   point: Point,
   event: PointerEvent,
 ): void {
+  // A fresh gesture starts without guides; tools publish their own while the
+  // pointer moves.
+  engine.setSnapGuides([])
   engine
     .getActiveToolInstance()
     .onPointerDown(engine.getToolContext(), point, event)
@@ -49,6 +52,7 @@ export function dispatchPointerUp(
   engine
     .getActiveToolInstance()
     .onPointerUp(engine.getToolContext(), point, event)
+  engine.setSnapGuides([])
 }
 
 // Screen-coordinate variants used by the facade's headless fallback (no DOM

@@ -13,7 +13,9 @@ function makeContext(elements: CanvasElement[]) {
   const context: ToolContext = {
     getCanvasSize: () => ({ height: 600, width: 800 }),
     getElements: () => elementMap,
+    getIsSnapMode: () => false,
     getSelectedIds: () => selectedIds,
+    getSnappingConfig: () => ({ threshold: 5 }),
     getStrokeColor: () => "#000",
     getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
     pushHistory: () => {},
@@ -24,6 +26,7 @@ function makeContext(elements: CanvasElement[]) {
     setSelectedIds: (next) => {
       selectedIds = next
     },
+    setSnapGuides: () => {},
     setViewport: () => {},
   }
   return context

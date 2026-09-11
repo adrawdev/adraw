@@ -114,20 +114,23 @@ canvas.off("change", handler)
 
 ## Snapping
 
+Elements snap to other elements' edges and centers while moving, resizing or
+drawing; alignment guides are shown while snapped.
+
 ```ts
 const canvas = new AdrawCanvas({
   container: el,
-  snapping: {
-    snapEnabled: true,
-    snapThreshold: 8,
-    gridEnabled: false,
-    gridSize: 20,
-  },
+  snapping: { threshold: 8 },
+  // Snap without holding a modifier. When false/omitted, snapping only
+  // activates while Ctrl (or Cmd) is held during the gesture.
+  isSnapMode: false,
 })
 
 // update at runtime
-canvas.setSnappingConfig({ snapEnabled: false })
+canvas.setSnappingConfig({ threshold: 12 })
+canvas.setIsSnapMode(true)
 canvas.getSnappingConfig()
+canvas.getIsSnapMode()
 ```
 
 ## Headless usage

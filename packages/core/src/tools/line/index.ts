@@ -9,6 +9,7 @@ import {
   type ToolOptions,
   type ToolState,
 } from "../base"
+import { snapToolPoint } from "../snap"
 
 export function createLineTool(options: ToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
@@ -29,25 +30,29 @@ export function createLineTool(options: ToolOptions = {}): Tool {
       state.currentPoint = null
       temporaryElement = null
     },
-    onPointerDown(_context: ToolContext, point: Point, _event: PointerEvent) {
-      state.startPoint = point
-      state.currentPoint = point
+    onPointerDown(context: ToolContext, point: Point, event: PointerEvent) {
+      const snapped = snapToolPoint(context, point, event, new Set())
+      state.startPoint = snapped.point
+      state.currentPoint = snapped.point
+      context.setSnapGuides(snapped.guides)
     },
-    onPointerMove(context: ToolContext, point: Point, _event: PointerEvent) {
+    onPointerMove(context: ToolContext, point: Point, event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
 
-      state.currentPoint = point
+      const snapped = snapToolPoint(context, point, event, new Set())
+      state.currentPoint = snapped.point
+      context.setSnapGuides(snapped.guides)
 
-      const x = Math.min(state.startPoint.x, point.x)
-      const y = Math.min(state.startPoint.y, point.y)
-      const width = Math.abs(point.x - state.startPoint.x)
-      const height = Math.abs(point.y - state.startPoint.y)
+      const x = Math.min(state.startPoint.x, snapped.point.x)
+      const y = Math.min(state.startPoint.y, snapped.point.y)
+      const width = Math.abs(snapped.point.x - state.startPoint.x)
+      const height = Math.abs(snapped.point.y - state.startPoint.y)
 
       temporaryElement = createLine({
-        endX: point.x,
-        endY: point.y,
+        endX: snapped.point.x,
+        endY: snapped.point.y,
         height: Math.max(height, 1),
         locked: false,
         rotation: 0,

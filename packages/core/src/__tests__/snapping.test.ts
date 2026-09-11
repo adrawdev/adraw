@@ -6,7 +6,9 @@ import {
   createSnappingConfig,
   getAllSnapPoints,
   getElementSnapPoints,
+  isSnapActive,
   snapBoundsToElements,
+  snapPointToElements,
   snapPointToGuides,
 } from "../snapping"
 import type { CanvasElement, ElementId, RectangleElement } from "../types"
@@ -35,14 +37,11 @@ function toMap(elements: CanvasElement[]): Map<ElementId, CanvasElement> {
 describe("snapping", () => {
   describe("createSnappingConfig", () => {
     it("provides defaults", () => {
-      expect(createSnappingConfig()).toEqual({ enabled: false, threshold: 5 })
+      expect(createSnappingConfig()).toEqual({ threshold: 5 })
     })
 
     it("merges partial overrides", () => {
-      expect(createSnappingConfig({ enabled: true })).toEqual({
-        enabled: true,
-        threshold: 5,
-      })
+      expect(createSnappingConfig({ threshold: 8 })).toEqual({ threshold: 8 })
     })
   })
 
@@ -117,6 +116,58 @@ describe("snapping", () => {
     })
   })
 
+  describe("isSnapActive", () => {
+    it("is always active in snap mode", () => {
+      expect(isSnapActive(true, { ctrlKey: false, metaKey: false })).toBe(true)
+    })
+
+    it("activates with Ctrl or Cmd outside snap mode", () => {
+      expect(isSnapActive(false, { ctrlKey: true, metaKey: false })).toBe(true)
+      expect(isSnapActive(false, { ctrlKey: false, metaKey: true })).toBe(true)
+      expect(isSnapActive(false, { ctrlKey: false, metaKey: false })).toBe(
+        false,
+      )
+    })
+  })
+
+  describe("snapPointToElements", () => {
+    it("snaps to the nearest edge or center on each axis", () => {
+      const elements = toMap([
+        makeRect({ height: 100, id: "target", width: 100, x: 100, y: 100 }),
+      ])
+
+      const result = snapPointToElements(
+        { x: 103, y: 197 },
+        elements,
+        new Set(),
+        5,
+      )
+
+      expect(result.point).toEqual({ x: 100, y: 200 })
+      expect(
+        result.guides.some((g) => g.type === "vertical" && g.position === 100),
+      ).toBe(true)
+      expect(
+        result.guides.some(
+          (g) => g.type === "horizontal" && g.position === 200,
+        ),
+      ).toBe(true)
+    })
+
+    it("returns the point unchanged outside the threshold", () => {
+      const elements = toMap([makeRect({ id: "target", x: 100, y: 100 })])
+      const result = snapPointToElements(
+        { x: 500, y: 500 },
+        elements,
+        new Set(),
+        5,
+      )
+
+      expect(result.point).toEqual({ x: 500, y: 500 })
+      expect(result.guides).toHaveLength(0)
+    })
+  })
+
   describe("snapBoundsToElements", () => {
     it("snaps the left edge to an aligned element", () => {
       const elements = toMap([
@@ -149,6 +200,26 @@ describe("snapping", () => {
       // dragged right edge (252 + 50 = 302) snaps to target right edge (300)
       // -> x = 300 - 50 = 250
       expect(result.x).toBe(250)
+    })
+
+    it("snaps the bounds center to a target center", () => {
+      const elements = toMap([
+        makeRect({ height: 100, id: "target", width: 100, x: 100, y: 0 }),
+      ])
+
+      // Moving bounds are 50 wide at x=123: left 123, right 173, center 148.
+      // The target's center (150) is the closest feature on the x axis.
+      const result = snapBoundsToElements(
+        { height: 50, width: 50, x: 123, y: 500 },
+        elements,
+        new Set(),
+        5,
+      )
+
+      expect(result.x).toBe(125)
+      expect(
+        result.guides.some((g) => g.type === "vertical" && g.position === 150),
+      ).toBe(true)
     })
 
     it("does not snap when outside the threshold", () => {

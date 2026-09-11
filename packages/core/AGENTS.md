@@ -48,6 +48,7 @@ src/
     text-editor.ts   inline <textarea> editing lifecycle
     render.ts        renderAll, renderTemporary, updateElementGeometry, positionTextEditor
     render/elements.ts     reconcileElements, renderSelectElements
+    render/guides.ts       renderGuides (alignment guides)
     render/overlay.ts      renderTransformOverlay
     render/overlay-nodes.ts ensureOverlayNodes, renderSelectionBox
     to-image.ts       toImage
@@ -55,6 +56,7 @@ src/
     state.ts          DomState (mutable DOM adapter state)
   elements/          factories (elements.ts) + hit-testing (hit-test.ts)
   tools/<tool>/      one directory per tool; index.ts exports the factory
+  tools/snap.ts      snapToolPoint: pointer snapping for tool gestures
   coordinates.ts, history.ts, snapping.ts, viewport.ts, types.ts, constants.ts
 ```
 
@@ -104,7 +106,8 @@ Passed to constructor as `CanvasOptions`:
 - `container?: HTMLElement`
 - `initialViewport?: ViewportState`
 - `hideOverlayWhileTransforming?: boolean`
-- `snapping?: SnappingConfig`
+- `snapping?: SnappingConfig` (`{ threshold }`)
+- `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
 
 ## Type system
 
@@ -197,14 +200,15 @@ File: `src/history.ts`. Stack-based undo/redo. Call `pushHistory()` before each 
 
 ## Snapping
 
-File: `src/snapping.ts`. Config via `SnappingConfig`. `calculateSnap()` snaps a point to element edges/centers. `snapBoundsToElements()` snaps element bounds during resize/move.
+File: `src/snapping.ts`. Config via `SnappingConfig` (`threshold`). `isSnapActive()` reports whether `isSnapMode` is on or Ctrl/Cmd is held; `snapBoundsToElements()` snaps moved selection bounds and `snapPointToElements()` snaps a resize/drawing point, both returning `SnapGuide`s. Tools publish active guides through `ToolContext.setSnapGuides()`; `engine/pointer.ts` clears them on pointer down/up. `getSnapGuides()` exposes them on the engine.
 
 ## Rendering
 
-The DOM adapter renders to an `<svg>` with two `<g>` child layers: `.adraw-elements-group` and transform overlay. Rendering is incremental (never `innerHTML = ""`):
+The DOM adapter renders to an `<svg>` with three `<g>` child layers: `.adraw-elements-group`, `.adraw-guides-group` (snap alignment guides) and the transform overlay. Rendering is incremental (never `innerHTML = ""`):
 
-- `src/dom/render.ts` — `renderAll()` (full render: temporary element, transform overlay, marquee, editor position), `renderTemporary()`, `updateElementGeometry()`, `positionTextEditor()`
+- `src/dom/render.ts` — `renderAll()` (full render: temporary element, snap guides, transform overlay, marquee, editor position), `renderTemporary()`, `updateElementGeometry()`, `positionTextEditor()`
 - `src/dom/render/elements.ts` — `reconcileElements()` (DOM diff for non-select tools), `renderSelectElements()` (DOM diff for select tool, only re-geometries selected)
+- `src/dom/render/guides.ts` — `renderGuides()` (pooled guide lines, viewport-spanning)
 - `src/dom/render/overlay.ts` — `renderTransformOverlay()`
 - `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
 
@@ -226,6 +230,8 @@ select-deactivate.test.ts      — select deactivation
 select-flip.test.ts            — flip/transform
 select-transform-state.test.ts — isResizing, isRotating
 snapping.test.ts               — snapping math
+snapping-dom.test.ts           — snap guide DOM rendering
+snapping-gestures.test.ts      — move/resize/create snapping via headless canvas
 text.test.ts                  — text tool, measurement, hit-testing
 transform-overlay.test.ts      — transform overlay
 viewport.test.ts               — zoom, pan, zoomToFit

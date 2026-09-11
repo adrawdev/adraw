@@ -61,7 +61,7 @@ export default function App() {
 Context provider that initialises shared canvas state. All hooks and `<Canvas>` must be rendered inside it.
 
 ```tsx
-<CanvasProvider options={{ snapping: { snapEnabled: true } }}>
+<CanvasProvider options={{ snapping: { threshold: 8 } }}>
   {children}
 </CanvasProvider>
 ```

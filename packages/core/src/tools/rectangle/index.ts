@@ -10,6 +10,7 @@ import {
   type ToolOptions,
   type ToolState,
 } from "../base"
+import { snapToolPoint } from "../snap"
 
 export interface RectangleToolOptions extends ToolOptions {
   cornerRadius?: number
@@ -34,18 +35,22 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
       state.currentPoint = null
       temporaryElement = null
     },
-    onPointerDown(_context: ToolContext, point: Point, _event: PointerEvent) {
-      state.startPoint = point
-      state.currentPoint = point
+    onPointerDown(context: ToolContext, point: Point, event: PointerEvent) {
+      const snapped = snapToolPoint(context, point, event, new Set())
+      state.startPoint = snapped.point
+      state.currentPoint = snapped.point
+      context.setSnapGuides(snapped.guides)
     },
     onPointerMove(context: ToolContext, point: Point, event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
 
-      state.currentPoint = point
+      const snapped = snapToolPoint(context, point, event, new Set())
+      state.currentPoint = snapped.point
+      context.setSnapGuides(snapped.guides)
 
-      const bounds = calculateShapeBounds(state.startPoint, point, {
+      const bounds = calculateShapeBounds(state.startPoint, snapped.point, {
         constrainProportions: event.shiftKey,
         fromCenter: event.altKey,
       })

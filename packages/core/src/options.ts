@@ -3,6 +3,9 @@ import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
 
 export interface CanvasOptions {
   snapping?: Partial<SnappingConfig>
+  // When `true`, snapping is active by default during a drag. When `false`,
+  // snapping only activates while Ctrl/Cmd is held. Defaults to `false`.
+  isSnapMode?: boolean
   initialViewport?: ViewportState
   // Hide the selection bounding box + resize/rotation handles while a
   // resize/rotation gesture is in progress, so the overlay doesn't lag the

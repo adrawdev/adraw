@@ -30,7 +30,7 @@ From `src/index.ts`:
   const el = document.getElementById("my-canvas")
 
   // Set options before connected (optional)
-  el.options = { snapping: { enabled: true } }
+  el.options = { snapping: { threshold: 8 } }
 
   // Read state from mirrored fields
   console.log(el.activeTool)

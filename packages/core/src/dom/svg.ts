@@ -14,9 +14,11 @@ export const resizeHandleClass = "adraw-resize-handle"
 export const resizeEdgeClass = "adraw-resize-edge"
 export const selectionBoxClass = "adraw-selection-box"
 export const multiSelectionBoxClass = "adraw-multi-selection-box"
+export const snapGuideClass = "adraw-snap-guide"
 export const textEditorClass = "adraw-text-editor"
 
 export const boundingBoxStrokeWidth = 2
+export const snapGuideStrokeWidth = 1
 export const resizeHandleSize = 12
 export const rotationHandleRadio = 6
 export const rotationHandleSpacing = 30

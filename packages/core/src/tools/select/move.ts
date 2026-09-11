@@ -1,12 +1,15 @@
-import type { Point } from "../../types"
+import { isSnapActive, snapBoundsToElements } from "../../snapping"
+import type { Point, SnapGuide } from "../../types"
 import { type ToolContext } from "../base"
 import type { SelectToolState } from "./state"
 
-// Move selected elements by the pointer delta since drag start.
+// Move selected elements by the pointer delta since drag start, optionally
+// snapping the moved selection bounds to other elements' edges/centers.
 export function moveSelection(
   state: SelectToolState,
   context: ToolContext,
   point: Point,
+  event?: PointerEvent,
 ): void {
   if (!state.dragStartElement || !state.dragStartPoint) {
     return
@@ -14,10 +17,29 @@ export function moveSelection(
 
   const elements = context.getElements()
   const selectedIds = context.getSelectedIds()
-  const delta = {
+  let delta = {
     x: point.x - state.dragStartPoint.x,
     y: point.y - state.dragStartPoint.y,
   }
+  let guides: SnapGuide[] = []
+
+  const bounds = state.originalBounds
+  if (event && bounds && isSnapActive(context.getIsSnapMode(), event)) {
+    const snapped = snapBoundsToElements(
+      {
+        height: bounds.height,
+        width: bounds.width,
+        x: bounds.x + delta.x,
+        y: bounds.y + delta.y,
+      },
+      elements,
+      selectedIds,
+      context.getSnappingConfig().threshold,
+    )
+    delta = { x: snapped.x - bounds.x, y: snapped.y - bounds.y }
+    guides = snapped.guides
+  }
+  context.setSnapGuides(guides)
 
   for (const id of selectedIds) {
     const original = state.originalPositions.get(id)

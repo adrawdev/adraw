@@ -1,9 +1,11 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
+import type { SnappingConfig } from "../snapping"
 import type {
   BoundingBox,
   CanvasElement,
   ElementId,
   Point,
+  SnapGuide,
   ToolType,
   ViewportState,
 } from "../types"
@@ -17,6 +19,9 @@ export interface ToolContext {
   setViewport: (viewport: ViewportState) => void
   getCanvasSize: () => { width: number; height: number }
   getStrokeColor: () => string
+  getSnappingConfig: () => SnappingConfig
+  getIsSnapMode: () => boolean
+  setSnapGuides: (guides: SnapGuide[]) => void
   pushHistory: () => void
   setActiveTool: (tool: ToolType) => void
 }

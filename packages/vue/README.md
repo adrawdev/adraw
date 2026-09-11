@@ -78,7 +78,7 @@ Each `CanvasProvider` creates its own isolated canvas instance, so nesting sever
 Creates the underlying canvas instance and makes it available to `Canvas` and all composables rendered inside it.
 
 ```vue
-<CanvasProvider :options="{ snapping: { snapEnabled: true } }">
+<CanvasProvider :options="{ snapping: { threshold: 8 } }">
   ...
 </CanvasProvider>
 ```

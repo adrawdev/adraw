@@ -98,6 +98,7 @@ export function Canvas(props: CanvasProps): JSX.Element {
       container: containerRef,
       hideOverlayWhileTransforming: options?.hideOverlayWhileTransforming,
       initialViewport: options?.initialViewport,
+      isSnapMode: options?.isSnapMode,
       snapping: options?.snapping,
     })
 

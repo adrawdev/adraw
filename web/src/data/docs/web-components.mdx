@@ -66,7 +66,7 @@ Configure before the element connects:
 
 ```ts
 const canvas = document.createElement("adraw-canvas")
-canvas.options = { snapping: { snapEnabled: true } }
+canvas.options = { snapping: { threshold: 8 } }
 container.appendChild(canvas) // connect → mounts with these options
 ```
 
