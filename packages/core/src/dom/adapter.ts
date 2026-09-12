@@ -94,10 +94,14 @@ function initDom(state: DomState, engine: CanvasEngine): void {
   state.transformOverlay.classList.add(transformOverlayClass)
   // Overlay children belong to the fresh `transformOverlay`; drop stale refs
   // so they're rebuilt into it on the next render (e.g. after a re-mount).
+  // The element node caches likewise start empty against the fresh group.
   state.overlayNodes = null
   state.selectionBoxNode = null
   state.multiSelectionGroup = null
   state.multiSelectionNodes.clear()
+  state.nodeById.clear()
+  state.pathPointSigs.clear()
+  state.renderedGeometry.clear()
 
   state.svgElement.appendChild(state.elementsGroup)
   state.svgElement.appendChild(state.guidesGroup)

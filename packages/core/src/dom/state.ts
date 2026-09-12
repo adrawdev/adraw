@@ -15,6 +15,17 @@ export interface DomState {
   container: HTMLElement | null
   svgElement: SVGSVGElement | null
   elementsGroup: SVGGElement | null
+  // Committed element nodes keyed by element id. `reconcileElements` and
+  // `renderSelectElements` update nodes through this cache instead of
+  // `document.getElementById`, and never rewrite nodes whose element hasn't
+  // changed (see `renderedGeometry`).
+  nodeById: Map<ElementId, SVGGElement>
+  // Fingerprint of the last geometry written to each element node, so renders
+  // skip DOM writes for unchanged elements.
+  renderedGeometry: Map<ElementId, string>
+  // Per-path cache of serialized points (keyed by points array identity) so
+  // signature computation doesn't re-join unchanged point arrays.
+  pathPointSigs: Map<ElementId, { points: Point[]; sig: string }>
   // The in-progress element (from the active tool) is rendered directly into
   // `elementsGroup`; this tracks its node so it can be updated/removed in place.
   temporaryNode: SVGGElement | null
@@ -65,10 +76,13 @@ export function createDomState(): DomState {
     guidesGroup: null,
     multiSelectionGroup: null,
     multiSelectionNodes: new Map(),
+    nodeById: new Map(),
     overlayNodes: null,
+    pathPointSigs: new Map(),
     pinchStartCenter: null,
     pinchStartDistance: null,
     pinchViewportState: null,
+    renderedGeometry: new Map(),
     resizeObserver: null,
     selectionBoxNode: null,
     svgElement: null,
