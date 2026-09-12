@@ -1,5 +1,6 @@
 import { generateId } from "./coordinates"
 import type {
+  ArrowElement,
   CanvasElement,
   EllipseElement,
   GroupElement,
@@ -57,6 +58,16 @@ export function createLine(factory: ElementFactory<LineElement>): LineElement {
     ...factory,
     id: factory.id ?? generateId(),
     type: "line",
+  }
+}
+
+export function createArrow(
+  factory: ElementFactory<ArrowElement>,
+): ArrowElement {
+  return {
+    ...factory,
+    id: factory.id ?? generateId(),
+    type: "arrow",
   }
 }
 

@@ -7,7 +7,9 @@ import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"
 import {
   appendTextLines,
+  bindingTargetClass,
   createElementGroup,
+  getArrowSvgGeometry,
   getTransformElementAttribute,
   pointsToPath,
   temporaryClass,
@@ -31,6 +33,7 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
 
   renderTemporary(state, engine)
   setTextElementVisibility(state, !state.textEditor)
+  renderBindingHighlight(state, engine)
   renderGuides(state, engine)
   renderTransformOverlay(state, engine)
   renderSelectionBox(state, engine)
@@ -99,6 +102,28 @@ export function setTextElementVisibility(
   }
 }
 
+// Mirror the active tool's binding candidate onto the candidate's element node
+// as a CSS class hook (`.adraw-binding-target`). Toggles only on change so
+// unchanged nodes aren't touched on every pointer move.
+export function renderBindingHighlight(
+  state: DomState,
+  engine: CanvasEngine,
+): void {
+  const candidate = engine.getBindingCandidate()
+  if (state.bindingHighlightId === candidate) {
+    return
+  }
+  if (state.bindingHighlightId) {
+    state.nodeById
+      .get(state.bindingHighlightId)
+      ?.classList.remove(bindingTargetClass)
+  }
+  state.bindingHighlightId = candidate
+  if (candidate) {
+    state.nodeById.get(candidate)?.classList.add(bindingTargetClass)
+  }
+}
+
 // Update an existing element's DOM node (transform + type-specific geometry)
 // in place, without recreating it.
 export function updateElementGeometry(
@@ -115,6 +140,34 @@ export function updateElementGeometry(
       lineElement.setAttribute("x2", `${element.endX}`)
       lineElement.setAttribute("y2", `${element.endY}`)
       lineElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      break
+    }
+    case "arrow": {
+      const geometry = getArrowSvgGeometry(element)
+      const stroke = element.strokeColor || STROKE_COLOR
+      const lineElement = group.getElementsByTagName("line")[0]
+      lineElement.setAttribute("x1", `${geometry.lineStart.x}`)
+      lineElement.setAttribute("y1", `${geometry.lineStart.y}`)
+      lineElement.setAttribute("x2", `${geometry.lineEnd.x}`)
+      lineElement.setAttribute("y2", `${geometry.lineEnd.y}`)
+      lineElement.setAttribute("stroke", stroke)
+      lineElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
+
+      const heads = group.getElementsByTagName("path")
+      const data = [geometry.endHead, geometry.startHead]
+      for (let i = 0; i < data.length; i++) {
+        const d = data[i]
+        if (d) {
+          heads[i].setAttribute("d", d)
+          heads[i].removeAttribute("display")
+        } else {
+          heads[i].setAttribute("display", "none")
+        }
+        heads[i].setAttribute("fill", stroke)
+      }
       break
     }
     case "path": {

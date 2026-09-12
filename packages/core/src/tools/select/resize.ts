@@ -1,11 +1,18 @@
-import type { ElementId, Point } from "../../types"
+import {
+  BINDING_PICK_MARGIN,
+  detachArrowsOutsideSelection,
+  findBindingTarget,
+} from "../../bindings"
+import type { ArrowBinding, ElementId, Point } from "../../types"
 import { calculateShapeBounds, type ToolContext } from "../base"
 import { snapToolPoint } from "../snap"
 import { resizeRotatedElement } from "./resize-rotated"
 import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
 
-// Drag a line's endpoint handle — move that endpoint and update bbox.
-function resizeLineEndpoint(
+// Drag a line/arrow endpoint handle — move that endpoint and update bbox. For
+// arrows the dragged endpoint (re)binds to the element under the pointer, or
+// unbinds when dropped on empty canvas.
+function resizeLinearEndpoint(
   state: SelectToolState,
   context: ToolContext,
   point: Point,
@@ -13,17 +20,25 @@ function resizeLineEndpoint(
 ): void {
   const elements = context.getElements()
   const selectedIds = context.getSelectedIds()
+  const margin =
+    BINDING_PICK_MARGIN / Math.max(context.getViewport().zoom, 0.01)
+  const target = findBindingTarget(elements, point, margin)
+  const binding: ArrowBinding | null = target ? { elementId: target.id } : null
+  let hasArrow = false
 
   for (const id of selectedIds) {
     const element = elements.get(id)
     const original = state.originalPositions.get(id)
     if (
-      element?.type !== "line" ||
+      (element?.type !== "line" && element?.type !== "arrow") ||
       !original ||
       !original.lineStart ||
       !original.lineEnd
     ) {
       continue
+    }
+    if (element.type === "arrow") {
+      hasArrow = true
     }
     if (dragHandle === "line-start") {
       const newX = Math.min(point.x, original.lineEnd.x)
@@ -32,6 +47,7 @@ function resizeLineEndpoint(
       const newH = Math.abs(point.y - original.lineEnd.y)
       elements.set(id, {
         ...element,
+        ...(element.type === "arrow" ? { startBinding: binding } : {}),
         endX: original.lineEnd.x,
         endY: original.lineEnd.y,
         height: Math.max(1, newH),
@@ -48,6 +64,7 @@ function resizeLineEndpoint(
       const newH = Math.abs(point.y - original.lineStart.y)
       elements.set(id, {
         ...element,
+        ...(element.type === "arrow" ? { endBinding: binding } : {}),
         endX: point.x,
         endY: point.y,
         height: Math.max(1, newH),
@@ -59,6 +76,7 @@ function resizeLineEndpoint(
       })
     }
   }
+  state.bindingCandidate = hasArrow ? (target?.id ?? null) : null
   context.setElements(new Map(elements))
 }
 
@@ -104,9 +122,13 @@ export function resizeSelection(
   )
 
   if (dragHandle === "line-start" || dragHandle === "line-end") {
-    resizeLineEndpoint(state, context, dragPoint, dragHandle)
+    resizeLinearEndpoint(state, context, dragPoint, dragHandle)
     return
   }
+
+  // Any other direct resize of an arrow detaches bindings whose target isn't
+  // part of the same selection (endpoint drags above rebind instead).
+  detachArrowsOutsideSelection(context.getElements(), selectedIds)
 
   if (rotated) {
     resizeRotatedElement(
@@ -183,7 +205,7 @@ export function resizeSelection(
             y: nb.y,
           })
         } else if (
-          element.type === "line" &&
+          (element.type === "line" || element.type === "arrow") &&
           original.lineStart &&
           original.lineEnd
         ) {

@@ -1,3 +1,4 @@
+import { syncArrowBindings } from "../bindings"
 import { STROKE_COLOR } from "../constants"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import {
@@ -11,6 +12,7 @@ import {
 import type { CanvasEventMap, CanvasOptions, MediaInput } from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import {
+  createArrowTool,
   createDrawTool,
   createEllipseTool,
   createEraserTool,
@@ -115,6 +117,7 @@ export class CanvasEngine {
     this.tools.set("rectangle", createRectangleTool())
     this.tools.set("ellipse", createEllipseTool())
     this.tools.set("line", createLineTool())
+    this.tools.set("arrow", createArrowTool())
     this.tools.set("draw", createDrawTool())
     this.tools.set("eraser", createEraserTool())
     this.tools.set("text", createTextTool())
@@ -147,6 +150,7 @@ export class CanvasEngine {
       setActiveTool: (tool) => this.setActiveTool(tool),
       setElements: (elements) => {
         this.elements = elements
+        syncArrowBindings(this.elements)
         this.emit("change", { elements: this.elements })
       },
       setSelectedIds: (ids) => {
@@ -219,6 +223,7 @@ export class CanvasEngine {
     for (const element of elements) {
       this.elements.set(element.id, element)
     }
+    syncArrowBindings(this.elements)
 
     this.emit("change", { elements: this.elements })
     this.selectedIds = new Set(elements.map((elem) => elem.id))
@@ -295,6 +300,7 @@ export class CanvasEngine {
     const result = undo(this.history, this.elements, this.selectedIds)
     if (result) {
       this.elements = result.elements
+      syncArrowBindings(this.elements)
       this.selectedIds = result.selectedIds
       this.history = result.state
       this.emit("change", { elements: this.elements })
@@ -308,6 +314,7 @@ export class CanvasEngine {
     const result = redo(this.history, this.elements, this.selectedIds)
     if (result) {
       this.elements = result.elements
+      syncArrowBindings(this.elements)
       this.selectedIds = result.selectedIds
       this.history = result.state
       this.emit("change", { elements: this.elements })
@@ -387,6 +394,7 @@ export class CanvasEngine {
     for (const element of pasted) {
       this.elements.set(element.id, element)
     }
+    syncArrowBindings(this.elements)
     this.selectedIds = new Set(pasted.map((element) => element.id))
     // Push after mutating so the top of the undo stack mirrors the pasted
     // state (same convention as the tools).
@@ -444,6 +452,14 @@ export class CanvasEngine {
 
   getTemporaryElement(): CanvasElement | null {
     return this.activeTool.getTemporaryElement()
+  }
+
+  // Element currently highlighted as a binding candidate, or null. Driven by
+  // the active tool (arrow drawing / arrow endpoint drag) and consumed by the
+  // DOM adapter's highlight rendering.
+  /** @internal */
+  getBindingCandidate(): ElementId | null {
+    return this.activeTool.getBindingCandidate?.() ?? null
   }
 
   on<K extends keyof CanvasEventMap>(

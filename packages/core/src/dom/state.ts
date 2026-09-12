@@ -32,6 +32,9 @@ export interface DomState {
   // Element type the current `temporaryNode` was built for, so `renderTemporary`
   // can update it in place while the type is unchanged instead of recreating it.
   temporaryType: string | null
+  // Element currently highlighted as a binding candidate while an arrow
+  // endpoint is drawn/dragged over it (mirrors the active tool's candidate).
+  bindingHighlightId: ElementId | null
   guidesGroup: SVGGElement | null
   // Persistent snap-guide lines rendered into `guidesGroup`, reused across
   // renders (usually at most two: one vertical, one horizontal).
@@ -70,6 +73,7 @@ export interface DomState {
 
 export function createDomState(): DomState {
   return {
+    bindingHighlightId: null,
     container: null,
     elementsGroup: null,
     guideNodes: [],

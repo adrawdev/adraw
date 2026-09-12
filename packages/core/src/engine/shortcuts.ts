@@ -73,6 +73,10 @@ export function handleShortcutKey(
         actions.setActiveTool("line")
         break
       }
+      case "a": {
+        actions.setActiveTool("arrow")
+        break
+      }
       case "t": {
         actions.setActiveTool("text")
         break

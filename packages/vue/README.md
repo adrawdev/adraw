@@ -122,7 +122,7 @@ Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest 
 
 ```ts
 const { tool, setTool } = useTool()
-// tool: getter — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+// tool: getter — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text" | "arrow"
 setTool("draw")
 ```
 

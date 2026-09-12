@@ -1,6 +1,6 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
 import { DEFAULT_PATH_SMOOTHING } from "../elements"
-import type { CanvasElement, Point, TextElement } from "../types"
+import type { ArrowElement, CanvasElement, Point, TextElement } from "../types"
 
 export const svgNamespaceURI = "http://www.w3.org/2000/svg"
 export const elementsGroupClass = "adraw-elements-group"
@@ -8,6 +8,7 @@ export const elementClass = "adraw-element"
 export const temporaryClass = "adraw-temporary"
 export const guidesGroupClass = "adraw-guides-group"
 export const selectedClass = "adraw-selected"
+export const bindingTargetClass = "adraw-binding-target"
 export const transformOverlayClass = "adraw-transform-overlay"
 export const rotationHandleClass = "adraw-rotation-handle"
 export const resizeHandleClass = "adraw-resize-handle"
@@ -38,11 +39,11 @@ export const handleCursorMap: Record<string, string> = {
 
 export function getTransformElementAttribute(element: CanvasElement) {
   // Paths are drawn from absolute coordinates (no translate), so they must
-  // rotate about their absolute bbox center. Lines never use rotate() — their
-  // visual rotation comes purely from changed endpoint coordinates. Other
-  // elements are translated to (x, y) first, so their pivot is the local center
-  // (width/2, height/2).
-  if (element.type === "line") {
+  // rotate about their absolute bbox center. Lines and arrows never use
+  // rotate() — their visual rotation comes purely from changed endpoint
+  // coordinates. Other elements are translated to (x, y) first, so their pivot
+  // is the local center (width/2, height/2).
+  if (element.type === "line" || element.type === "arrow") {
     return ""
   }
   if (element.type === "path") {
@@ -98,6 +99,79 @@ export function pointsToPath(
   return d
 }
 
+// Filled-triangle arrowhead sized relative to the stroke width (with a floor so
+// thin strokes stay legible). The stroke is trimmed at the head base so the
+// line never pokes through the tip.
+const arrowHeadLengthRatio = 5
+const arrowHeadMinLength = 10
+const arrowHeadHalfWidthRatio = 0.4
+
+export function getArrowHeadLength(strokeWidth: number): number {
+  return Math.max(
+    arrowHeadMinLength,
+    arrowHeadLengthRatio * (strokeWidth || STROKE_WIDTH),
+  )
+}
+
+interface ArrowSvgGeometry {
+  startHead: string | null
+  endHead: string | null
+  lineStart: Point
+  lineEnd: Point
+}
+
+export function getArrowSvgGeometry(element: ArrowElement): ArrowSvgGeometry {
+  const start = { x: element.startX, y: element.startY }
+  const end = { x: element.endX, y: element.endY }
+  const length = Math.hypot(end.x - start.x, end.y - start.y)
+  const dir =
+    length > 0
+      ? { x: (end.x - start.x) / length, y: (end.y - start.y) / length }
+      : { x: 1, y: 0 }
+
+  const headLength = getArrowHeadLength(element.strokeWidth)
+  const trim = Math.min(headLength, length)
+  let lineStart = element.startArrowhead
+    ? { x: start.x + dir.x * trim, y: start.y + dir.y * trim }
+    : start
+  let lineEnd = element.endArrowhead
+    ? { x: end.x - dir.x * trim, y: end.y - dir.y * trim }
+    : end
+
+  // Both heads enabled on a very short arrow would invert the trimmed segment;
+  // fall back to the full span so it still draws.
+  const span =
+    (lineEnd.x - lineStart.x) * dir.x + (lineEnd.y - lineStart.y) * dir.y
+  if (span < 0) {
+    lineStart = start
+    lineEnd = end
+  }
+
+  return {
+    endHead: element.endArrowhead ? arrowHeadPath(end, dir, headLength) : null,
+    lineEnd,
+    lineStart,
+    startHead: element.startArrowhead
+      ? arrowHeadPath(start, { x: -dir.x, y: -dir.y }, headLength)
+      : null,
+  }
+}
+
+function arrowHeadPath(tip: Point, dir: Point, headLength: number): string {
+  const base = { x: tip.x - dir.x * headLength, y: tip.y - dir.y * headLength }
+  const halfWidth = headLength * arrowHeadHalfWidthRatio
+  const normal = { x: -dir.y, y: dir.x }
+  const a = {
+    x: base.x + normal.x * halfWidth,
+    y: base.y + normal.y * halfWidth,
+  }
+  const b = {
+    x: base.x - normal.x * halfWidth,
+    y: base.y - normal.y * halfWidth,
+  }
+  return `M ${tip.x} ${tip.y} L ${a.x} ${a.y} L ${b.x} ${b.y} Z`
+}
+
 export function createElementGroup(element: CanvasElement): SVGGElement {
   const group = document.createElementNS(svgNamespaceURI, "g")
   group.id = element.id
@@ -143,6 +217,37 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
         `${element.strokeWidth || STROKE_WIDTH}`,
       )
       group.appendChild(line)
+      break
+    }
+
+    case "arrow": {
+      const geometry = getArrowSvgGeometry(element)
+      const stroke = element.strokeColor || STROKE_COLOR
+      const line = document.createElementNS(svgNamespaceURI, "line")
+      line.setAttribute("stroke-linecap", "round")
+      line.setAttribute("stroke-linejoin", "round")
+      line.setAttribute("x1", `${geometry.lineStart.x}`)
+      line.setAttribute("y1", `${geometry.lineStart.y}`)
+      line.setAttribute("x2", `${geometry.lineEnd.x}`)
+      line.setAttribute("y2", `${geometry.lineEnd.y}`)
+      line.setAttribute("stroke", stroke)
+      line.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
+      group.appendChild(line)
+
+      for (const d of [geometry.endHead, geometry.startHead]) {
+        const head = document.createElementNS(svgNamespaceURI, "path")
+        head.setAttribute("fill", stroke)
+        head.setAttribute("stroke", "none")
+        if (d) {
+          head.setAttribute("d", d)
+        } else {
+          head.setAttribute("display", "none")
+        }
+        group.appendChild(head)
+      }
       break
     }
 

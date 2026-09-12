@@ -1,7 +1,7 @@
 import { getElementsBounds } from "../../elements"
 import type { CanvasEngine } from "../../engine/engine"
 import { isRotating, isTransforming } from "../../engine/internal"
-import type { LineElement, Point } from "../../types"
+import type { ArrowElement, LineElement, Point } from "../../types"
 import type { DomState } from "../state"
 import {
   resizeHandleSize,
@@ -63,12 +63,15 @@ export function renderTransformOverlay(
 
   const handleSize = resizeHandleSize / engine.getViewport().zoom
 
-  // Check if the single selected element is a line
+  // Check if the single selected element is a line or arrow
+  const linearType = elements.get([...selectedIds][0])?.type
   const isLine =
-    selectedIds.size === 1 && elements.get([...selectedIds][0])?.type === "line"
+    selectedIds.size === 1 && (linearType === "line" || linearType === "arrow")
 
   if (isLine) {
-    const lineEl = elements.get([...selectedIds][0]) as LineElement
+    const lineEl = elements.get([...selectedIds][0]) as
+      | LineElement
+      | ArrowElement
 
     // Hide standard overlay elements
     nodes.boundingBox.setAttribute("display", "none")

@@ -9,6 +9,7 @@ import {
   ImageDownIcon,
   MinusIcon,
   MousePointerIcon,
+  MoveUpRightIcon,
   PencilIcon,
   PlusIcon,
   RatioIcon,
@@ -44,6 +45,9 @@ const { class: className, ...props } = Astro.props;
     </button>
     <button class="tool-button" data-tool="line" title="Line (L)">
       <MinusIcon size={16} />
+    </button>
+    <button class="tool-button" data-tool="arrow" title="Arrow (A)">
+      <MoveUpRightIcon size={16} />
     </button>
     <button class="tool-button" data-tool="text" title="Text (T)">
       <TypeIcon size={16} />

@@ -1,3 +1,4 @@
+export { createArrowTool } from "./arrow"
 export { createDrawTool, type DrawToolOptions } from "./draw"
 export { createEllipseTool } from "./ellipse"
 export { createEraserTool } from "./eraser"

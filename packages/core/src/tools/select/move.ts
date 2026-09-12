@@ -1,3 +1,4 @@
+import { detachArrowsOutsideSelection } from "../../bindings"
 import { isSnapActive, snapBoundsToElements } from "../../snapping"
 import type { Point, SnapGuide } from "../../types"
 import { type ToolContext } from "../base"
@@ -17,6 +18,9 @@ export function moveSelection(
 
   const elements = context.getElements()
   const selectedIds = context.getSelectedIds()
+  // A direct move detaches arrows from targets outside the moving selection;
+  // arrows whose targets move along stay bound.
+  detachArrowsOutsideSelection(elements, selectedIds)
   let delta = {
     x: point.x - state.dragStartPoint.x,
     y: point.y - state.dragStartPoint.y,
@@ -59,7 +63,7 @@ export function moveSelection(
             y: original.y + delta.y,
           })
         } else if (
-          element.type === "line" &&
+          (element.type === "line" || element.type === "arrow") &&
           original.lineStart &&
           original.lineEnd
         ) {

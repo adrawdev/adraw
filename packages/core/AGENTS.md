@@ -121,19 +121,20 @@ Defined in `src/types.ts`.
 
 All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locked, visible):
 
-| Type          | Interface          | Extra fields                                           |
-| ------------- | ------------------ | ------------------------------------------------------ |
-| `"rectangle"` | `RectangleElement` | `cornerRadius`                                         |
-| `"ellipse"`   | `EllipseElement`   | —                                                      |
-| `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`     |
-| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` |
-| `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`               |
-| `"group"`     | `GroupElement`     | `children: ElementId[]`                                |
-| `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`                      |
+| Type          | Interface          | Extra fields                                                                                                           |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `"rectangle"` | `RectangleElement` | `cornerRadius`                                                                                                         |
+| `"ellipse"`   | `EllipseElement`   | —                                                                                                                      |
+| `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`                                                                     |
+| `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?` |
+| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?`                                                                 |
+| `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                               |
+| `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                |
+| `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`                                                                                      |
 
 ### Tool types
 
-`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text"`
+`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "arrow" | "text"`
 
 ### Coordinate types
 
@@ -153,6 +154,7 @@ interface Tool {
   onPointerMove(ctx: ToolContext, point: Point, event: PointerEvent): void
   onPointerUp(ctx: ToolContext, point: Point, event: PointerEvent): void
   getTemporaryElement(): CanvasElement | null
+  getBindingCandidate?(): ElementId | null
   getSelectionBox?(): BoundingBox | null
   isResizing?(): boolean
   isRotating?(): boolean
@@ -230,6 +232,7 @@ Unit tests are in `src/__tests__/`:
 
 ```
 clipboard.test.ts              — copy/cut/paste, pointer placement, serialization hooks
+arrow.test.ts                  — arrow tool, bindings, endpoint drag, clipboard remap
 coordinates.test.ts            — screenToCanvas, canvasToScreen, bounds, hit-test
 elements.test.ts               — factory functions, clone, move, resize, rotate
 history.test.ts                — undo/redo stack

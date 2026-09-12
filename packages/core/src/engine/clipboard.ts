@@ -1,6 +1,6 @@
 import { generateId } from "../coordinates"
 import type { ClipboardOptions } from "../options"
-import type { CanvasElement, ElementId, Point } from "../types"
+import type { ArrowBinding, CanvasElement, ElementId, Point } from "../types"
 
 const CLIPBOARD_TYPE = "adraw/clipboard"
 const CLIPBOARD_VERSION = 1
@@ -11,8 +11,9 @@ interface ClipboardEnvelope {
   version: number
 }
 
-// Deep-copy an element: path points and group child lists are the only nested
-// structures, so clipboard contents never alias live canvas state.
+// Deep-copy an element: path points, group child lists and arrow bindings are
+// the only nested structures, so clipboard contents never alias live canvas
+// state.
 export function cloneElementDeep(element: CanvasElement): CanvasElement {
   if (element.type === "path") {
     return {
@@ -20,10 +21,31 @@ export function cloneElementDeep(element: CanvasElement): CanvasElement {
       points: element.points.map((point) => ({ x: point.x, y: point.y })),
     }
   }
+  if (element.type === "arrow") {
+    return {
+      ...element,
+      endBinding: element.endBinding ? { ...element.endBinding } : null,
+      startBinding: element.startBinding ? { ...element.startBinding } : null,
+    }
+  }
   if (element.type === "group") {
     return { ...element, children: [...element.children] }
   }
   return { ...element }
+}
+
+// Point a pasted binding at the pasted clone of its target; null when the
+// target wasn't part of the copied batch (the endpoint then stays free at its
+// last resolved coordinates).
+function remapBinding(
+  binding: ArrowBinding | null | undefined,
+  idMap: Map<ElementId, ElementId>,
+): ArrowBinding | null {
+  if (!binding) {
+    return null
+  }
+  const elementId = idMap.get(binding.elementId)
+  return elementId ? { ...binding, elementId } : null
 }
 
 // Snapshot the selected elements, recursively including the children of any
@@ -93,7 +115,7 @@ export function createPastedElements(
       clone.y += dy
       clone.zIndex = baseZIndex + index
 
-      if (clone.type === "line") {
+      if (clone.type === "line" || clone.type === "arrow") {
         clone.startX += dx
         clone.startY += dy
         clone.endX += dx
@@ -107,6 +129,11 @@ export function createPastedElements(
         clone.children = clone.children.map(
           (childId) => idMap.get(childId) ?? childId,
         )
+      }
+
+      if (clone.type === "arrow") {
+        clone.startBinding = remapBinding(clone.startBinding, idMap)
+        clone.endBinding = remapBinding(clone.endBinding, idMap)
       }
 
       return clone

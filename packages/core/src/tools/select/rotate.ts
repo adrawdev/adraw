@@ -1,3 +1,4 @@
+import { detachArrowsOutsideSelection } from "../../bindings"
 import type { Point } from "../../types"
 import { type ToolContext } from "../base"
 import { getPointsBounds, type SelectToolState } from "./state"
@@ -25,6 +26,9 @@ export function applyRotation(
 
   const elements = context.getElements()
   const selectedIds = context.getSelectedIds()
+  // Rotating an arrow directly detaches it from targets outside the rotating
+  // selection; arrows whose targets rotate along stay bound.
+  detachArrowsOutsideSelection(elements, selectedIds)
 
   const startAngle = Math.atan2(
     state.startPoint.y - state.rotationCenter.y,
@@ -75,7 +79,7 @@ export function applyRotation(
             y: nb.y,
           })
         } else if (
-          element.type === "line" &&
+          (element.type === "line" || element.type === "arrow") &&
           original.lineStart &&
           original.lineEnd
         ) {

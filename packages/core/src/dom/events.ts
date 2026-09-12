@@ -16,6 +16,7 @@ import { setupTouchListeners } from "./touch"
 
 export function updateCursor(state: DomState, tool: ToolType): void {
   const cursors: Record<ToolType, string> = {
+    arrow: "crosshair",
     draw: "crosshair",
     ellipse: "crosshair",
     eraser: "crosshair",

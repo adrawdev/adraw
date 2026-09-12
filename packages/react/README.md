@@ -94,7 +94,7 @@ Returns the raw context value, including `elements`, `viewport`, `activeTool`, `
 
 ```ts
 const { tool, setTool } = useTool()
-// tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+// tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text" | "arrow"
 setTool("draw")
 ```
 

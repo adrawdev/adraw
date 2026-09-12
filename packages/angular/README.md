@@ -121,7 +121,7 @@ Returns the `CanvasService` for the nearest `provideCanvas()`. `CanvasService.in
 
 ```ts
 const { tool, setTool } = useTool()
-// tool: Signal<ToolType> — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+// tool: Signal<ToolType> — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text" | "arrow"
 setTool("draw")
 ```
 

@@ -16,6 +16,9 @@ function geometrySignature(state: DomState, element: CanvasElement): string {
     case "line": {
       return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}`
     }
+    case "arrow": {
+      return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}`
+    }
     case "path": {
       return `path|${base}|${element.smoothing ?? ""}|${pathPointsSignature(state, element.id, element.points)}|${element.strokeColor}`
     }

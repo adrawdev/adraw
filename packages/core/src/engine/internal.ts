@@ -1,3 +1,4 @@
+import { syncArrowBindings } from "../bindings"
 import { measureTextSize } from "../elements"
 import type { TextTool } from "../tools"
 import type { BoundingBox, ElementId, TextElement } from "../types"
@@ -58,6 +59,7 @@ export function updateTextElement(
     text,
     width: size.width,
   })
+  syncArrowBindings(engine.getElements())
   engine.emit("change", { elements: engine.getElements() })
 }
 
@@ -79,6 +81,7 @@ export function commitTextEdit(engine: EngineInternal, id: ElementId): void {
       engine.setSelectedIds(next)
     }
   }
+  syncArrowBindings(engine.getElements())
   engine.pushHistory()
   engine.emit("change", { elements: engine.getElements() })
 }
@@ -91,6 +94,7 @@ export function restoreTextElement(
   original: TextElement,
 ): void {
   engine.getElements().set(id, original)
+  syncArrowBindings(engine.getElements())
   engine.emit("change", { elements: engine.getElements() })
 }
 

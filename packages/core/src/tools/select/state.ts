@@ -21,6 +21,9 @@ export interface SelectToolState {
   dragHandle: string | null
   rotationCenter: Point | null
   originalBounds: BoundingBox | null
+  // Element highlighted as a binding candidate while dragging an arrow
+  // endpoint over it, or null.
+  bindingCandidate: ElementId | null
   // Marquee (rubber-band) selection: the anchor point where the brush started,
   // the current box while dragging, and the selection captured at brush start so
   // a multi-select modifier can union the brushed elements onto it.
@@ -31,6 +34,7 @@ export interface SelectToolState {
 
 export function createSelectToolState(): SelectToolState {
   return {
+    bindingCandidate: null,
     brushBaseSelection: null,
     brushBox: null,
     brushStart: null,

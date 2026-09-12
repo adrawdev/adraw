@@ -36,6 +36,7 @@ Pass `container` to mount immediately, or omit it and call `canvas.mount(el)` la
 | `rectangle` | Draw rectangles                           |
 | `ellipse`   | Draw ellipses                             |
 | `line`      | Draw lines                                |
+| `arrow`     | Draw arrows; endpoints can bind to shapes |
 
 ```ts
 canvas.setActiveTool("draw")
@@ -50,8 +51,55 @@ Each element on the canvas has a type:
 - `ellipse` — oval / circle
 - `path` — freehand stroke (Catmull-Rom smoothing)
 - `line` — line
+- `arrow` — line with optional arrowheads; either endpoint can bind to a shape
 - `media` — raster image
 - `group` — container for other elements
+
+## Arrows and bindings
+
+The `arrow` tool draws a straight arrow with a filled head (`startArrowhead` and
+`endArrowhead` are optional booleans; the tool enables the end head). Press `A`
+or `canvas.setActiveTool("arrow")` to activate it.
+
+Drop an endpoint on a rectangle, ellipse, text, media, or group to bind it. A
+bound endpoint aims at the target's center, is clipped just outside the target's
+border (with a `max(4, strokeWidth)` gap), and follows the target through moves,
+resizes, and rotations. Bound arrows are re-resolved automatically on every
+element change, and the last resolved coordinates are always available on the
+element (`startX`/`startY`/`endX`/`endY`).
+
+```ts
+import { createArrow } from "@adraw/core"
+
+const arrow = createArrow({
+  x: 0,
+  y: 0,
+  width: 200,
+  height: 1,
+  startX: 0,
+  startY: 0,
+  endX: 200,
+  endY: 0,
+  strokeColor: "#000",
+  strokeWidth: 2,
+  rotation: 0,
+  zIndex: 1,
+  locked: false,
+  visible: true,
+  endArrowhead: true,
+  endBinding: { elementId: rectangle.id }, // live link to another element
+})
+```
+
+Binding rules:
+
+- Select an arrow and drag its endpoint handles to rebind or unbind it.
+- Moving, resizing, or rotating an arrow directly detaches its bindings —
+  unless the bound target is part of the same selection/gesture.
+- Deleting a target detaches the arrow and freezes its last coordinates;
+  hiding a target keeps the binding and still resolves from its geometry.
+- Copy/paste remaps bindings when the target is copied too, and drops them
+  otherwise.
 
 ## Viewport
 

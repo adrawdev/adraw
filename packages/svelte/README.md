@@ -86,7 +86,7 @@ Returns the raw context value: `state` (reactive `elements`, `viewport`, `active
 
 ```ts
 const tool = useTool()
-// tool.tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+// tool.tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text" | "arrow"
 tool.setTool("draw")
 ```
 

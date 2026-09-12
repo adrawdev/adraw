@@ -8,6 +8,8 @@ test.describe("tool selection", () => {
     "rectangle",
     "ellipse",
     "draw",
+    "line",
+    "arrow",
     "eraser",
     "text",
     "select",
@@ -48,6 +50,7 @@ test.describe("tool selection", () => {
       ["h", "hand"],
       ["v", "select"],
       ["t", "text"],
+      ["a", "arrow"],
     ]
 
     for (const [key, tool] of shortcuts) {

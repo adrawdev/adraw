@@ -1,4 +1,10 @@
-import type { CanvasElement, ElementId, LineElement, Point } from "../types"
+import type {
+  ArrowElement,
+  CanvasElement,
+  ElementId,
+  LineElement,
+  Point,
+} from "../types"
 
 export function getElementsBounds(
   elements: Map<ElementId, CanvasElement>,
@@ -79,8 +85,8 @@ function pointToSegmentDistance(point: Point, a: Point, b: Point): number {
 function isPointInElement(point: Point, element: CanvasElement): boolean {
   const { x, y, width, height, rotation, type } = element
 
-  if (type === "line") {
-    const line = element as LineElement
+  if (type === "line" || type === "arrow") {
+    const line = element as LineElement | ArrowElement
     const halfStroke = Math.max(line.strokeWidth, 4) / 2
     if (rotation === 0) {
       return (

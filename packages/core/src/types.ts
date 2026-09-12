@@ -22,6 +22,7 @@ export type ElementType =
   | "ellipse"
   | "star"
   | "line"
+  | "arrow"
   | "path"
   | "media"
   | "text"
@@ -63,6 +64,28 @@ export interface LineElement extends BaseElement {
   strokeColor: string
 }
 
+// A live link from one arrow endpoint to another element. `focus` is reserved
+// for a future attach point along the target's border; v1 always aims at the
+// target's center and clips at its border.
+export interface ArrowBinding {
+  elementId: ElementId
+  focus?: number
+}
+
+export interface ArrowElement extends BaseElement {
+  type: "arrow"
+  startX: number
+  startY: number
+  endX: number
+  endY: number
+  strokeWidth: number
+  strokeColor: string
+  startArrowhead?: boolean
+  endArrowhead?: boolean
+  startBinding?: ArrowBinding | null
+  endBinding?: ArrowBinding | null
+}
+
 export interface PathElement extends BaseElement {
   type: "path"
   points: Point[]
@@ -98,6 +121,7 @@ export type CanvasElement =
   | RectangleElement
   | EllipseElement
   | LineElement
+  | ArrowElement
   | PathElement
   | MediaElement
   | TextElement
@@ -111,6 +135,7 @@ export type ToolType =
   | "rectangle"
   | "ellipse"
   | "line"
+  | "arrow"
   | "text"
 
 export interface ViewportState {

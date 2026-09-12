@@ -114,7 +114,7 @@ export function resizeRotatedElement(
   }
 
   if (
-    element.type === "line" &&
+    (element.type === "line" || element.type === "arrow") &&
     singleOriginal.lineStart &&
     singleOriginal.lineEnd
   ) {

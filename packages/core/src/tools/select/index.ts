@@ -19,6 +19,9 @@ export function createSelectTool(
 
   return {
     cursor: "default",
+    getBindingCandidate() {
+      return state.bindingCandidate
+    },
     getSelectionBox() {
       return state.brushBox
     },
@@ -43,6 +46,7 @@ export function createSelectTool(
       state.dragHandle = null
       state.rotationCenter = null
       state.originalBounds = null
+      state.bindingCandidate = null
       state.brushStart = null
       state.brushBox = null
       state.brushBaseSelection = null
@@ -128,9 +132,13 @@ export function createSelectTool(
           state.originalPositions.set(id, {
             height: el.height,
             lineEnd:
-              el.type === "line" ? { x: el.endX, y: el.endY } : undefined,
+              el.type === "line" || el.type === "arrow"
+                ? { x: el.endX, y: el.endY }
+                : undefined,
             lineStart:
-              el.type === "line" ? { x: el.startX, y: el.startY } : undefined,
+              el.type === "line" || el.type === "arrow"
+                ? { x: el.startX, y: el.startY }
+                : undefined,
             // Paths are rendered from their absolute `points`, so a resize/move
             // must transform the points too. Snapshot them to transform against
             // a stable source instead of the already-mutated live element.
@@ -234,6 +242,7 @@ export function createSelectTool(
       state.dragHandle = null
       state.rotationCenter = null
       state.originalBounds = null
+      state.bindingCandidate = null
       state.brushStart = null
       state.brushBox = null
       state.brushBaseSelection = null

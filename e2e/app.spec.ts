@@ -18,7 +18,17 @@ test.describe("app shell", () => {
   test("exposes every tool and action button", async ({ page }) => {
     await openCanvas(page)
 
-    const tools = ["select", "hand", "rectangle", "ellipse", "draw", "eraser"]
+    const tools = [
+      "select",
+      "hand",
+      "rectangle",
+      "ellipse",
+      "draw",
+      "line",
+      "arrow",
+      "text",
+      "eraser",
+    ]
     await Promise.all(
       tools.map((tool) =>
         expect(

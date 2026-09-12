@@ -1,3 +1,4 @@
+import { syncArrowBindings } from "../bindings"
 import { pushHistory, type HistoryState } from "../history"
 import type { CanvasElement, ElementId, ViewportState } from "../types"
 
@@ -24,6 +25,9 @@ export function deleteSelectedElements(
   for (const id of selectedIds) {
     nextElements.delete(id)
   }
+  // Arrows bound to a deleted target detach before the snapshot is taken, so
+  // undo restores a consistent state.
+  syncArrowBindings(nextElements)
 
   return {
     elements: nextElements,
