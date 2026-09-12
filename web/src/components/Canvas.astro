@@ -1,6 +1,8 @@
 ---
 import {
   CircleIcon,
+  ClipboardPasteIcon,
+  CopyIcon,
   EraserIcon,
   HandIcon,
   ImageIcon,
@@ -11,6 +13,7 @@ import {
   PlusIcon,
   RatioIcon,
   RedoIcon,
+  ScissorsIcon,
   SquareIcon,
   TypeIcon,
   UndoIcon
@@ -57,6 +60,16 @@ const { class: className, ...props } = Astro.props;
     </button>
     <button class="tool-button" data-action="redo" title="Redo (Ctrl+Shift+Z)">
       <RedoIcon size={16} />
+    </button>
+    <div class="separator"></div>
+    <button class="tool-button" data-action="copy" title="Copy (Ctrl+C)">
+      <CopyIcon size={16} />
+    </button>
+    <button class="tool-button" data-action="cut" title="Cut (Ctrl+X)">
+      <ScissorsIcon size={16} />
+    </button>
+    <button class="tool-button" data-action="paste" title="Paste (Ctrl+V)">
+      <ClipboardPasteIcon size={16} />
     </button>
     <div class="separator"></div>
     <button class="tool-button" data-action="zoom-in" title="Zoom In">
@@ -272,6 +285,18 @@ const { class: className, ...props } = Astro.props;
         }
         case "redo": {
           canvas.redo()
+          break
+        }
+        case "copy": {
+          canvas.copy()
+          break
+        }
+        case "cut": {
+          canvas.cut()
+          break
+        }
+        case "paste": {
+          canvas.paste()
           break
         }
         case "zoom-in": {

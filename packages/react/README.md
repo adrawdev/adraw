@@ -88,7 +88,7 @@ All hooks must be called inside `<CanvasProvider>`.
 
 ### `useCanvas()`
 
-Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and a ref to the underlying `AdrawCanvas` instance (`vanillaRef`).
+Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and a ref to the underlying `AdrawCanvas` instance (`vanillaRef`). The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

@@ -35,6 +35,7 @@ src/
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
+    clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements, computeZoomToFitViewport
     shortcuts.ts     handleShortcutKey (pure keyboard-shortcut function)
@@ -80,6 +81,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `resetZoom()`                                           | Reset zoom to 1, center to 0,0                       |
 | `zoomToFit()`                                           | Fit all elements in viewport                         |
 | `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                 |
+| `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                |
+| `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text         |
 | `undo()` / `redo()`                                     | History navigation                                   |
 | `canUndo()` / `canRedo()`                               | History stack state                                  |
 | `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                |
@@ -108,6 +111,7 @@ Passed to constructor as `CanvasOptions`:
 - `hideOverlayWhileTransforming?: boolean`
 - `snapping?: SnappingConfig` (`{ threshold }`)
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
+- `clipboard?: ClipboardOptions` — `{ serialize?, deserialize? }` hooks bridging the in-memory clipboard to the system clipboard
 
 ## Type system
 
@@ -198,6 +202,10 @@ Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection
 
 File: `src/history.ts`. Stack-based undo/redo. Call `pushHistory()` before each mutation. `undo()`/`redo()` restore elements and trigger a `"change"` event.
 
+## Clipboard
+
+`src/engine/clipboard.ts`. Each engine owns an in-memory `ClipboardManager`. `copy()`/`cut()` snapshot the selected elements — recursively including group children — and `paste(point?)` inserts fresh-ID clones (group references remapped) centered on `point`, defaulting to the last pointer position and then the viewport center. Pasting is a single undo step and selects the clones. `Ctrl/Cmd+C/X/V` map to the same operations. `serializeClipboard()` / `deserializeClipboard(text)` bridge the buffer to the system clipboard: the default format is an `{ type: "adraw/clipboard", version: 1, elements }` JSON envelope, replaceable via `new AdrawCanvas({ clipboard: { serialize, deserialize } })`.
+
 ## Snapping
 
 File: `src/snapping.ts`. Config via `SnappingConfig` (`threshold`). `isSnapActive()` reports whether `isSnapMode` is on or Ctrl/Cmd is held; `snapBoundsToElements()` snaps moved selection bounds and `snapPointToElements()` snaps a resize/drawing point, both returning `SnapGuide`s. Tools publish active guides through `ToolContext.setSnapGuides()`; `engine/pointer.ts` clears them on pointer down/up. `getSnapGuides()` exposes them on the engine.
@@ -221,6 +229,7 @@ Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-ba
 Unit tests are in `src/__tests__/`:
 
 ```
+clipboard.test.ts              — copy/cut/paste, pointer placement, serialization hooks
 coordinates.test.ts            — screenToCanvas, canvasToScreen, bounds, hit-test
 elements.test.ts               — factory functions, clone, move, resize, rotate
 history.test.ts                — undo/redo stack

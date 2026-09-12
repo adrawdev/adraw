@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { ToolType } from "@adraw/core"
-import { useHistory, useTool, useViewport } from "@adraw/vue"
+import { useCanvas, useHistory, useTool, useViewport } from "@adraw/vue"
 
 defineProps<{ label: string }>()
 
+const canvasApi = useCanvas()
 const toolApi = useTool()
 const viewportApi = useViewport()
 const historyApi = useHistory()
@@ -37,6 +38,12 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
     </button>
     <button :disabled="!historyApi.canRedo()" @click="historyApi.redo()">
       Redo
+    </button>
+    <div class="separator" />
+    <button title="Copy (Ctrl+C)" @click="canvasApi.core.copy()">Copy</button>
+    <button title="Cut (Ctrl+X)" @click="canvasApi.core.cut()">Cut</button>
+    <button title="Paste (Ctrl+V)" @click="canvasApi.core.paste()">
+      Paste
     </button>
     <div class="separator" />
     <button @click="viewportApi.zoomIn()">+</button>

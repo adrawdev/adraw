@@ -80,7 +80,7 @@ All composables must be called inside `<CanvasProvider>` (in the top level of a 
 
 ### `useCanvas()`
 
-Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`) and `instance` — a `{ current: AdrawCanvas | null }` ref to the underlying instance.
+Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`) and `instance` — a `{ current: AdrawCanvas | null }` ref to the underlying instance. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

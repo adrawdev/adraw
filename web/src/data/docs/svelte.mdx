@@ -79,7 +79,7 @@ Mounts the drawing surface. Fills its parent container (`width: 100%; height: 10
 
 ### `useCanvas()`
 
-Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`) and `instance` — a `{ current: AdrawCanvas | null }` ref to the underlying instance.
+Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`) and `instance` — a `{ current: AdrawCanvas | null }` ref to the underlying instance. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

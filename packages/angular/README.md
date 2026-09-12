@@ -115,7 +115,7 @@ All hooks must be called in an injection context and resolve the nearest provide
 
 ### `useCanvas()`
 
-Returns the `CanvasService` for the nearest `provideCanvas()`.
+Returns the `CanvasService` for the nearest `provideCanvas()`. `CanvasService.instance` is the raw `AdrawCanvas`, which carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

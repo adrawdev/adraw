@@ -112,7 +112,7 @@ The injectable that wraps the underlying `AdrawCanvas`. It exposes read-only sig
 
 ### `useCanvas()`
 
-Returns the `CanvasService` for the nearest `provideCanvas()`.
+Returns the `CanvasService` for the nearest `provideCanvas()`. `CanvasService.instance` is the raw `AdrawCanvas`, which carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

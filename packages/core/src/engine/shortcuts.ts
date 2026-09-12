@@ -2,7 +2,10 @@ import type { ToolType } from "../types"
 
 export interface ShortcutActions {
   clearSelection: () => void
+  copy: () => void
+  cut: () => void
   deleteSelected: () => void
+  paste: () => void
   redo: () => boolean
   selectAll: () => void
   setActiveTool: (tool: ToolType) => void
@@ -34,6 +37,15 @@ export function handleShortcutKey(
     } else if (key === "a") {
       event.preventDefault()
       actions.selectAll()
+    } else if (key === "c") {
+      event.preventDefault()
+      actions.copy()
+    } else if (key === "x") {
+      event.preventDefault()
+      actions.cut()
+    } else if (key === "v") {
+      event.preventDefault()
+      actions.paste()
     }
   } else {
     switch (key) {

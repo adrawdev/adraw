@@ -116,7 +116,7 @@ Call this directly only if you want to manage mounting/destruction yourself inst
 
 ### `useCanvas()`
 
-Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest `CanvasProvider`. Throws if called outside one.
+Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

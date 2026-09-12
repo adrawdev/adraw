@@ -81,7 +81,7 @@ Renders the container element and mounts the `AdrawCanvas` from the nearest `Can
 
 ### `useCanvas()`
 
-Returns the raw context value (`vanillaRef`, reactive accessors, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one.
+Returns the raw context value (`vanillaRef`, reactive accessors, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 

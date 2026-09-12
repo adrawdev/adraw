@@ -1,7 +1,8 @@
 <script lang="ts">
 import type { ToolType } from "@adraw/core"
-import { useHistory, useTool, useViewport } from "@adraw/svelte"
+import { useCanvas, useHistory, useTool, useViewport } from "@adraw/svelte"
 
+const canvas = useCanvas()
 const tool = useTool()
 const viewport = useViewport()
 const history = useHistory()
@@ -34,6 +35,25 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
   </button>
   <button type="button" onclick={history.redo} disabled={!history.canRedo()}>
     Redo
+  </button>
+  <div class="separator"></div>
+  <button
+    type="button"
+    title="Copy (Ctrl+C)"
+    onclick={() => canvas.instance.current?.copy()}>
+    Copy
+  </button>
+  <button
+    type="button"
+    title="Cut (Ctrl+X)"
+    onclick={() => canvas.instance.current?.cut()}>
+    Cut
+  </button>
+  <button
+    type="button"
+    title="Paste (Ctrl+V)"
+    onclick={() => canvas.instance.current?.paste()}>
+    Paste
   </button>
   <div class="separator"></div>
   <button type="button" onclick={viewport.zoomIn}>+</button>

@@ -86,6 +86,38 @@ canvas.deleteSelected() // remove selected elements
 canvas.getSelectedIds() // Set<ElementId>
 ```
 
+## Clipboard
+
+```ts
+canvas.copy() // snapshot the selection (group children included)
+canvas.cut() // copy, then delete the selection
+canvas.paste() // paste clones centered on the pointer
+canvas.paste({ x: 120, y: 80 }) // …or on an explicit canvas point
+```
+
+`Ctrl/Cmd+C`, `Ctrl/Cmd+X`, and `Ctrl/Cmd+V` map to the same operations.
+Pasted elements get new IDs (group references are remapped), are selected, and
+the paste is a single undo step. Without a pointer position, paste falls back to
+the viewport center.
+
+The clipboard is an in-memory buffer per canvas. Use
+`serializeClipboard()` / `deserializeClipboard(text)` to bridge it to the system
+clipboard, or pass custom hooks:
+
+```ts
+const canvas = new AdrawCanvas({
+  container: el,
+  clipboard: {
+    serialize: (elements) => JSON.stringify(elements),
+    deserialize: (data) => JSON.parse(data),
+  },
+})
+
+await navigator.clipboard.writeText(canvas.serializeClipboard()!)
+canvas.deserializeClipboard(await navigator.clipboard.readText())
+canvas.paste()
+```
+
 ## Events
 
 ```ts

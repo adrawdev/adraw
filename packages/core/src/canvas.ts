@@ -20,6 +20,7 @@ export type {
   AdrawCanvasOptions,
   CanvasEventMap,
   CanvasOptions,
+  ClipboardOptions,
   MediaInput,
   ToImageOptions,
 } from "./options"

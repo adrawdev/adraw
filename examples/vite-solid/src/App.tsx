@@ -2,6 +2,7 @@ import type { ToolType } from "@adraw/core"
 import {
   Canvas,
   CanvasProvider,
+  useCanvas,
   useHistory,
   useTool,
   useViewport,
@@ -19,6 +20,7 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
 ]
 
 function Toolbar() {
+  const { canvasRef } = useCanvas()
   const toolCtx = useTool()
   const { zoomIn, zoomOut, zoomToFit, resetZoom } = useViewport()
   const { undo, redo, canUndo, canRedo } = useHistory()
@@ -56,6 +58,31 @@ function Toolbar() {
         disabled={!canRedo()}
       >
         Redo
+      </button>
+      <div style={styles.separator} />
+      <button
+        type="button"
+        style={styles.button}
+        title="Copy (Ctrl+C)"
+        onClick={() => canvasRef.current?.copy()}
+      >
+        Copy
+      </button>
+      <button
+        type="button"
+        style={styles.button}
+        title="Cut (Ctrl+X)"
+        onClick={() => canvasRef.current?.cut()}
+      >
+        Cut
+      </button>
+      <button
+        type="button"
+        style={styles.button}
+        title="Paste (Ctrl+V)"
+        onClick={() => canvasRef.current?.paste()}
+      >
+        Paste
       </button>
       <div style={styles.separator} />
       <button type="button" style={styles.button} onClick={zoomIn}>

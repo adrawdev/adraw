@@ -1,7 +1,19 @@
 import type { SnappingConfig } from "./snapping"
 import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
 
+export interface ClipboardOptions {
+  // Custom parser for `deserializeClipboard()`; return null to reject the data
+  // and keep the current in-memory clipboard.
+  deserialize?: (data: string) => CanvasElement[] | null
+  // Custom serializer for `serializeClipboard()`; defaults to an
+  // `adraw/clipboard` JSON envelope.
+  serialize?: (elements: CanvasElement[]) => string
+}
+
 export interface CanvasOptions {
+  // Serialization hooks bridging the in-memory clipboard to the system
+  // clipboard (or any other transport).
+  clipboard?: ClipboardOptions
   snapping?: Partial<SnappingConfig>
   // When `true`, snapping is active by default during a drag. When `false`,
   // snapping only activates while Ctrl/Cmd is held. Defaults to `false`.

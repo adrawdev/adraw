@@ -26,7 +26,7 @@ const canvas = document.querySelector("adraw-canvas")!
 
 // Drive the canvas through the underlying core instance (`element.canvas`),
 // which carries the full API: setActiveTool, setViewport, zoomIn/Out,
-// undo/redo, selectAll, deleteSelected, …
+// undo/redo, selectAll, deleteSelected, copy/cut/paste, …
 document
   .querySelector("#draw-btn")!
   .addEventListener("click", () => canvas.canvas?.setActiveTool("draw"))

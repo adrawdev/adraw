@@ -24,6 +24,7 @@ export function dispatchPointerDown(
   point: Point,
   event: PointerEvent,
 ): void {
+  engine.setPointerPoint(point)
   // A fresh gesture starts without guides; tools publish their own while the
   // pointer moves.
   engine.setSnapGuides([])
@@ -38,6 +39,7 @@ export function dispatchPointerMove(
   point: Point,
   event: PointerEvent,
 ): void {
+  engine.setPointerPoint(point)
   engine
     .getActiveToolInstance()
     .onPointerMove(engine.getToolContext(), point, event)
@@ -49,6 +51,7 @@ export function dispatchPointerUp(
   point: Point,
   event: PointerEvent,
 ): void {
+  engine.setPointerPoint(point)
   engine
     .getActiveToolInstance()
     .onPointerUp(engine.getToolContext(), point, event)

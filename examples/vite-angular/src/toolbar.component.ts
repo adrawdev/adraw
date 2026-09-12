@@ -1,4 +1,4 @@
-import { useHistory, useTool, useViewport } from "@adraw/angular"
+import { useCanvas, useHistory, useTool, useViewport } from "@adraw/angular"
 import type { ToolType } from "@adraw/core"
 import { Component, input } from "@angular/core"
 
@@ -68,6 +68,16 @@ import { Component, input } from "@angular/core"
         Redo
       </button>
       <div class="separator"></div>
+      <button title="Copy (Ctrl+C)" (click)="canvasApi.instance.copy()">
+        Copy
+      </button>
+      <button title="Cut (Ctrl+X)" (click)="canvasApi.instance.cut()">
+        Cut
+      </button>
+      <button title="Paste (Ctrl+V)" (click)="canvasApi.instance.paste()">
+        Paste
+      </button>
+      <div class="separator"></div>
       <button (click)="viewportApi.zoomIn()">+</button>
       <button (click)="viewportApi.zoomOut()">-</button>
       <button (click)="viewportApi.zoomToFit()">Fit</button>
@@ -78,6 +88,7 @@ import { Component, input } from "@angular/core"
 export class Toolbar {
   readonly label = input("")
 
+  protected readonly canvasApi = useCanvas()
   protected readonly toolApi = useTool()
   protected readonly viewportApi = useViewport()
   protected readonly historyApi = useHistory()

@@ -25,11 +25,17 @@ import type {
   CanvasElement,
   ElementId,
   MediaElement,
+  Point,
   SnapGuide,
   ToolType,
   ViewportState,
 } from "../types"
 import { createViewport, resetViewport, zoomViewport } from "../viewport"
+import {
+  ClipboardManager,
+  collectClipboardElements,
+  createPastedElements,
+} from "./clipboard"
 import { createMediaElements } from "./media"
 import {
   deleteSelectedElements,
@@ -47,9 +53,11 @@ export interface EngineInternal {
   getActiveToolInstance: () => Tool
   getCanvasSize: () => { height: number; width: number }
   getElements: () => Map<ElementId, CanvasElement>
+  getPointerPoint: () => Point | null
   getSelectedIds: () => Set<ElementId>
   getToolContext: () => ToolContext
   getViewport: () => ViewportState
+  setPointerPoint: (point: Point) => void
   setViewport: (viewport: ViewportState) => void
   setSelectedIds: (ids: Set<ElementId>) => void
   setSnapGuides: (guides: SnapGuide[]) => void
@@ -74,6 +82,10 @@ export class CanvasEngine {
   private strokeColor: string = STROKE_COLOR
   private hideOverlayWhileTransforming: boolean
   private history = createHistoryState()
+  private clipboard: ClipboardManager
+  // Last pointer position in canvas space, tracked by the dispatch helpers so
+  // keyboard paste can land at the cursor.
+  private pointerPoint: Point | null = null
   private listeners = new Map<keyof CanvasEventMap, Set<EventListener<any>>>()
   private canvasSize: { width: number; height: number } = {
     height: 0,
@@ -92,6 +104,7 @@ export class CanvasEngine {
 
   constructor(options: CanvasOptions = {}) {
     this.viewport = createViewport(options.initialViewport)
+    this.clipboard = new ClipboardManager(options.clipboard)
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.isSnapMode = options.isSnapMode ?? false
     this.hideOverlayWhileTransforming =
@@ -334,6 +347,69 @@ export class CanvasEngine {
     this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
+  // Snapshot the selected elements (plus any grouped children) into the
+  // in-memory clipboard. Returns an empty array when nothing is selected;
+  // copying nothing never clears previously copied content.
+  copy(): CanvasElement[] {
+    const elements = collectClipboardElements(this.elements, this.selectedIds)
+    if (elements.length > 0) {
+      this.clipboard.write(elements)
+    }
+    return elements
+  }
+
+  // Copy the selection, then delete it as a single history step.
+  cut(): CanvasElement[] {
+    const copied = this.copy()
+    if (copied.length > 0) {
+      this.deleteSelected()
+    }
+    return copied
+  }
+
+  // Paste the clipboard centered on `at`, defaulting to the last pointer
+  // position and then the viewport center. The pasted elements are selected and
+  // the whole paste is one undo step.
+  paste(at?: Point): CanvasElement[] {
+    const copied = this.clipboard.read()
+    if (copied.length === 0) {
+      return []
+    }
+
+    const point = at ??
+      this.pointerPoint ?? { x: this.viewport.x, y: this.viewport.y }
+    const pasted = createPastedElements(
+      copied,
+      point,
+      getNextZIndex(this.elements.values()),
+    )
+
+    for (const element of pasted) {
+      this.elements.set(element.id, element)
+    }
+    this.selectedIds = new Set(pasted.map((element) => element.id))
+    // Push after mutating so the top of the undo stack mirrors the pasted
+    // state (same convention as the tools).
+    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+
+    this.emit("change", { elements: this.elements })
+    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    if (this.activeTool.type !== "select") {
+      this.setActiveTool("select")
+    }
+    return pasted
+  }
+
+  // Serialize the clipboard for the system clipboard; null when empty.
+  serializeClipboard(): string | null {
+    return this.clipboard.serialize()
+  }
+
+  // Replace the clipboard from serialized text; false when rejected.
+  deserializeClipboard(data: string): boolean {
+    return this.clipboard.deserialize(data)
+  }
+
   zoomIn(): void {
     const center = { x: 0, y: 0 }
     this.viewport = zoomViewport(this.viewport, -100, center)
@@ -415,9 +491,19 @@ export class CanvasEngine {
   }
 
   /** @internal */
+  getPointerPoint(): Point | null {
+    return this.pointerPoint
+  }
+
+  /** @internal */
   setSelectedIds(ids: Set<ElementId>): void {
     this.selectedIds = ids
     this.emit("selectionChange", { selectedIds: this.selectedIds })
+  }
+
+  /** @internal */
+  setPointerPoint(point: Point): void {
+    this.pointerPoint = point
   }
 
   /** @internal */

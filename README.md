@@ -11,6 +11,7 @@ A lightweight, framework-agnostic infinity canvas library built on SVG. Supports
 - Freehand drawing with Catmull-Rom spline smoothing
 - Shape tools: Rectangle, Ellipse, Line
 - Selection with multi-select, resize, rotation, and flip
+- Clipboard: copy, cut, and paste (`Ctrl/Cmd+C/X/V`)
 - Eraser tool
 - Undo/redo history
 - Snap-to-grid and element snapping guides
@@ -52,7 +53,12 @@ const canvas = new AdrawCanvas({
 })
 
 // Switch tools
-canvas.setTool("draw")
+canvas.setActiveTool("draw")
+
+// Copy / cut / paste (also Ctrl/Cmd+C/X/V); paste lands at the pointer
+canvas.copy()
+canvas.cut()
+canvas.paste()
 
 // Listen for changes
 canvas.on("change", (elements) => {

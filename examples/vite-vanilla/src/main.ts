@@ -32,6 +32,18 @@ actionButtons.forEach((btn) => {
         vanilla.redo()
         break
       }
+      case "copy": {
+        vanilla.copy()
+        break
+      }
+      case "cut": {
+        vanilla.cut()
+        break
+      }
+      case "paste": {
+        vanilla.paste()
+        break
+      }
       case "zoom-in": {
         vanilla.zoomIn()
         break

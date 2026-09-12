@@ -31,6 +31,18 @@ actionButtons.forEach((btn) => {
         canvas.canvas?.redo()
         break
       }
+      case "copy": {
+        canvas.canvas?.copy()
+        break
+      }
+      case "cut": {
+        canvas.canvas?.cut()
+        break
+      }
+      case "paste": {
+        canvas.canvas?.paste()
+        break
+      }
       case "zoom-in": {
         canvas.canvas?.zoomIn()
         break
