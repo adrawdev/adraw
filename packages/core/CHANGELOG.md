@@ -1,5 +1,23 @@
 # @adraw/core
 
+## 0.4.0
+
+### Minor Changes
+
+- [`cc2366e`](https://github.com/adrawdev/adraw/commit/cc2366e26731e1aebd2adc6a5b12f4f230e7d142) Thanks [@vladiantio](https://github.com/vladiantio)! - Add an `arrow` tool and element type. Drag to draw a straight arrow with a filled head; drop either endpoint on a rectangle, ellipse, text, media or group to bind it. Bound endpoints aim at the target's center, are clipped just outside its border (with a `max(4, strokeWidth)` gap), and follow the target through moves, resizes and rotations. Moving/resizing an arrow directly detaches its bindings unless its targets move along in the same gesture; dragging an endpoint handle rebinds or unbinds it. Deleting a target detaches the arrow and freezes its last coordinates; hiding a target keeps the binding. Bindings survive copy/paste when the target is part of the copied batch (and are dropped otherwise). Public API adds the `arrow` `ToolType`, `ArrowElement`/`ArrowBinding` types and the `createArrow` factory; both arrowheads can be enabled via `startArrowhead`/`endArrowhead`.
+
+- [`311d282`](https://github.com/adrawdev/adraw/commit/311d2826d46fc125acbaeb5e49e27ee9c221ac09) Thanks [@vladiantio](https://github.com/vladiantio)! - Add clipboard support: `copy()`, `cut()`, and `paste()` on `AdrawCanvas`, plus `Ctrl/Cmd + C/X/V` shortcuts. Paste inserts fresh-ID clones centered on the current pointer (grouped children included, group references remapped) as a single undo step. `serializeClipboard()` / `deserializeClipboard()` bridge the in-memory buffer to the system clipboard, with custom `clipboard: { serialize, deserialize }` hooks.
+
+- [`4200c29`](https://github.com/adrawdev/adraw/commit/4200c29efb29e0079a03ec52b848a7c14c0b1f8f) Thanks [@vladiantio](https://github.com/vladiantio)! - Constrain rectangle and ellipse creation with `Shift` for square proportions and `Alt` to size from the center point.
+
+- [`b16b4dd`](https://github.com/adrawdev/adraw/commit/b16b4dd45f0666d35b5016835852a13c2ca5553e) Thanks [@vladiantio](https://github.com/vladiantio)! - Snap elements to other elements' edges and centers while moving, resizing or drawing. Snapping activates while holding Ctrl/Cmd, or by default with the new `isSnapMode` option; alignment guides are rendered while snapped.
+
+  **Breaking:** `snapping.enabled` was removed. Snapping is always available and gated per gesture by Ctrl/Cmd or `isSnapMode`; `SnappingConfig` is now `{ threshold }`.
+
+### Patch Changes
+
+- [`8fdfb7b`](https://github.com/adrawdev/adraw/commit/8fdfb7b2e855d7790e7319ce4f3003aba6e139aa) Thanks [@vladiantio](https://github.com/vladiantio)! - Render element changes incrementally during `change` events: committed element DOM nodes are now cached by id and only rewritten when the element's geometry actually changed, instead of re-writing every node in the elements group. Dragging one element out of a board with many elements now updates just that element's node per frame, significantly reducing per-move rendering cost on element-heavy boards.
+
 ## 0.3.0
 
 ### Minor Changes
