@@ -34,9 +34,9 @@ All commands run from repo root unless noted. Manual checks use
       `@plugin "@tailwindcss/typography"` in place for now.
 - [x] **Acceptance criteria:**
   - [x] `reset.css` is byte-identical to the preflight source
-    (Deviation, user-approved: wrapped in `@layer base` — the source carries no
-    literal layer marker; `--theme(...)` calls replaced with `var(...)` since the
-    theme function is only valid while the compiler is active)
+        (Deviation, user-approved: wrapped in `@layer base` — the source carries no
+        literal layer marker; `--theme(...)` calls replaced with `var(...)` since the
+        theme function is only valid while the compiler is active)
   - [x] Every `--color-*` and `--font-sans` token from `@theme` exists natively on `:root`
   - [x] No `@apply` remains; `@theme` block may remain until Task 11
   - [x] Zero visual change vs baseline (tokens are redeclared with identical values)
@@ -205,8 +205,8 @@ All commands run from repo root unless noted. Manual checks use
       `package.json`; run `pnpm install` from repo root.
 - [x] **Acceptance criteria:**
   - [x] `rg -i tailwind web/src web/astro.config.mjs web/package.json` returns nothing
-    (Deviation: 3 matches remain — `tailwindlabs` URLs inside the verbatim
-    preflight copy; no dependencies, directives, or classes remain)
+        (Deviation: 3 matches remain — `tailwindlabs` URLs inside the verbatim
+        preflight copy; no dependencies, directives, or classes remain)
   - [x] No `@apply`, `@theme`, `@plugin` directives remain
   - [x] Lockfile updated; `pnpm install` clean
 - [x] **Verification:** `pnpm build:web` from clean state succeeds; full-page
