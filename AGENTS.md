@@ -79,9 +79,7 @@ Linter is **oxlint** (config: `.oxlintrc.json`) with plugins for import, typescr
 
 ### Testing
 
-Repository-specific unit-test, Playwright, WebKit, and test-environment
-instructions are in `.agents/skills/adraw-testing/SKILL.md`. Use that skill
-when running or troubleshooting tests.
+Repository-specific unit-test, Playwright, WebKit, and test-environment instructions are in `.agents/skills/adraw-testing/SKILL.md`. Use that skill when running or troubleshooting tests.
 
 ## Architecture
 
@@ -121,10 +119,7 @@ Pattern per framework:
 
 ## Creating a new adapter package
 
-Detailed scaffolding, lifecycle, framework-specific exceptions, and
-verification instructions are in
-`.agents/skills/adraw-adapter-package/SKILL.md`. Use that skill when creating
-or changing an adapter package.
+Detailed scaffolding, lifecycle, framework-specific exceptions, and verification instructions are in `.agents/skills/adraw-adapter-package/SKILL.md`. Use that skill when creating or changing an adapter package.
 
 ## Pull request guidelines
 
@@ -135,6 +130,4 @@ or changing an adapter package.
 
 ## Release workflow
 
-Changesets configuration and the complete versioning, publishing, and tag-push
-workflow are in `.agents/skills/adraw-release/SKILL.md`. Use that skill when
-preparing or publishing a release.
+Changesets configuration and the complete versioning, publishing, and tag-push workflow are in `.agents/skills/adraw-release/SKILL.md`. Use that skill when preparing or publishing a release.
