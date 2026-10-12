@@ -6,8 +6,7 @@ compatibility: Requires the adraw pnpm workspace and its existing package/build 
 
 # Adraw Adapter Packages
 
-Use this skill when creating a new framework adapter package under `packages/*`.
-Follow existing adapter packages for naming, exports, and example structure.
+Use this skill when creating a new framework adapter package under `packages/*`. Follow existing adapter packages for naming, exports, and example structure.
 
 ## Package Scaffolding
 
@@ -40,19 +39,12 @@ Angular uses `ng-packagr`, not tsdown. Build it with:
 ng-packagr -p ng-package.json
 ```
 
-Its `tsconfig.json` does not extend the root configuration and therefore does
-not use `erasableSyntaxOnly`. `tslib` is a required runtime dependency. See
-`packages/angular/` for the complete Angular package pattern.
+Its `tsconfig.json` does not extend the root configuration and therefore does not use `erasableSyntaxOnly`. `tslib` is a required runtime dependency. See `packages/angular/` for the complete Angular package pattern.
 
 ## Web Components
 
-Web Components has no hooks; the custom element is the complete public surface.
-Drive it through `element.canvas`, read its mirrored fields directly, and
-listen to `adraw:*` `CustomEvent`s. It has no peer dependencies because it uses
-native DOM APIs.
+Web Components has no hooks; the custom element is the complete public surface. Drive it through `element.canvas`, read its mirrored fields directly, and listen to `adraw:*` `CustomEvent`s. It has no peer dependencies because it uses native DOM APIs.
 
 ## Submission
 
-Update or add adapter tests and use the repository testing skill at
-`.agents/skills/adraw-testing/SKILL.md` for the required checks before
-submitting.
+Update or add adapter tests and use the repository testing skill at `.agents/skills/adraw-testing/SKILL.md` for the required checks before submitting.
