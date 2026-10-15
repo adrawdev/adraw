@@ -24,6 +24,7 @@ import {
 } from "../tools"
 import type { Tool, ToolContext } from "../tools/base"
 import type {
+  CanvasDocument,
   CanvasElement,
   ElementId,
   MediaElement,
@@ -35,6 +36,7 @@ import type {
 import { createViewport, resetViewport, zoomViewport } from "../viewport"
 import {
   ClipboardManager,
+  cloneElementDeep,
   collectClipboardElements,
   createPastedElements,
 } from "./clipboard"
@@ -45,6 +47,8 @@ import {
   computeZoomToFitViewport,
 } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
+
+const DOCUMENT_VERSION = 1
 
 type EventListener<K extends keyof CanvasEventMap> = (
   event: CanvasEventMap[K],
@@ -218,20 +222,117 @@ export class CanvasEngine {
       getNextZIndex(this.elements.values()),
     )
 
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
-
     for (const element of elements) {
       this.elements.set(element.id, element)
     }
     syncArrowBindings(this.elements)
 
-    this.emit("change", { elements: this.elements })
     this.selectedIds = new Set(elements.map((elem) => elem.id))
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
     if (this.activeTool.type !== "select") {
       this.setActiveTool("select")
     }
+
+    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+
+    this.emit("change", { elements: this.elements })
+    this.emit("selectionChange", { selectedIds: this.selectedIds })
     return elements
+  }
+
+  // Add one or more elements to the canvas. Unlike mutating the Map returned
+  // by `getElements()`, this pushes a history checkpoint (unless `history` is
+  // false) and emits the usual `change` event, so the addition is undoable and
+  // reactive bindings stay in sync.
+  addElement(
+    elements: CanvasElement | CanvasElement[],
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    const inputs = Array.isArray(elements) ? elements : [elements]
+    if (inputs.length === 0) {
+      return []
+    }
+
+    for (const element of inputs) {
+      this.elements.set(element.id, element)
+    }
+    syncArrowBindings(this.elements)
+
+    if (options.history !== false) {
+      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    }
+
+    this.emit("change", { elements: this.elements })
+    return inputs
+  }
+
+  // Replace the entire element set with the elements from a document. Emits
+  // `change` (and `selectionChange`, since selection is cleared) so reactive
+  // bindings and the DOM adapter re-render. By default a history checkpoint of
+  // the previous state is pushed; pass `{ history: false }` to skip it.
+  loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
+    const next = new Map<ElementId, CanvasElement>()
+    for (const element of doc?.elements ?? []) {
+      next.set(element.id, element)
+    }
+    this.elements = next
+    syncArrowBindings(this.elements)
+    this.selectedIds = new Set()
+
+    if (options.history !== false) {
+      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    }
+
+    this.emit("change", { elements: this.elements })
+    this.emit("selectionChange", { selectedIds: this.selectedIds })
+  }
+
+  // Serialize the current document. `exclude` filters which elements are
+  // included without mutating canvas state. Returns a fresh, decoupled copy.
+  toDocument(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
+    version: number
+    elements: CanvasElement[]
+  } {
+    const elements = [...this.elements.values()]
+      .filter((element) => !options.exclude?.(element))
+      .map(cloneElementDeep)
+
+    return {
+      elements,
+      version: DOCUMENT_VERSION,
+    }
+  }
+
+  // Alias for `toDocument`; kept for symmetry with the original toJSON proposal.
+  toJSON(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
+    version: number
+    elements: CanvasElement[]
+  } {
+    return this.toDocument(options)
+  }
+
+  // Replace the element set wholesale. Accepts either a Map or an array of
+  // elements. Selection is intersected with the new IDs.
+  setElements(
+    elements: Map<ElementId, CanvasElement> | CanvasElement[],
+    options: { history?: boolean } = {},
+  ): void {
+    const next =
+      elements instanceof Map
+        ? new Map(elements)
+        : new Map(elements.map((element) => [element.id, element]))
+
+    this.elements = next
+    syncArrowBindings(this.elements)
+    this.selectedIds = new Set(
+      [...this.selectedIds].filter((id) => this.elements.has(id)),
+    )
+
+    if (options.history !== false) {
+      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    }
+
+    this.emit("change", { elements: this.elements })
+    this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
   getSelectedIds(): Set<ElementId> {

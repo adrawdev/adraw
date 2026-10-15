@@ -184,6 +184,11 @@ export interface SnapResult {
   snapped: boolean
 }
 
+export interface CanvasDocument {
+  version: number
+  elements: CanvasElement[]
+}
+
 export type ResizeAnchor =
   | "top-left"
   | "top-right"
