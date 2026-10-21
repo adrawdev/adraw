@@ -5,7 +5,7 @@ import { openCanvas, pickTool, snapshot } from "./helpers"
 test.describe("text tool", () => {
   test("creates a text element by typing into the inline editor", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await openCanvas(page)
     await pickTool(page, "text")
 
@@ -22,9 +22,15 @@ test.describe("text tool", () => {
     await expect(
       page.locator(".adraw-elements-group .adraw-temporary"),
     ).toHaveCSS("visibility", "hidden")
+    // WebKit only exposes the prefixed property for SVG text.
     await expect(
       page.locator(".adraw-elements-group .adraw-temporary text"),
-    ).toHaveCSS("user-select", "none")
+    ).toHaveCSS(
+      testInfo.project.name === "webkit"
+        ? "-webkit-user-select"
+        : "user-select",
+      "none",
+    )
     await page.keyboard.press("Enter")
 
     const state = await snapshot(page)

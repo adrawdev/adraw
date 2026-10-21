@@ -14,6 +14,15 @@ async function drawRect(
   return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
 }
 
+/** Read element positions from the exposed canvas, sorted by x. */
+function elementPositions(page: Page): Promise<{ x: number; y: number }[]> {
+  return page.evaluate(() =>
+    [...(window as any).adraw.getElements().values()]
+      .map((element: any) => ({ x: element.x, y: element.y }))
+      .toSorted((a, b) => a.x - b.x),
+  )
+}
+
 test.describe("selection", () => {
   test("clicking a shape with the select tool selects it", async ({ page }) => {
     const svg = await openCanvas(page)
@@ -99,18 +108,15 @@ test.describe("selection", () => {
     expect(await selectedCount(page)).toBe(2)
 
     // Start in the gap between the shapes, but inside their combined bounds.
+    const before = await elementPositions(page)
     await drag(page, svg, { x: 240, y: 140 }, { x: 270, y: 170 })
 
-    const positions = await page.evaluate(() =>
-      [...(window as any).adraw.getElements().values()]
-        .map((element: any) => ({ x: element.x, y: element.y }))
-        .toSorted((a, b) => a.x - b.x),
-    )
+    const positions = await elementPositions(page)
     expect(positions).toHaveLength(2)
-    expect(positions[0].x).toBeCloseTo(130, 1)
-    expect(positions[0].y).toBeCloseTo(130, 1)
-    expect(positions[1].x).toBeCloseTo(330, 1)
-    expect(positions[1].y).toBeCloseTo(130, 1)
+    for (let index = 0; index < positions.length; index += 1) {
+      expect(positions[index].x).toBeCloseTo(before[index].x + 30, 1)
+      expect(positions[index].y).toBeCloseTo(before[index].y + 30, 1)
+    }
   })
 
   test("Escape clears the selection", async ({ page }) => {
@@ -138,24 +144,16 @@ test.describe("selection", () => {
     // container reaches the viewport edge, at the very edge of the window.
     const from = { x: center.x, y: center.y }
     const to = {
-      x: Math.max(box.width + 40, viewport.width - box.x - 1),
+      x: Math.min(box.width + 40, viewport.width - box.x - 1),
       y: center.y,
     }
-    const before = await page.evaluate(() => {
-      const canvas = (window as any).adraw
-      const element = [...canvas.getElements().values()][0]
-      return { x: element.x, y: element.y }
-    })
+    const [before] = await elementPositions(page)
     await drag(page, svg, from, to)
 
     // The drag delta must apply in full — pointer capture keeps move/up
     // events flowing outside the container, so the shape is not clipped at
     // its edge.
-    const after = await page.evaluate(() => {
-      const canvas = (window as any).adraw
-      const element = [...canvas.getElements().values()][0]
-      return { x: element.x, y: element.y }
-    })
+    const [after] = await elementPositions(page)
     expect(after.x).toBeCloseTo(before.x + (to.x - from.x), 1)
     expect(after.y).toBeCloseTo(before.y, 1)
   })

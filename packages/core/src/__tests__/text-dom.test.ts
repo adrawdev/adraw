@@ -47,7 +47,11 @@ describe("text editor DOM integration", () => {
 
     const textGroup = container.querySelector(".adraw-temporary") as SVGGElement
     expect(textGroup.textContent).toBe("Hello")
-    expect(textGroup.querySelector("text")?.style.userSelect).toBe("none")
+    const renderedText = textGroup.querySelector("text")
+    expect(renderedText?.style.userSelect).toBe("none")
+    expect(renderedText?.style.getPropertyValue("-webkit-user-select")).toBe(
+      "none",
+    )
     expect(getComputedStyle(textGroup).visibility).toBe("hidden")
 
     editor!.dispatchEvent(

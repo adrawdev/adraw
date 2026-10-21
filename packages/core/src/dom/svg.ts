@@ -307,6 +307,9 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       text.setAttribute("font-size", `${element.fontSize}`)
       text.setAttribute("fill", element.strokeColor || STROKE_COLOR)
       text.style.userSelect = "none"
+      // WebKit does not apply (or serialize) `style.userSelect` on SVG text;
+      // only the prefixed property prevents selection there.
+      text.style.setProperty("-webkit-user-select", "none")
       text.style.whiteSpace = "pre"
       appendTextLines(text, element)
       group.appendChild(text)
