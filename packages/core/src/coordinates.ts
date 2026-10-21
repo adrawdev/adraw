@@ -82,16 +82,20 @@ export function getElementBounds(
   const sin = Math.sin(rad)
 
   const corners = [
-    { x: x - width / 2, y: y - height / 2 },
-    { x: x + width / 2, y: y - height / 2 },
-    { x: x + width / 2, y: y + height / 2 },
-    { x: x - width / 2, y: y + height / 2 },
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
   ]
 
-  const rotatedCorners = corners.map((corner) => ({
-    x: cos * (corner.x - cx) - sin * (corner.y - cy) + cx,
-    y: sin * (corner.x - cx) + cos * (corner.y - cy) + cy,
-  }))
+  const rotatedCorners = corners.map((corner) => {
+    const dx = corner.x - width / 2
+    const dy = corner.y - height / 2
+    return {
+      x: cos * dx - sin * dy + cx,
+      y: sin * dx + cos * dy + cy,
+    }
+  })
 
   const xs = rotatedCorners.map((c) => c.x)
   const ys = rotatedCorners.map((c) => c.y)

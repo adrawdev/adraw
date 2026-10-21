@@ -113,6 +113,13 @@ export function getArrowHeadLength(strokeWidth: number): number {
   )
 }
 
+// Half of the arrowhead's base width, i.e. how far the head extends
+// perpendicular to the arrow line. Used to pad the exported region so heads
+// are not clipped.
+export function getArrowHeadHalfWidth(strokeWidth: number): number {
+  return getArrowHeadLength(strokeWidth) * arrowHeadHalfWidthRatio
+}
+
 interface ArrowSvgGeometry {
   startHead: string | null
   endHead: string | null

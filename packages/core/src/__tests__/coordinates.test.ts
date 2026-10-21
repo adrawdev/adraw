@@ -70,6 +70,17 @@ describe("coordinates", () => {
       expect(result.center.x).toBe(60)
       expect(result.center.y).toBe(45)
     })
+
+    it("returns the axis-aligned bounds of a rotated rectangle", () => {
+      const result = getElementBounds(10, 20, 100, 50, 90)
+
+      expect(result.left).toBe(35)
+      expect(result.right).toBe(85)
+      expect(result.top).toBe(-5)
+      expect(result.bottom).toBe(95)
+      expect(result.center.x).toBe(60)
+      expect(result.center.y).toBe(45)
+    })
   })
 
   describe("pointInBounds", () => {

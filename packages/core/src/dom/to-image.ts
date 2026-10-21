@@ -1,8 +1,81 @@
-import { getElementsBounds } from "../elements"
+import { BACKGROUND_COLOR } from "../constants"
+import { getElementBounds } from "../coordinates"
 import type { CanvasEngine } from "../engine/engine"
 import type { ToImageOptions } from "../options"
+import type { CanvasElement } from "../types"
 import type { DomState } from "./state"
-import { createElementGroup, svgNamespaceURI } from "./svg"
+import {
+  createElementGroup,
+  getArrowHeadHalfWidth,
+  svgNamespaceURI,
+} from "./svg"
+
+interface ExportBounds {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+// How far an element's paint can extend past its geometry. Strokes are
+// centered on the shape outline, and arrowheads are wider than the stroke, so
+// the exported region must grow by that much or the content is clipped.
+function getElementOverhang(element: CanvasElement): number {
+  switch (element.type) {
+    case "arrow": {
+      return Math.max(
+        element.strokeWidth / 2,
+        getArrowHeadHalfWidth(element.strokeWidth),
+      )
+    }
+    case "ellipse":
+    case "line":
+    case "path":
+    case "rectangle": {
+      return element.strokeWidth / 2
+    }
+    default: {
+      return 0
+    }
+  }
+}
+
+// Visual bounds of the exported elements: axis-aligned, rotation-aware and
+// including stroke/arrowhead overhang. Group elements are containers only —
+// their children render on their own — so they do not contribute bounds.
+// Locked elements do contribute: they are still part of the exported content.
+function getExportBounds(elements: CanvasElement[]): ExportBounds | null {
+  let left = Infinity
+  let right = -Infinity
+  let top = Infinity
+  let bottom = -Infinity
+
+  for (const element of elements) {
+    if (element.type === "group") {
+      continue
+    }
+
+    const overhang = getElementOverhang(element)
+    const bounds = getElementBounds(
+      element.x,
+      element.y,
+      element.width,
+      element.height,
+      element.rotation,
+    )
+
+    left = Math.min(left, bounds.left - overhang)
+    right = Math.max(right, bounds.right + overhang)
+    top = Math.min(top, bounds.top - overhang)
+    bottom = Math.max(bottom, bounds.bottom + overhang)
+  }
+
+  if (left === Infinity) {
+    return null
+  }
+
+  return { height: bottom - top, left, top, width: right - left }
+}
 
 export async function toImage(
   state: DomState,
@@ -10,52 +83,40 @@ export async function toImage(
   options: ToImageOptions = {},
 ): Promise<Blob> {
   const {
-    format = "png",
     background = false,
-    padding = 0,
-    scale = 1,
-    quality = 0.92,
     darkMode = false,
+    exclude,
+    format = "png",
+    padding = 0,
+    quality = 0.92,
+    scale = 1,
   } = options
 
-  const elements = engine.getElements()
-  const visibleElements = [...elements.values()]
-    .filter((el) => el.visible)
+  // Same order as the DOM adapter: ascending z-index, stable for equal
+  // z-indexes. Hidden and excluded elements are left out of both the drawing
+  // and the bounds, so `exclude` also crops the exported region.
+  const elements = [...engine.getElements().values()]
+    .filter((element) => element.visible && !exclude?.(element))
     .toSorted((a, b) => a.zIndex - b.zIndex)
 
-  const bounds = getElementsBounds(elements)
-  if (!bounds || visibleElements.length === 0) {
-    if (format === "svg") {
-      return new Blob([], { type: "image/svg+xml;charset=utf-8" })
-    }
-    const c = document.createElement("canvas")
-    c.width = 1
-    c.height = 1
-    return new Promise<Blob>((resolve, reject) => {
-      c.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob)
-          } else {
-            reject(new Error("toImage: canvas.toBlob returned null"))
-          }
-        },
-        `image/${format === "jpeg" ? "png" : format}`,
-        quality,
-      )
-    })
-  }
-
-  const areaX = bounds.left - padding
-  const areaY = bounds.top - padding
-  const areaW = Math.max(1, bounds.width + padding * 2)
-  const areaH = Math.max(1, bounds.height + padding * 2)
+  const bounds = getExportBounds(elements)
+  const areaX = bounds ? bounds.left - padding : 0
+  const areaY = bounds ? bounds.top - padding : 0
+  const areaW = Math.max(1, (bounds?.width ?? 0) + padding * 2)
+  const areaH = Math.max(1, (bounds?.height ?? 0) + padding * 2)
 
   const computedStyle = getComputedStyle(state.container!)
-  const bgColor =
-    background || format === "jpeg"
-      ? computedStyle.getPropertyValue("--adraw-background")
-      : undefined
+
+  // A string is an explicit paint color. `true` (or JPEG, which has no alpha)
+  // uses the container's `--adraw-background`, falling back to the default.
+  let backgroundFill: string | null = null
+  if (typeof background === "string" && background.trim()) {
+    backgroundFill = background
+  } else if (background || format === "jpeg") {
+    backgroundFill =
+      computedStyle.getPropertyValue("--adraw-background").trim() ||
+      BACKGROUND_COLOR
+  }
 
   const style = document.createElementNS(svgNamespaceURI, "style")
   const colorScheme = darkMode ? "dark" : "light"
@@ -69,19 +130,18 @@ export async function toImage(
   svg.setAttribute("height", `${areaH}`)
   svg.appendChild(style)
 
-  if (bgColor) {
+  if (backgroundFill) {
     const bg = document.createElementNS(svgNamespaceURI, "rect")
     bg.setAttribute("x", `${areaX}`)
     bg.setAttribute("y", `${areaY}`)
     bg.setAttribute("width", `${areaW}`)
     bg.setAttribute("height", `${areaH}`)
-    bg.setAttribute("fill", bgColor)
+    bg.setAttribute("fill", backgroundFill)
     svg.appendChild(bg)
   }
 
-  for (const element of visibleElements) {
-    const group = createElementGroup(element)
-    svg.appendChild(group)
+  for (const element of elements) {
+    svg.appendChild(createElementGroup(element))
   }
 
   const serializer = new XMLSerializer()

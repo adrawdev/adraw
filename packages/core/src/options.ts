@@ -102,10 +102,22 @@ export interface AdrawCanvasOptions extends CanvasOptions {
  * Options for exporting the canvas to an image.
  */
 export interface ToImageOptions {
-  /** Whether to paint the background. */
-  background?: boolean
-  /** Use dark-mode colors. */
+  /**
+   * Background paint of the exported image. `true` fills it with the
+   * container's `--adraw-background` color; a string uses that CSS color
+   * instead. Defaults to `false` (transparent PNG/WebP/SVG). JPEG has no
+   * alpha channel, so it always paints the background.
+   */
+  background?: boolean | string
+  /** Use dark-mode colors. Ignored by an explicit `background` color. */
   darkMode?: boolean
+  /**
+   * Elements to leave out of the export, e.g.
+   * `exclude: (element) => element.id === gridId`. Excluded elements also do
+   * not contribute to the exported bounds. Locked elements are included by
+   * default — they are content, just not editable.
+   */
+  exclude?: (element: CanvasElement) => boolean
   /** Output image format. */
   format?: "png" | "jpeg" | "webp" | "svg"
   /** Padding around the exported region, in pixels. */

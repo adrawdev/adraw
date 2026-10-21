@@ -263,6 +263,34 @@ canvas.deserializeClipboard(await navigator.clipboard.readText())
 canvas.paste()
 ```
 
+## Exporting
+
+`toImage()` returns a `Blob` with the visible content cropped to its bounds.
+Rotation, stroke overhang and arrowheads are included, so nothing is clipped.
+Locked elements are exported (they are content, just not editable); hidden
+elements are skipped.
+
+```ts
+const blob = await canvas.toImage({
+  format: "png", // "png" | "jpeg" | "webp" | "svg"
+  background: "#ffffff", // or `true` to use --adraw-background
+  padding: 24,
+  scale: 2,
+  quality: 0.92, // lossy formats only
+  darkMode: false,
+})
+
+// Leave a guide or grid out of the drawing and out of the cropped bounds:
+const clean = await canvas.toImage({
+  background: true,
+  exclude: (element) => element.id === gridId,
+})
+```
+
+Without `background`, PNG/WebP/SVG exports are transparent. JPEG has no alpha
+channel, so it always paints the background: the `--adraw-background` color, or
+the explicit string when one is given.
+
 ## Events
 
 ```ts

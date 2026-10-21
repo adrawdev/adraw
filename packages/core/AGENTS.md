@@ -198,7 +198,7 @@ File: `src/coordinates.ts`.
 
 - `screenToCanvas(screenPoint, viewport, canvasSize)` — convert screen coords to canvas space
 - `canvasToScreen(canvasPoint, viewport, canvasSize)` — reverse
-- `getElementBounds(element)` — get `BoundingBox` accounting for rotation
+- `getElementBounds(x, y, width, height, rotation?)` — axis-aligned `BoundingBox` accounting for rotation
 - `pointInBounds(point, bounds)` — point-in-rect test
 - `distanceBetweenPoints(a, b)` — Euclidean distance
 - `clamp(value, min, max)`
