@@ -10,6 +10,10 @@ import type {
   ViewportState,
 } from "../types"
 
+/**
+ * Read/write access a tool has to the canvas state. Tools never mutate state
+ * directly; they go through these helpers.
+ */
 export interface ToolContext {
   getElements: () => Map<ElementId, CanvasElement>
   setElements: (elements: Map<ElementId, CanvasElement>) => void
@@ -26,14 +30,22 @@ export interface ToolContext {
   setActiveTool: (tool: ToolType) => void
 }
 
+/**
+ * Base state shared by every tool gesture.
+ */
 export interface ToolState {
   isActive: boolean
   startPoint: Point | null
   currentPoint: Point | null
 }
 
+/**
+ * Contract implemented by each drawing/selecting tool.
+ */
 export interface Tool {
+  /** Tool identifier. */
   readonly type: ToolType
+  /** CSS cursor to show while the tool is active. */
   readonly cursor: string
   onActivate: (context: ToolContext) => void
   onDeactivate: (context: ToolContext) => void
@@ -48,25 +60,21 @@ export interface Tool {
     event: PointerEvent,
   ) => void
   onPointerUp: (context: ToolContext, point: Point, event: PointerEvent) => void
+  /** Transient element rendered during a gesture. */
   getTemporaryElement: () => CanvasElement | null
-  // Element currently highlighted as a binding candidate (an arrow endpoint
-  // being drawn or dragged over it), or null. Only the arrow and select tools
-  // implement this.
+  /** Element currently highlighted as a binding candidate, or null. Only arrow/select implement this. */
   getBindingCandidate?: () => ElementId | null
-  // In-progress marquee (rubber-band) selection box in canvas space, or null
-  // when the tool isn't brushing. Rendered as a dashed overlay, not committed as
-  // an element. Only the select tool implements this.
+  /** In-progress marquee (rubber-band) selection box in canvas space. */
   getSelectionBox?: () => BoundingBox | null
-  // True while the tool is actively resizing the selection. The transform
-  // overlay (bounding box + handles) is hidden during the gesture so it
-  // doesn't visually lag the element being transformed. Only the select tool
-  // implements this.
+  /** Whether the tool is actively resizing the selection. */
   isResizing?: () => boolean
-  // True while the tool is actively rotating the selection. Only the select
-  // tool implements this.
+  /** Whether the tool is actively rotating the selection. */
   isRotating?: () => boolean
 }
 
+/**
+ * Create a fresh base tool state.
+ */
 export function createBaseToolState(): ToolState {
   return {
     currentPoint: null,
@@ -75,12 +83,18 @@ export function createBaseToolState(): ToolState {
   }
 }
 
+/**
+ * Optional visual style overrides for a tool.
+ */
 export interface ToolOptions {
   strokeColor?: string
   fillColor?: string
   strokeWidth?: number
 }
 
+/**
+ * Default tool options derived from the global constants.
+ */
 export function getDefaultToolOptions(): ToolOptions {
   return {
     fillColor: FILL_COLOR,
@@ -89,6 +103,9 @@ export function getDefaultToolOptions(): ToolOptions {
   }
 }
 
+/**
+ * Compute the axis-aligned bounds between two points (top-left origin).
+ */
 export function calculateBounds(
   startPoint: Point,
   endPoint: Point,
@@ -101,37 +118,47 @@ export function calculateBounds(
   return { height, width, x, y }
 }
 
+/**
+ * Bounds with signed extents (negative when the drag crosses `startPoint`).
+ * Resize uses signed extents to mirror across anchors; creation uses the
+ * positive width/height and x/y.
+ */
 export interface ShapeBounds extends BoundingBox {
-  // Signed extents, negative when the drag crosses `startPoint`. Resize callers
-  // use these to mirror elements across the fixed anchor; shape creation uses
-  // the positive `width`/`height` and `x`/`y`.
+  /** Signed width (may be negative). */
   signedHeight: number
+  /** Signed height (may be negative). */
   signedWidth: number
 }
 
+/**
+ * Options for {@link calculateShapeBounds}.
+ */
 export interface ShapeBoundsOptions {
-  // Box being transformed. Needed by resize: its proportions seed the
-  // constrained drag (default 1:1, i.e. square) and its position/extent fill
-  // in the axes the drag doesn't change.
+  /** Box being transformed. */
   base?: BoundingBox
-  // Which axes the pointer drives; the others keep `base`'s extent.
+  /** Which axes the pointer drives. */
   changes?: { height: boolean; width: boolean }
-  // Preserve `base`'s proportions while dragging instead of sizing each axis
-  // independently.
+  /** Preserve `base` proportions while dragging. */
   constrainProportions?: boolean
-  // Sign of the drag along each axis: -1 for resize handles that grow toward
-  // negative coordinates (left/top), 1 otherwise. Defaults to an unoriented
-  // drag, as used by shape creation.
+  /** Drag direction multiplier per axis. */
   direction?: Point
-  // Treat `startPoint` as the center of the result rather than a corner.
+  /** Treat `startPoint` as the center rather than a corner. */
   fromCenter?: boolean
 }
 
-// Bounds produced by dragging from `startPoint` to `endPoint`, shared by shape
-// creation and selection resize. `constrainProportions` keeps `base`'s
-// proportions (default 1:1, i.e. a square) and `fromCenter` treats the start
-// point as the center; resize callers also pass the driven axes and handle
-// direction so the returned signed extents flip content across the anchor.
+/**
+ * Compute bounds produced by dragging from `startPoint` to `endPoint`, shared
+ * by shape creation and selection resize.
+ *
+ * @param startPoint Drag start point.
+ * @param endPoint Current pointer point.
+ * @param options Geometry modifiers.
+ * @returns Bounds plus signed extents.
+ * @example
+ * ```ts
+ * const bounds = calculateShapeBounds(start, end, { fromCenter: true })
+ * ```
+ */
 export function calculateShapeBounds(
   startPoint: Point,
   endPoint: Point,
@@ -187,6 +214,9 @@ export function calculateShapeBounds(
   return { height, signedHeight, signedWidth, width, x, y }
 }
 
+/**
+ * Midpoint between two points.
+ */
 export function getCenterPoint(startPoint: Point, endPoint: Point): Point {
   return {
     x: (startPoint.x + endPoint.x) / 2,

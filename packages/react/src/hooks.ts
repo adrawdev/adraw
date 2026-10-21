@@ -11,6 +11,9 @@ import React, { createContext, useCallback, useContext } from "react"
 
 import type { CanvasReactOptions } from "./components"
 
+/**
+ * React context value synced with an adraw canvas instance.
+ */
 export interface CanvasContextValue {
   vanillaRef: React.RefObject<AdrawCanvas | null>
   elements: Map<ElementId, CanvasElement>
@@ -29,8 +32,17 @@ export interface CanvasContextValue {
   >
 }
 
+/**
+ * React context holding the canvas state.
+ */
 export const CanvasContext = createContext<CanvasContextValue | null>(null)
 
+/**
+ * Resolve the nearest {@link CanvasProvider} context.
+ * Must be called within a `CanvasProvider`.
+ *
+ * @throws When used outside a `CanvasProvider`.
+ */
 export function useCanvas() {
   const context = useContext(CanvasContext)
   if (!context) {
@@ -39,6 +51,11 @@ export function useCanvas() {
   return context
 }
 
+/**
+ * Access the active tool and a setter.
+ *
+ * @returns `{ tool, setTool }`.
+ */
 export function useTool() {
   const { vanillaRef, activeTool, setActiveTool } = useCanvas()
 
@@ -53,6 +70,9 @@ export function useTool() {
   return { setTool, tool: activeTool }
 }
 
+/**
+ * Access viewport state and zoom/pan helpers.
+ */
 export function useViewport() {
   const { vanillaRef, viewport } = useCanvas()
 
@@ -89,6 +109,9 @@ export function useViewport() {
   }
 }
 
+/**
+ * Access undo/redo operations and availability.
+ */
 export function useHistory() {
   const { vanillaRef } = useCanvas()
 
@@ -115,6 +138,9 @@ export function useHistory() {
   return { canRedo, canUndo, redo, undo }
 }
 
+/**
+ * Access selection state and selection operations.
+ */
 export function useSelection() {
   const { vanillaRef, selectedIds, elements } = useCanvas()
 
@@ -139,6 +165,9 @@ export function useSelection() {
   }
 }
 
+/**
+ * Access and control the transform-overlay visibility.
+ */
 export function useTransformOverlay() {
   const { vanillaRef, hideWhileTransforming, setHideWhileTransforming } =
     useCanvas()

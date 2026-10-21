@@ -18,10 +18,16 @@ import {
   type VNode,
 } from "vue"
 
+/**
+ * Vue-specific canvas options.
+ */
 export interface CanvasVueOptions extends CanvasOptions {
   initialViewport?: ViewportState
 }
 
+/**
+ * Reactive state synced with an adraw canvas.
+ */
 export interface CanvasState {
   elements: Map<ElementId, CanvasElement>
   viewport: ViewportState
@@ -34,6 +40,10 @@ export interface CanvasState {
   historyVersion: number
 }
 
+/**
+ * Create a Vue canvas instance and reactive state.
+ * @param options Canvas options.
+ */
 export function createCanvas(options?: CanvasVueOptions) {
   const core = new AdrawCanvas(options)
   const vanilla = ref<AdrawCanvas | null>(null)
@@ -71,6 +81,7 @@ export function createCanvas(options?: CanvasVueOptions) {
   }
 }
 
+/** Context returned by {@link createCanvas}. */
 export type CanvasContext = ReturnType<typeof createCanvas>
 
 // Each <CanvasProvider> provides its own context down its own subtree, so
@@ -78,6 +89,9 @@ export type CanvasContext = ReturnType<typeof createCanvas>
 // multiple independent <CanvasProvider>/<Canvas> pairs coexist on one page.
 const canvasInjectionKey: InjectionKey<CanvasContext> = Symbol("adraw-canvas")
 
+/**
+ * Component providing a canvas context to its subtree.
+ */
 export const CanvasProvider = {
   props: {
     options: Object,
@@ -100,6 +114,10 @@ export const CanvasProvider = {
 // Resolves the nearest <CanvasProvider>. Must be called synchronously during
 // a component's setup() (directly, or from a composable invoked there) —
 // Vue's inject() only sees the active component instance at that point.
+/**
+ * Resolve the nearest canvas context.
+ * @throws When used outside a `CanvasProvider`.
+ */
 export function useCanvas(): CanvasContext {
   const context = inject(canvasInjectionKey, null)
   if (!context) {
@@ -108,6 +126,7 @@ export function useCanvas(): CanvasContext {
   return context
 }
 
+/** Access the active tool and a setter. */
 export function useTool() {
   const canvas = useCanvas()
 
@@ -121,6 +140,7 @@ export function useTool() {
   }
 }
 
+/** Access viewport state and zoom/pan helpers. */
 export function useViewport() {
   const canvas = useCanvas()
 
@@ -138,6 +158,7 @@ export function useViewport() {
   }
 }
 
+/** Access undo/redo operations and availability. */
 export function useHistory() {
   const canvas = useCanvas()
 
@@ -155,6 +176,7 @@ export function useHistory() {
   }
 }
 
+/** Access and control the transform-overlay visibility. */
 export function useTransformOverlay() {
   const canvas = useCanvas()
 
@@ -169,6 +191,7 @@ export function useTransformOverlay() {
   }
 }
 
+/** Access selection state and selection operations. */
 export function useSelection() {
   const canvas = useCanvas()
 
@@ -185,6 +208,9 @@ export function useSelection() {
   }
 }
 
+/**
+ * Component rendering the mount container.
+ */
 export const Canvas = {
   props: {
     class: String,

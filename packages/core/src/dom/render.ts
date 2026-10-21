@@ -1,4 +1,4 @@
-import { STROKE_COLOR, TEXT_FONT_SIZE } from "../constants"
+import { STROKE_COLOR, STROKE_WIDTH, TEXT_FONT_SIZE } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import type { CanvasElement, TextElement } from "../types"
 import { renderGuides } from "./render/guides"

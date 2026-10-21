@@ -2,11 +2,25 @@ import { syncArrowBindings } from "../bindings"
 import { STROKE_COLOR } from "../constants"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import {
+  /**
+   * Whether redo is currently possible.
+   */
   canRedo,
+  /**
+   * Whether undo is currently possible.
+   */
   canUndo,
   createHistoryState,
   pushHistory,
+  /**
+   * Redo the last undone change.
+   * @returns `true` if a redo was applied.
+   */
   redo,
+  /**
+   * Undo the last change.
+   * @returns `true` if an undo was applied.
+   */
   undo,
 } from "../history"
 import type { CanvasEventMap, CanvasOptions, MediaInput } from "../options"
@@ -54,16 +68,36 @@ type EventListener<K extends keyof CanvasEventMap> = (
   event: CanvasEventMap[K],
 ) => void
 
+/**
+ * Internal access shape used by adapter and engine hooks.
+ * @internal
+ */
 export interface EngineInternal {
+  /**
+   * Get the currently active tool.
+   */
   getActiveTool: () => ToolType
   getActiveToolInstance: () => Tool
   getCanvasSize: () => { height: number; width: number }
+  /**
+   * Get the current elements map. Caller should copy before storing.
+   */
   getElements: () => Map<ElementId, CanvasElement>
   getPointerPoint: () => Point | null
+  /**
+   * Get the current selection ids.
+   */
   getSelectedIds: () => Set<ElementId>
   getToolContext: () => ToolContext
+  /**
+   * Get the current viewport state.
+   */
   getViewport: () => ViewportState
   setPointerPoint: (point: Point) => void
+  /**
+   * Set the viewport state and emit `viewportChange`.
+   * @param viewport New viewport.
+   */
   setViewport: (viewport: ViewportState) => void
   setSelectedIds: (ids: Set<ElementId>) => void
   setSnapGuides: (guides: SnapGuide[]) => void
@@ -77,6 +111,11 @@ export interface EngineInternal {
 // Headless canvas engine: pure state (elements, selection, viewport, tools,
 // history) plus the event system. No DOM — a DOM adapter (see `dom/`) drives it
 // through the public API and the `/** @internal */` hooks below.
+/**
+ * Headless canvas engine: pure state (elements, selection, viewport, tools,
+ * history) plus the event system. No DOM. A DOM adapter drives it via the
+ * public API and the `@internal` hooks.
+ */
 export class CanvasEngine {
   private elements = new Map<ElementId, CanvasElement>()
   private selectedIds = new Set<ElementId>()
@@ -171,10 +210,19 @@ export class CanvasEngine {
     }
   }
 
+  /**
+   * Set the container size used for screen↔canvas conversions.
+   * @param width Container width in pixels.
+   * @param height Container height in pixels.
+   */
   setCanvasSize(width: number, height: number): void {
     this.canvasSize = { height, width }
   }
 
+  /**
+   * Switch the active drawing/selecting tool.
+   * @param toolType Tool to activate.
+   */
   setActiveTool(toolType: ToolType): void {
     const newTool = this.tools.get(toolType)
     if (!newTool || newTool === this.activeTool) {
@@ -192,23 +240,41 @@ export class CanvasEngine {
     this.emit("toolChange", { tool: toolType })
   }
 
+  /**
+   * Get the currently active tool.
+   */
   getActiveTool(): ToolType {
     return this.activeTool.type
   }
 
+  /**
+   * Get the current viewport state.
+   */
   getViewport(): ViewportState {
     return this.viewport
   }
 
+  /**
+   * Set the viewport state and emit `viewportChange`.
+   * @param viewport New viewport.
+   */
   setViewport(viewport: ViewportState): void {
     this.viewport = viewport
     this.emit("viewportChange", { viewport: this.viewport })
   }
 
+  /**
+   * Get the current elements map. Caller should copy before storing.
+   */
   getElements(): Map<ElementId, CanvasElement> {
     return this.elements
   }
 
+  /**
+   * Insert one or more media (image) elements, sizing them to fit the viewport.
+   * @param descriptors Media input(s).
+   * @returns The created media elements.
+   */
   insertMedia(descriptors: MediaInput | MediaInput[]): MediaElement[] {
     const inputs = Array.isArray(descriptors) ? descriptors : [descriptors]
     if (inputs.length === 0) {
@@ -243,6 +309,13 @@ export class CanvasEngine {
   // by `getElements()`, this pushes a history checkpoint (unless `history` is
   // false) and emits the usual `change` event, so the addition is undoable and
   // reactive bindings stay in sync.
+  /**
+   * Add one or more elements, pushing a history checkpoint (unless disabled)
+   * and emitting `change`.
+   * @param elements Element or elements to add.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The added elements.
+   */
   addElement(
     elements: CanvasElement | CanvasElement[],
     options: { history?: boolean } = {},
@@ -269,6 +342,11 @@ export class CanvasEngine {
   // `change` (and `selectionChange`, since selection is cleared) so reactive
   // bindings and the DOM adapter re-render. By default a history checkpoint of
   // the previous state is pushed; pass `{ history: false }` to skip it.
+  /**
+   * Replace the element set with the contents of a document.
+   * @param doc Document to load.
+   * @param options `{ history }` to skip the checkpoint.
+   */
   loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
     const next = new Map<ElementId, CanvasElement>()
     for (const element of doc?.elements ?? []) {
@@ -288,6 +366,10 @@ export class CanvasEngine {
 
   // Serialize the current document. `exclude` filters which elements are
   // included without mutating canvas state. Returns a fresh, decoupled copy.
+  /**
+   * Serialize the current document. Returns a decoupled copy.
+   * @param options `{ exclude }` filter.
+   */
   toDocument(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
     version: number
     elements: CanvasElement[]
@@ -303,6 +385,9 @@ export class CanvasEngine {
   }
 
   // Alias for `toDocument`; kept for symmetry with the original toJSON proposal.
+  /**
+   * Alias for {@link CanvasEngine.toDocument}.
+   */
   toJSON(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
     version: number
     elements: CanvasElement[]
@@ -312,6 +397,11 @@ export class CanvasEngine {
 
   // Replace the element set wholesale. Accepts either a Map or an array of
   // elements. Selection is intersected with the new IDs.
+  /**
+   * Replace the element set wholesale. Selection is intersected with new ids.
+   * @param elements Map or array of elements.
+   * @param options `{ history }` to skip the checkpoint.
+   */
   setElements(
     elements: Map<ElementId, CanvasElement> | CanvasElement[],
     options: { history?: boolean } = {},
@@ -335,34 +425,58 @@ export class CanvasEngine {
     this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
+  /**
+   * Get the current selection ids.
+   */
   getSelectedIds(): Set<ElementId> {
     return this.selectedIds
   }
 
+  /**
+   * Get the current snapping configuration.
+   */
   getSnappingConfig(): SnappingConfig {
     return this.snappingConfig
   }
 
+  /**
+   * Merge partial snapping configuration.
+   * @param config Partial configuration.
+   */
   setSnappingConfig(config: Partial<SnappingConfig>): void {
     this.snappingConfig = { ...this.snappingConfig, ...config }
   }
 
   // Snapping stays active without a modifier when `true`; otherwise it is
   // activated per-gesture by holding Ctrl/Cmd.
+  /**
+   * Whether snapping stays active without a modifier key.
+   */
   getIsSnapMode(): boolean {
     return this.isSnapMode
   }
 
+  /**
+   * Toggle snap mode.
+   * @param isSnapMode Whether snapping is always active.
+   */
   setIsSnapMode(isSnapMode: boolean): void {
     this.isSnapMode = isSnapMode
   }
 
   // Guides from the in-progress snap gesture (empty when not snapped); the DOM
   // adapter renders them and headless consumers can read them.
+  /**
+   * Get guides from the in-progress snap gesture.
+   */
   getSnapGuides(): SnapGuide[] {
     return this.snapGuides
   }
 
+  /**
+   * Set the active stroke color, applying it to the current selection.
+   * @param color Stroke color.
+   */
   setStrokeColor(color: string): void {
     this.strokeColor = color
 
@@ -378,10 +492,17 @@ export class CanvasEngine {
     this.emit("change", { elements: this.elements })
   }
 
+  /**
+   * Whether the transform overlay is hidden during transform gestures.
+   */
   getHideOverlayWhileTransforming(): boolean {
     return this.hideOverlayWhileTransforming
   }
 
+  /**
+   * Set whether the transform overlay hides during transforms.
+   * @param hide Hide flag.
+   */
   setHideOverlayWhileTransforming(hide: boolean): void {
     this.hideOverlayWhileTransforming = hide
     // Re-render so the overlay reflects the change immediately (e.g. toggled
@@ -389,14 +510,24 @@ export class CanvasEngine {
     this.renderRequested?.()
   }
 
+  /**
+   * Whether undo is currently possible.
+   */
   canUndo(): boolean {
     return canUndo(this.history)
   }
 
+  /**
+   * Whether redo is currently possible.
+   */
   canRedo(): boolean {
     return canRedo(this.history)
   }
 
+  /**
+   * Undo the last change.
+   * @returns `true` if an undo was applied.
+   */
   undo(): boolean {
     const result = undo(this.history, this.elements, this.selectedIds)
     if (result) {
@@ -411,6 +542,10 @@ export class CanvasEngine {
     return false
   }
 
+  /**
+   * Redo the last undone change.
+   * @returns `true` if a redo was applied.
+   */
   redo(): boolean {
     const result = redo(this.history, this.elements, this.selectedIds)
     if (result) {
@@ -425,20 +560,33 @@ export class CanvasEngine {
     return false
   }
 
+  /**
+   * Handle a keyboard shortcut event.
+   * @param event Keyboard event.
+   */
   handleKeyDown(event: KeyboardEvent): void {
     handleShortcutKey(event, this)
   }
 
+  /**
+   * Select all visible elements.
+   */
   selectAll(): void {
     this.selectedIds = selectAllIds(this.elements)
     this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
+  /**
+   * Clear the current selection.
+   */
   clearSelection(): void {
     this.selectedIds = new Set()
     this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
+  /**
+   * Delete the selected elements.
+   */
   deleteSelected(): void {
     const result = deleteSelectedElements(
       this.elements,
@@ -458,6 +606,10 @@ export class CanvasEngine {
   // Snapshot the selected elements (plus any grouped children) into the
   // in-memory clipboard. Returns an empty array when nothing is selected;
   // copying nothing never clears previously copied content.
+  /**
+   * Copy the selection (and grouped children) to the clipboard.
+   * @returns Copied elements.
+   */
   copy(): CanvasElement[] {
     const elements = collectClipboardElements(this.elements, this.selectedIds)
     if (elements.length > 0) {
@@ -467,6 +619,10 @@ export class CanvasEngine {
   }
 
   // Copy the selection, then delete it as a single history step.
+  /**
+   * Copy the selection, then delete it.
+   * @returns Copied elements.
+   */
   cut(): CanvasElement[] {
     const copied = this.copy()
     if (copied.length > 0) {
@@ -478,6 +634,11 @@ export class CanvasEngine {
   // Paste the clipboard centered on `at`, defaulting to the last pointer
   // position and then the viewport center. The pasted elements are selected and
   // the whole paste is one undo step.
+  /**
+   * Paste the clipboard centered on `at` (or last pointer / viewport center).
+   * @param at Optional paste point in canvas coordinates.
+   * @returns Pasted elements.
+   */
   paste(at?: Point): CanvasElement[] {
     const copied = this.clipboard.read()
     if (copied.length === 0) {
@@ -510,32 +671,52 @@ export class CanvasEngine {
   }
 
   // Serialize the clipboard for the system clipboard; null when empty.
+  /**
+   * Serialize the clipboard to a string; null when empty.
+   */
   serializeClipboard(): string | null {
     return this.clipboard.serialize()
   }
 
   // Replace the clipboard from serialized text; false when rejected.
+  /**
+   * Replace the clipboard from serialized text.
+   * @param data Serialized clipboard data.
+   * @returns Whether it was accepted.
+   */
   deserializeClipboard(data: string): boolean {
     return this.clipboard.deserialize(data)
   }
 
+  /**
+   * Zoom in by one step around the origin.
+   */
   zoomIn(): void {
     const center = { x: 0, y: 0 }
     this.viewport = zoomViewport(this.viewport, -100, center)
     this.emit("viewportChange", { viewport: this.viewport })
   }
 
+  /**
+   * Zoom out by one step around the origin.
+   */
   zoomOut(): void {
     const center = { x: 0, y: 0 }
     this.viewport = zoomViewport(this.viewport, 100, center)
     this.emit("viewportChange", { viewport: this.viewport })
   }
 
+  /**
+   * Reset zoom to 1 and center to 0,0.
+   */
   resetZoom(): void {
     this.viewport = resetViewport()
     this.emit("viewportChange", { viewport: this.viewport })
   }
 
+  /**
+   * Zoom and pan to fit all elements.
+   */
   zoomToFit(): void {
     const bounds = getElementsBounds(this.elements)
     if (!bounds) {
@@ -551,6 +732,9 @@ export class CanvasEngine {
     this.emit("viewportChange", { viewport: this.viewport })
   }
 
+  /**
+   * Get the active tool's temporary (in-progress) element.
+   */
   getTemporaryElement(): CanvasElement | null {
     return this.activeTool.getTemporaryElement()
   }
@@ -563,6 +747,11 @@ export class CanvasEngine {
     return this.activeTool.getBindingCandidate?.() ?? null
   }
 
+  /**
+   * Subscribe to a canvas event.
+   * @param event Event name.
+   * @param listener Event handler.
+   */
   on<K extends keyof CanvasEventMap>(
     event: K,
     listener: EventListener<K>,
@@ -573,6 +762,11 @@ export class CanvasEngine {
     this.listeners.get(event)!.add(listener)
   }
 
+  /**
+   * Unsubscribe from a canvas event.
+   * @param event Event name.
+   * @param listener Event handler.
+   */
   off<K extends keyof CanvasEventMap>(
     event: K,
     listener: EventListener<K>,

@@ -11,6 +11,11 @@ import { CanvasService } from "./canvas.service"
   styles: [":host { display: block; width: 100%; height: 100%; }"],
   template: "",
 })
+/**
+ * `adraw-canvas` component. Mounts an `AdrawCanvas` into its host element on
+ * next render; the `CanvasService` (provided via `provideCanvas()`) owns
+ * creation and teardown.
+ */
 export class Canvas {
   private readonly canvas = inject(CanvasService)
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef)

@@ -5,11 +5,18 @@ import { InjectionToken } from "@angular/core"
 // provideCanvas() have a stable, framework-named options type — mirrors the
 // CanvasReactOptions / CanvasVueOptions / CanvasSolidOptions in the other
 // adapters.
+/**
+ * Angular-specific canvas options; currently an alias of {@link CanvasOptions}.
+ */
 export interface CanvasAngularOptions extends CanvasOptions {}
 
 // Optional DI token read by CanvasService's constructor. provideCanvas() only
 // registers it when options are passed, so the service falls back to defaults
 // when the token is absent (injected with { optional: true }).
+/**
+ * Optional DI token read by `CanvasService`'s constructor. `provideCanvas()`
+ * registers it only when options are passed, falling back to defaults.
+ */
 export const CANVAS_OPTIONS = new InjectionToken<CanvasAngularOptions>(
   "adraw-canvas-options",
 )

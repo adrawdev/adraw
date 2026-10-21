@@ -9,10 +9,12 @@ import { createContext, useContext, type Accessor, type Setter } from "solid-js"
 
 import type { CanvasSolidOptions } from "./components"
 
+/** Ref holding the mounted canvas instance. */
 export interface CanvasRef {
   current: AdrawCanvas | null
 }
 
+/** Solid context value synced with an adraw canvas. */
 export interface CanvasContextValue {
   canvasRef: CanvasRef
   elements: Accessor<Map<ElementId, CanvasElement>>
@@ -32,8 +34,13 @@ export interface CanvasContextValue {
   options?: CanvasSolidOptions
 }
 
+/** Solid context holding the canvas state. */
 export const CanvasContext = createContext<CanvasContextValue | null>(null)
 
+/**
+ * Resolve the nearest `CanvasProvider` context.
+ * @throws When used outside a `CanvasProvider`.
+ */
 export function useCanvas() {
   const context = useContext(CanvasContext)
   if (!context) {
@@ -42,6 +49,10 @@ export function useCanvas() {
   return context
 }
 
+/**
+ * Access the active tool and a setter.
+ * @returns `{ tool, setTool }`.
+ */
 export function useTool() {
   const { canvasRef, activeTool } = useCanvas()
 
@@ -55,6 +66,7 @@ export function useTool() {
   }
 }
 
+/** Access viewport state and zoom/pan helpers. */
 export function useViewport() {
   const { canvasRef, viewport } = useCanvas()
 
@@ -72,6 +84,7 @@ export function useViewport() {
   }
 }
 
+/** Access undo/redo operations and availability. */
 export function useHistory() {
   const { canvasRef, canUndo, canRedo } = useCanvas()
 
@@ -83,6 +96,7 @@ export function useHistory() {
   }
 }
 
+/** Access and control the transform-overlay visibility. */
 export function useTransformOverlay() {
   const { canvasRef, hideWhileTransforming, setHideWhileTransforming } =
     useCanvas()
@@ -98,6 +112,7 @@ export function useTransformOverlay() {
   }
 }
 
+/** Access selection state and selection operations. */
 export function useSelection() {
   const { canvasRef, selectedIds, elements } = useCanvas()
 

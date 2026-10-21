@@ -1,17 +1,28 @@
 import type { CanvasElement, ElementId } from "./types"
 
+/**
+ * A single undo/redo checkpoint.
+ */
 export interface HistoryEntry {
   elements: Map<ElementId, CanvasElement>
   selectedIds: Set<ElementId>
   timestamp: number
 }
 
+/**
+ * Stack-based history state managed outside the canvas.
+ */
 export interface HistoryState {
   undoStack: HistoryEntry[]
   redoStack: HistoryEntry[]
   maxSize: number
 }
 
+/**
+ * Create a fresh history state.
+ *
+ * @param maxSize Maximum number of checkpoints retained.
+ */
 export function createHistoryState(maxSize: number = 100): HistoryState {
   return {
     maxSize,
@@ -20,6 +31,15 @@ export function createHistoryState(maxSize: number = 100): HistoryState {
   }
 }
 
+/**
+ * Push a checkpoint onto the undo stack, clearing the redo stack.
+ * The submitted state is copied so callers can keep mutating.
+ *
+ * @param state Current history state.
+ * @param elements Current elements map.
+ * @param selectedIds Current selection.
+ * @returns A new history state.
+ */
 export function pushHistory(
   state: HistoryState,
   elements: Map<ElementId, CanvasElement>,
@@ -44,6 +64,15 @@ export function pushHistory(
   }
 }
 
+/**
+ * Restore the previous checkpoint, pushing the current state onto the redo
+ * stack. Returns `null` when there is nothing to undo.
+ *
+ * @param state Current history state.
+ * @param currentElements Elements currently on the canvas.
+ * @param currentSelectedIds Current selection.
+ * @returns The restored elements/selection and new history state, or `null`.
+ */
 export function undo(
   state: HistoryState,
   currentElements: Map<ElementId, CanvasElement>,
@@ -80,6 +109,13 @@ export function undo(
   }
 }
 
+/**
+ * Re-apply the most recently undone checkpoint. Returns `null` when the redo
+ * stack is empty.
+ *
+ * @param state Current history state.
+ * @returns The restored elements/selection and new history state, or `null`.
+ */
 export function redo(
   state: HistoryState,
   _currentElements: Map<ElementId, CanvasElement>,
@@ -108,14 +144,23 @@ export function redo(
   }
 }
 
+/**
+ * Whether undo is currently possible.
+ */
 export function canUndo(state: HistoryState): boolean {
   return state.undoStack.length > 1
 }
 
+/**
+ * Whether redo is currently possible.
+ */
 export function canRedo(state: HistoryState): boolean {
   return state.redoStack.length > 0
 }
 
+/**
+ * Clear both undo and redo stacks.
+ */
 export function clearHistory(state: HistoryState): HistoryState {
   return {
     ...state,

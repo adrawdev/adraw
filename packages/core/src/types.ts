@@ -1,13 +1,22 @@
+/**
+ * A point in 2D (canvas or screen) coordinate space.
+ */
 export interface Point {
   x: number
   y: number
 }
 
+/**
+ * A width/height size.
+ */
 export interface Size {
   width: number
   height: number
 }
 
+/**
+ * An axis-aligned bounding box.
+ */
 export interface BoundingBox {
   x: number
   y: number
@@ -15,8 +24,14 @@ export interface BoundingBox {
   height: number
 }
 
+/**
+ * Unique identifier for a canvas element.
+ */
 export type ElementId = string
 
+/**
+ * The kind of drawable element that can live on the canvas.
+ */
 export type ElementType =
   | "rectangle"
   | "ellipse"
@@ -28,6 +43,10 @@ export type ElementType =
   | "text"
   | "group"
 
+/**
+ * Common fields shared by every canvas element. All elements extend this
+ * interface.
+ */
 export interface BaseElement {
   id: ElementId
   type: ElementType
@@ -41,6 +60,9 @@ export interface BaseElement {
   visible: boolean
 }
 
+/**
+ * A rectangle element, optionally with rounded corners.
+ */
 export interface RectangleElement extends BaseElement {
   type: "rectangle"
   cornerRadius: number
@@ -48,12 +70,18 @@ export interface RectangleElement extends BaseElement {
   strokeColor: string
 }
 
+/**
+ * An ellipse (or circle when width == height) element.
+ */
 export interface EllipseElement extends BaseElement {
   type: "ellipse"
   strokeWidth: number
   strokeColor: string
 }
 
+/**
+ * A straight line element defined by two endpoints.
+ */
 export interface LineElement extends BaseElement {
   type: "line"
   startX: number
@@ -64,14 +92,19 @@ export interface LineElement extends BaseElement {
   strokeColor: string
 }
 
-// A live link from one arrow endpoint to another element. `focus` is reserved
-// for a future attach point along the target's border; v1 always aims at the
-// target's center and clips at its border.
+/**
+ * A link from one arrow endpoint to another element. `focus` is reserved for
+ * a future attach point along the target's border; v1 always aims at the
+ * target's center and clips at its border.
+ */
 export interface ArrowBinding {
   elementId: ElementId
   focus?: number
 }
 
+/**
+ * A two-ended arrow element, optionally bound to other elements.
+ */
 export interface ArrowElement extends BaseElement {
   type: "arrow"
   startX: number
@@ -86,6 +119,12 @@ export interface ArrowElement extends BaseElement {
   endBinding?: ArrowBinding | null
 }
 
+/**
+ * A freehand stroke made of sampled points. `smoothing` controls spline
+ * tension used when rendering (default 0 = straight segments, 1 = full
+ * Catmull-Rom curve). Falls back to {@link DEFAULT_PATH_SMOOTHING} when
+ * omitted.
+ */
 export interface PathElement extends BaseElement {
   type: "path"
   points: Point[]
@@ -97,6 +136,9 @@ export interface PathElement extends BaseElement {
   smoothing?: number
 }
 
+/**
+ * A raster image element placed on the canvas.
+ */
 export interface MediaElement extends BaseElement {
   type: "media"
   src: string
@@ -105,11 +147,17 @@ export interface MediaElement extends BaseElement {
   naturalHeight: number
 }
 
+/**
+ * A container element grouping other elements by id.
+ */
 export interface GroupElement extends BaseElement {
   type: "group"
   children: ElementId[]
 }
 
+/**
+ * A text label element.
+ */
 export interface TextElement extends BaseElement {
   type: "text"
   text: string
@@ -117,6 +165,9 @@ export interface TextElement extends BaseElement {
   strokeColor: string
 }
 
+/**
+ * Union of all concrete canvas element types.
+ */
 export type CanvasElement =
   | RectangleElement
   | EllipseElement
@@ -127,6 +178,9 @@ export type CanvasElement =
   | TextElement
   | GroupElement
 
+/**
+ * The active drawing/selecting tool on the canvas.
+ */
 export type ToolType =
   | "select"
   | "hand"
@@ -138,12 +192,18 @@ export type ToolType =
   | "arrow"
   | "text"
 
+/**
+ * Viewport pan/zoom state.
+ */
 export interface ViewportState {
   x: number
   y: number
   zoom: number
 }
 
+/**
+ * Canvas-wide configuration (snapping, grid, zoom limits).
+ */
 export interface CanvasConfig {
   snapEnabled: boolean
   snapThreshold: number
@@ -153,6 +213,9 @@ export interface CanvasConfig {
   maxZoom: number
 }
 
+/**
+ * Snapshot of the runtime canvas state exposed to consumers.
+ */
 export interface CanvasState {
   elements: Map<ElementId, CanvasElement>
   selectedIds: Set<ElementId>
@@ -160,6 +223,9 @@ export interface CanvasState {
   activeTool: ToolType
 }
 
+/**
+ * Optional visual styling overrides for an element.
+ */
 export interface CanvasElementStyle {
   strokeColor?: string
   fillColor?: string
@@ -167,28 +233,43 @@ export interface CanvasElementStyle {
   opacity?: number
 }
 
+/**
+ * Geometric transform applied to a selection.
+ */
 export interface Transform {
   translate: Point
   scale: Point
   rotation: number
 }
 
+/**
+ * A visual alignment guide produced by snapping.
+ */
 export interface SnapGuide {
   type: "horizontal" | "vertical"
   position: number
   elements: ElementId[]
 }
 
+/**
+ * Result of a snapping calculation.
+ */
 export interface SnapResult {
   guides: SnapGuide[]
   snapped: boolean
 }
 
+/**
+ * Serializable canvas document format.
+ */
 export interface CanvasDocument {
   version: number
   elements: CanvasElement[]
 }
 
+/**
+ * Anchor position used when resizing an element.
+ */
 export type ResizeAnchor =
   | "top-left"
   | "top-right"

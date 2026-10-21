@@ -1,5 +1,13 @@
 import type { Point, Size, ViewportState } from "./types"
 
+/**
+ * Convert a screen-space point into canvas-space coordinates.
+ *
+ * @param screenPoint Point in screen pixels.
+ * @param viewport Current viewport state.
+ * @param canvasSize Size of the canvas container in pixels.
+ * @returns The same point expressed in canvas coordinates.
+ */
 export function screenToCanvas(
   screenPoint: Point,
   viewport: ViewportState,
@@ -14,6 +22,14 @@ export function screenToCanvas(
   return { x, y }
 }
 
+/**
+ * Convert a canvas-space point into screen-space coordinates.
+ *
+ * @param canvasPoint Point in canvas coordinates.
+ * @param viewport Current viewport state.
+ * @param canvasSize Size of the canvas container in pixels.
+ * @returns The same point expressed in screen (container) pixels.
+ */
 export function canvasToScreen(
   canvasPoint: Point,
   viewport: ViewportState,
@@ -28,6 +44,20 @@ export function canvasToScreen(
   return { x, y }
 }
 
+/**
+ * Get the axis-aligned bounds of an (optionally rotated) rectangle.
+ *
+ * @param x Top-left x.
+ * @param y Top-left y.
+ * @param width Width.
+ * @param height Height.
+ * @param rotation Rotation in degrees (default 0).
+ * @returns Bounds with `left/right/top/bottom` and `center`.
+ * @example
+ * ```ts
+ * const bounds = getElementBounds(0, 0, 100, 50, 45)
+ * ```
+ */
 export function getElementBounds(
   x: number,
   y: number,
@@ -75,6 +105,9 @@ export function getElementBounds(
   }
 }
 
+/**
+ * Test whether a point lies inside a set of left/right/top/bottom bounds.
+ */
 export function pointInBounds(
   point: Point,
   bounds: { left: number; right: number; top: number; bottom: number },
@@ -87,16 +120,25 @@ export function pointInBounds(
   )
 }
 
+/**
+ * Euclidean distance between two points.
+ */
 export function distanceBetweenPoints(p1: Point, p2: Point): number {
   const dx = p2.x - p1.x
   const dy = p2.y - p1.y
   return Math.sqrt(dx * dx + dy * dy)
 }
 
+/**
+ * Clamp a number to the inclusive range `[min, max]`.
+ */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
+/**
+ * Generate a unique element id string.
+ */
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }

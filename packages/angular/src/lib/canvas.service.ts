@@ -20,6 +20,11 @@ import { CANVAS_OPTIONS, type CanvasAngularOptions } from "./canvas.tokens"
 // constructor and mounted later by <adraw-canvas>, so every method here is
 // safe to call before mount — it just operates on headless state. Core state
 // is mirrored into Angular signals by subscribing to the four core events.
+/**
+ * Injectable service wrapping a headless `AdrawCanvas`. Core state is mirrored
+ * into Angular signals by subscribing to the four core events. Safe to use
+ * before mount.
+ */
 @Injectable()
 export class CanvasService {
   private readonly core: AdrawCanvas
@@ -87,57 +92,81 @@ export class CanvasService {
     return this.core
   }
 
-  /** Mount the canvas into a container element (called by <adraw-canvas>). */
+  /**
+   * Mount the canvas into a container element (called by `<adraw-canvas>`).
+   * @param container Container element.
+   */
   mount(container: HTMLElement): void {
     this.core.mount(container)
     this.core.render()
   }
 
+  /**
+   * Set the active tool.
+   * @param tool Tool identifier.
+   */
   setTool(tool: ToolType): void {
     this.core.setActiveTool(tool)
   }
 
+  /**
+   * Set transform-overlay visibility.
+   * @param hide Hide flag.
+   */
   setHideWhileTransforming(hide: boolean): void {
     this.core.setHideOverlayWhileTransforming(hide)
     this._hideWhileTransforming.set(hide)
   }
 
+  /**
+   * Set the viewport.
+   * @param viewport New viewport.
+   */
   setViewport(viewport: ViewportState): void {
     this.core.setViewport(viewport)
   }
 
+  /** Zoom in by one step. */
   zoomIn(): void {
     this.core.zoomIn()
   }
 
+  /** Zoom out by one step. */
   zoomOut(): void {
     this.core.zoomOut()
   }
 
+  /** Reset zoom to 1. */
   resetZoom(): void {
     this.core.resetZoom()
   }
 
+  /** Zoom to fit all elements. */
   zoomToFit(): void {
     this.core.zoomToFit()
   }
 
+  /** Undo the last change. @returns Whether applied. */
   undo(): boolean {
     return this.core.undo()
   }
 
+  /** Redo the last undone change. @returns Whether applied. */
   redo(): boolean {
     return this.core.redo()
   }
 
+  /** Select all elements. */
   selectAll(): void {
     this.core.selectAll()
   }
 
+  /** Clear the selection. */
   clearSelection(): void {
     this.core.clearSelection()
   }
 
+  /** Delete the selected elements. */
   deleteSelected(): void {
     this.core.deleteSelected()
   }

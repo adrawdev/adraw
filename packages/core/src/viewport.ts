@@ -1,18 +1,34 @@
 import { clamp } from "./coordinates"
 import type { Point, ViewportState } from "./types"
 
+/**
+ * Configuration for viewport zoom/pan behavior.
+ */
 export interface ViewportConfig {
+  /** Minimum allowed zoom. */
   minZoom: number
+  /** Maximum allowed zoom. */
   maxZoom: number
+  /** Zoom sensitivity factor applied to wheel deltas. */
   zoomSensitivity: number
 }
 
+/**
+ * Default viewport configuration.
+ */
 const DEFAULT_VIEWPORT_CONFIG: ViewportConfig = {
   maxZoom: 10,
   minZoom: 0.1,
   zoomSensitivity: 0.001,
 }
 
+/**
+ * Create a (possibly clamped) initial viewport.
+ *
+ * @param initialViewport Starting viewport state; defaults to origin/zoom 1.
+ * @param config Partial viewport configuration.
+ * @returns A viewport state with zoom clamped to the configured range.
+ */
 export function createViewport(
   initialViewport: ViewportState = { x: 0, y: 0, zoom: 1 },
   config: Partial<ViewportConfig> = {},
@@ -25,6 +41,14 @@ export function createViewport(
   }
 }
 
+/**
+ * Pan a viewport by the given delta.
+ *
+ * @param viewport Current viewport.
+ * @param delta Pan delta in canvas units.
+ * @param _config Unused, kept for signature compatibility.
+ * @returns A new viewport state.
+ */
 export function panViewport(
   viewport: ViewportState,
   delta: Point,
@@ -37,6 +61,15 @@ export function panViewport(
   }
 }
 
+/**
+ * Zoom a viewport around a center point.
+ *
+ * @param viewport Current viewport.
+ * @param delta Wheel/zoom delta (positive zooms out, negative zooms in).
+ * @param centerPoint Point in canvas coordinates to zoom around.
+ * @param config Viewport configuration.
+ * @returns A new viewport state (or the unchanged viewport when clamped).
+ */
 export function zoomViewport(
   viewport: ViewportState,
   delta: number,
@@ -62,6 +95,15 @@ export function zoomViewport(
   }
 }
 
+/**
+ * Compute a viewport that fits the given bounds within the canvas size.
+ *
+ * @param viewport Fallback viewport when bounds are empty.
+ * @param bounds Content bounds to fit.
+ * @param canvasSize Canvas container size in pixels.
+ * @param padding Padding around the content in pixels.
+ * @returns A new viewport state centered on the bounds.
+ */
 export function zoomToFit(
   viewport: ViewportState,
   bounds: { left: number; right: number; top: number; bottom: number },
@@ -96,6 +138,9 @@ export function zoomToFit(
   }
 }
 
+/**
+ * Reset the viewport to origin with zoom 1.
+ */
 export function resetViewport(): ViewportState {
   return { x: 0, y: 0, zoom: 1 }
 }

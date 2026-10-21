@@ -4,6 +4,10 @@ import { useCanvas } from "./context.svelte.ts"
 
 export { useCanvas } from "./context.svelte.ts"
 
+/**
+ * Access the active tool and a setter.
+ * @returns `{ tool, setTool }`.
+ */
 export function useTool() {
   const context = useCanvas()
 
@@ -17,6 +21,7 @@ export function useTool() {
   }
 }
 
+/** Access viewport state and zoom/pan helpers. */
 export function useViewport() {
   const context = useCanvas()
 
@@ -34,6 +39,7 @@ export function useViewport() {
   }
 }
 
+/** Access undo/redo operations and availability. */
 export function useHistory() {
   const context = useCanvas()
 
@@ -45,6 +51,7 @@ export function useHistory() {
   }
 }
 
+/** Access and control the transform-overlay visibility. */
 export function useTransformOverlay() {
   const context = useCanvas()
 
@@ -59,6 +66,7 @@ export function useTransformOverlay() {
   }
 }
 
+/** Access selection state and selection operations. */
 export function useSelection() {
   const context = useCanvas()
 

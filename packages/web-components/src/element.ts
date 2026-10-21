@@ -8,6 +8,10 @@ import {
   type ViewportState,
 } from "@adraw/core"
 
+/**
+ * Web Components-specific canvas options; currently an alias of
+ * {@link CanvasOptions}.
+ */
 export interface CanvasWebComponentsOptions extends CanvasOptions {}
 
 /** Detail payloads for the `adraw:*` events re-dispatched from the element. */

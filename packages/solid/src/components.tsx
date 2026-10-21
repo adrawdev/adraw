@@ -17,6 +17,9 @@ import {
 
 import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
 
+/**
+ * Solid-specific canvas options; currently an alias of {@link CanvasOptions}.
+ */
 export interface CanvasSolidOptions extends CanvasOptions {}
 
 export interface CanvasProviderProps {
@@ -24,6 +27,9 @@ export interface CanvasProviderProps {
   options?: CanvasSolidOptions
 }
 
+/**
+ * Context provider holding the Solid state synced with an adraw canvas.
+ */
 export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   const canvasRef: CanvasContextValue["canvasRef"] = { current: null }
   const [elements, setElements] = createSignal<Map<ElementId, CanvasElement>>(
@@ -76,6 +82,9 @@ export interface CanvasProps {
   style?: JSX.CSSProperties
 }
 
+/**
+ * Renders the mount container for the canvas.
+ */
 export function Canvas(props: CanvasProps): JSX.Element {
   const {
     canvasRef,

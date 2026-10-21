@@ -12,10 +12,12 @@ import { CanvasService } from "./canvas.service"
 // primitive, the analog of Solid's accessors — so read them by calling them
 // (e.g. `tool()`), including inside templates.
 
+/** Resolve the component-scoped `CanvasService`. */
 export function useCanvas(): CanvasService {
   return inject(CanvasService)
 }
 
+/** Access the active tool signal and setter. */
 export function useTool() {
   const canvas = inject(CanvasService)
   return {
@@ -24,6 +26,7 @@ export function useTool() {
   }
 }
 
+/** Access viewport state and zoom/pan helpers. */
 export function useViewport() {
   const canvas = inject(CanvasService)
   return {
@@ -36,6 +39,7 @@ export function useViewport() {
   }
 }
 
+/** Access undo/redo operations and availability signals. */
 export function useHistory() {
   const canvas = inject(CanvasService)
   return {
@@ -46,6 +50,7 @@ export function useHistory() {
   }
 }
 
+/** Access and control transform-overlay visibility. */
 export function useTransformOverlay() {
   const canvas = inject(CanvasService)
   return {
@@ -55,6 +60,7 @@ export function useTransformOverlay() {
   }
 }
 
+/** Access selection state and selection operations. */
 export function useSelection() {
   const canvas = inject(CanvasService)
   return {

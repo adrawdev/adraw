@@ -19,6 +19,9 @@ import React, {
 
 import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
 
+/**
+ * React-specific canvas options; currently an alias of {@link CanvasOptions}.
+ */
 export interface CanvasReactOptions extends CanvasOptions {}
 
 interface CanvasProviderProps {
@@ -26,6 +29,16 @@ interface CanvasProviderProps {
   options?: CanvasReactOptions
 }
 
+/**
+ * Context provider holding the React state synced with an adraw canvas.
+ *
+ * @example
+ * ```tsx
+ * <CanvasProvider options={...}>
+ *   <Canvas />
+ * </CanvasProvider>
+ * ```
+ */
 export function CanvasProvider({
   children,
   options: defaultOptions,
@@ -84,6 +97,13 @@ interface CanvasProps {
   style?: React.CSSProperties
 }
 
+/**
+ * Renders the mount container for the canvas. Must be used inside a
+ * {@link CanvasProvider}.
+ *
+ * @param props.className Optional CSS class.
+ * @param props.style Optional inline styles.
+ */
 export function Canvas({ className, style }: CanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const {

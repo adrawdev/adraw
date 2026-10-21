@@ -8,8 +8,14 @@ import type {
 } from "@adraw/core"
 import { getContext, setContext } from "svelte"
 
+/**
+ * Svelte-specific canvas options; currently an alias of {@link CanvasOptions}.
+ */
 export interface CanvasSvelteOptions extends CanvasOptions {}
 
+/**
+ * Reactive state synced with an adraw canvas.
+ */
 export interface CanvasState {
   elements: Map<ElementId, CanvasElement>
   viewport: ViewportState
@@ -18,6 +24,9 @@ export interface CanvasState {
   hideWhileTransforming: boolean
 }
 
+/**
+ * Svelte context value holding the canvas state.
+ */
 export interface CanvasContextValue {
   instance: { current: AdrawCanvas | null }
   options?: CanvasSvelteOptions
@@ -26,6 +35,12 @@ export interface CanvasContextValue {
 
 const CANVAS_CONTEXT_KEY = Symbol("adraw-canvas")
 
+/**
+ * Create and provide a canvas context.
+ *
+ * @param getOptions Reactive accessor for options.
+ * @returns The provided context value.
+ */
 export function createCanvasContext(
   getOptions?: () => CanvasSvelteOptions | undefined,
 ): CanvasContextValue {
@@ -50,6 +65,10 @@ export function createCanvasContext(
   return value
 }
 
+/**
+ * Resolve the nearest canvas context.
+ * @throws When used outside a `CanvasProvider`.
+ */
 export function useCanvas(): CanvasContextValue {
   const context = getContext<CanvasContextValue | undefined>(CANVAS_CONTEXT_KEY)
 

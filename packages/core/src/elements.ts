@@ -16,10 +16,17 @@ import type {
 
 export { getElementAtPoint, getElementsBounds } from "./elements/hit-test"
 
+/**
+ * Partial factory input used by the element creation helpers: every field of
+ * the element except `id` and `type`, with `id` allowed to be supplied.
+ */
 export type ElementFactory<T extends CanvasElement> = Omit<T, "id" | "type"> & {
   id?: string
 }
 
+/**
+ * Get the next z-index value above all elements in `elements`.
+ */
 export function getNextZIndex(elements: Iterable<CanvasElement>): number {
   let maxZIndex = 0
   for (const element of elements) {
@@ -28,11 +35,19 @@ export function getNextZIndex(elements: Iterable<CanvasElement>): number {
   return maxZIndex + 1
 }
 
-// Default spline tension for freehand paths (0 = straight segments, 1 = full
-// Catmull-Rom curve). Shared by the draw tool and the renderer so a path always
-// looks the same regardless of how it was constructed.
+/**
+ * Default spline tension for freehand paths (0 = straight segments, 1 = full
+ * Catmull-Rom curve). Shared by the draw tool and the renderer.
+ */
 export const DEFAULT_PATH_SMOOTHING = 0.5
 
+/**
+ * Create a rectangle element.
+ * @example
+ * ```ts
+ * const el = createRectangle({ x: 0, y: 0, width: 100, height: 50, cornerRadius: 4, strokeWidth: 2 })
+ * ```
+ */
 export function createRectangle(
   factory: ElementFactory<RectangleElement>,
 ): RectangleElement {
@@ -43,6 +58,9 @@ export function createRectangle(
   }
 }
 
+/**
+ * Create an ellipse element.
+ */
 export function createEllipse(
   factory: ElementFactory<EllipseElement>,
 ): EllipseElement {
@@ -53,6 +71,9 @@ export function createEllipse(
   }
 }
 
+/**
+ * Create a line element.
+ */
 export function createLine(factory: ElementFactory<LineElement>): LineElement {
   return {
     ...factory,
@@ -61,6 +82,9 @@ export function createLine(factory: ElementFactory<LineElement>): LineElement {
   }
 }
 
+/**
+ * Create an arrow element.
+ */
 export function createArrow(
   factory: ElementFactory<ArrowElement>,
 ): ArrowElement {
@@ -71,6 +95,10 @@ export function createArrow(
   }
 }
 
+/**
+ * Create a freehand path element. Points defaults to `[]` and smoothing to
+ * {@link DEFAULT_PATH_SMOOTHING}.
+ */
 export function createPath(factory: ElementFactory<PathElement>): PathElement {
   return {
     ...factory,
@@ -81,6 +109,9 @@ export function createPath(factory: ElementFactory<PathElement>): PathElement {
   }
 }
 
+/**
+ * Create a media (image) element.
+ */
 export function createMedia(
   factory: ElementFactory<MediaElement>,
 ): MediaElement {
@@ -91,6 +122,9 @@ export function createMedia(
   }
 }
 
+/**
+ * Create a text element.
+ */
 export function createText(factory: ElementFactory<TextElement>): TextElement {
   return {
     ...factory,
@@ -99,9 +133,14 @@ export function createText(factory: ElementFactory<TextElement>): TextElement {
   }
 }
 
-// Approximate the rendered size of a text element without a DOM: ~0.6em per
-// character on the longest line, 1.2em line height. The DOM adapter renders
-// text with the same metrics so the bounding box stays close to the glyphs.
+/**
+ * Approximate the rendered size of a text element without a DOM. ~0.6em per
+ * character on the longest line, 1.2em line height.
+ *
+ * @param text Text content.
+ * @param fontSize Font size in pixels.
+ * @returns Approximate width/height.
+ */
 export function measureTextSize(text: string, fontSize: number): Size {
   const lines = text.split("\n")
   const lineHeight = fontSize * 1.2
@@ -115,6 +154,9 @@ export function measureTextSize(text: string, fontSize: number): Size {
   }
 }
 
+/**
+ * Create a group element grouping other element ids.
+ */
 export function createGroup(
   factory: ElementFactory<GroupElement>,
 ): GroupElement {
@@ -126,6 +168,13 @@ export function createGroup(
   }
 }
 
+/**
+ * Clone an element with a new id and offset position (default offset 20,20).
+ *
+ * @param element Element to clone.
+ * @param offset Offset applied to x/y. Defaults to `{ x: 20, y: 20 }`.
+ * @returns A new element with a fresh id.
+ */
 export function cloneElement<T extends CanvasElement>(
   element: T,
   offset: Point = { x: 20, y: 20 },
@@ -138,6 +187,9 @@ export function cloneElement<T extends CanvasElement>(
   }
 }
 
+/**
+ * Move an element by a delta, returning a new element.
+ */
 export function moveElement(
   element: CanvasElement,
   delta: Point,
@@ -149,6 +201,16 @@ export function moveElement(
   }
 }
 
+/**
+ * Resize an element to the given dimensions, keeping the requested anchor
+ * (default `top-left`) fixed.
+ *
+ * @param element Element to resize.
+ * @param width New width (clamped to at least 1).
+ * @param height New height (clamped to at least 1).
+ * @param anchor Anchor kept fixed while resizing.
+ * @returns A new element with updated geometry.
+ */
 export function resizeElement(
   element: CanvasElement,
   width: number,
@@ -205,6 +267,9 @@ export function resizeElement(
   }
 }
 
+/**
+ * Rotate an element to the given rotation (mod 360).
+ */
 export function rotateElement(
   element: CanvasElement,
   rotation: number,

@@ -6,7 +6,11 @@ import type {
   SnapResult,
 } from "./types"
 
+/**
+ * Snapping threshold configuration.
+ */
 export interface SnappingConfig {
+  /** Snap distance threshold in pixels. */
   threshold: number
 }
 
@@ -14,6 +18,11 @@ const DEFAULT_SNAPPING_CONFIG: SnappingConfig = {
   threshold: 5,
 }
 
+/**
+ * Create a snapping configuration, filling in defaults.
+ *
+ * @param partial Partial configuration to merge with defaults.
+ */
 export function createSnappingConfig(
   partial: Partial<SnappingConfig> = {},
 ): SnappingConfig {
@@ -23,14 +32,18 @@ export function createSnappingConfig(
   }
 }
 
-// Modifier keys that temporarily activate snapping when `isSnapMode` is off.
+/**
+ * Modifier keys that temporarily activate snapping when `isSnapMode` is off.
+ */
 export interface SnapModifiers {
   ctrlKey: boolean
   metaKey: boolean
 }
 
-// Snapping is on when `isSnapMode` keeps it always on or the user holds
-// Ctrl/Cmd for the duration of the gesture.
+/**
+ * Snapping is on when `isSnapMode` keeps it always on or the user holds
+ * Ctrl/Cmd for the duration of the gesture.
+ */
 export function isSnapActive(
   isSnapMode: boolean,
   event: SnapModifiers,
@@ -38,6 +51,9 @@ export function isSnapActive(
   return isSnapMode || event.ctrlKey || event.metaKey
 }
 
+/**
+ * A candidate snap point on an element's edge/center.
+ */
 export interface SnapPoint {
   x: number
   y: number
@@ -45,6 +61,9 @@ export interface SnapPoint {
   type: "left" | "right" | "top" | "bottom" | "center-x" | "center-y"
 }
 
+/**
+ * Compute the snap points for a single element.
+ */
 export function getElementSnapPoints(element: CanvasElement): SnapPoint[] {
   const { x, y, width, height } = element
   const cx = x + width / 2
@@ -60,6 +79,13 @@ export function getElementSnapPoints(element: CanvasElement): SnapPoint[] {
   ]
 }
 
+/**
+ * Collect snap points from all visible, non-locked elements, excluding the
+ * ones in `excludeIds` (e.g. the moving selection).
+ *
+ * @param elements Current elements map.
+ * @param excludeIds Ids excluded from snapping.
+ */
 export function getAllSnapPoints(
   elements: Map<ElementId, CanvasElement>,
   excludeIds = new Set<ElementId>(),
@@ -76,6 +102,14 @@ export function getAllSnapPoints(
   return snapPoints
 }
 
+/**
+ * Calculate snap guides for a point against a list of snap points.
+ *
+ * @param point Point being dragged.
+ * @param snapPoints Candidate target snap points.
+ * @param threshold Snap distance threshold in pixels.
+ * @returns Guides plus a boolean indicating whether a snap occurred.
+ */
 export function calculateSnap(
   point: Point,
   snapPoints: SnapPoint[],
@@ -110,6 +144,9 @@ export function calculateSnap(
   return { guides, snapped }
 }
 
+/**
+ * Apply a set of guides to snap a point's x/y coordinates.
+ */
 export function snapPointToGuides(point: Point, guides: SnapGuide[]): Point {
   let snappedX = point.x
   let snappedY = point.y
@@ -125,9 +162,6 @@ export function snapPointToGuides(point: Point, guides: SnapGuide[]): Point {
   return { x: snappedX, y: snappedY }
 }
 
-// A single axis feature of the moving bounds (its left/right/center or
-// top/bottom/middle) paired with the offset needed to place the bounds so that
-// feature lands on a guide position.
 interface AxisFeature {
   offset: number
   position: number
@@ -167,6 +201,15 @@ function nearestAxisSnap(
   return best
 }
 
+/**
+ * Snap a moving bounds rectangle to nearby elements' edges/centers.
+ *
+ * @param bounds Moving bounds.
+ * @param elements Other elements to snap against.
+ * @param excludeIds Ids excluded from snapping (the moving elements).
+ * @param threshold Snap distance threshold in pixels.
+ * @returns The snapped bounds plus any produced guides.
+ */
 export function snapBoundsToElements(
   bounds: { x: number; y: number; width: number; height: number },
   elements: Map<ElementId, CanvasElement>,
@@ -182,8 +225,6 @@ export function snapBoundsToElements(
   const snapPoints = getAllSnapPoints(elements, excludeIds)
   const guides: SnapGuide[] = []
 
-  // Align the moving bounds' left/right/center with any target edge or center,
-  // snapping the closest feature on each axis.
   const xSnap = nearestAxisSnap(
     [
       { offset: 0, position: bounds.x },
@@ -229,8 +270,16 @@ export function snapBoundsToElements(
   }
 }
 
-// Snap a single point (a resize handle / drawing cursor) to the nearest target
-// edge or center on each axis, returning the snapped point and its guides.
+/**
+ * Snap a single point (a resize handle / drawing cursor) to nearby
+ * elements' edges/centers.
+ *
+ * @param point Point to snap.
+ * @param elements Other elements to snap against.
+ * @param excludeIds Ids excluded from snapping.
+ * @param threshold Snap distance threshold in pixels.
+ * @returns The snapped point plus any produced guides.
+ */
 export function snapPointToElements(
   point: Point,
   elements: Map<ElementId, CanvasElement>,
