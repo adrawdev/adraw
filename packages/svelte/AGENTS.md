@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Svelte 5 bindings for adraw. Uses Svelte 5 runes (`$state`, `$effect`, snippets) with a module-level singleton pattern. Supports a single canvas instance per page.
+Svelte 5 bindings for adraw. Uses Svelte 5 runes (`$state`, `$effect`, snippets) with a `CanvasProvider` context. Each provider subtree owns one canvas; multiple independent providers can coexist.
 
 ## Exports
 
@@ -42,8 +42,8 @@ From `src/index.ts`:
 
 1. `CanvasProvider` creates canvas context and provides it via Svelte 5's `setContext`/`getContext`
 2. `Canvas` mounts the `AdrawCanvas` in a `$effect` block, subscribes to all 4 events
-3. Singleton pattern — `useCanvas()` returns context set by nearest ancestor `CanvasProvider`
-4. One canvas per page (singleton within the component tree)
+3. `useCanvas()` returns the context set by the nearest ancestor `CanvasProvider` and throws outside one
+4. One canvas per `CanvasProvider` subtree
 
 ## Build
 
@@ -60,7 +60,7 @@ pnpm dev:svelte      # watch mode
 
 - Svelte 5 runes (`$state`, `$effect`, `{#snippet}`, `{@render}`) not Svelte 4 `$:`
 - No semicolons, double quotes, 2-space indent
-- `useCanvas()` calls `useCanvas()` from `context.svelte.ts`
+- `useCanvas()` reads the `CanvasProvider` context from `context.svelte.ts`
 - Hooks return objects with getters (arrow functions for reactive reads) and methods
 - Exported types: `CanvasContextValue`, `CanvasSvelteOptions`
 - All methods no-op safely when canvas instance is `null`
