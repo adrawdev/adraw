@@ -32,6 +32,16 @@ import type {
 } from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import {
+  CONFIGURABLE_TOOLS,
+  getElementTypeForTool,
+  isConfigurableTool,
+  resolveToolOptions,
+  type ConfigurableToolType,
+  type ResolvedToolOptions,
+  type ToolOptionsChangeEvent,
+  type ToolOptionsMap,
+} from "../tool-options"
+import {
   createArrowTool,
   createDrawTool,
   createEllipseTool,
@@ -42,7 +52,11 @@ import {
   createSelectTool,
   createTextTool,
 } from "../tools"
-import type { Tool, ToolContext } from "../tools/base"
+import {
+  getDefaultToolOptions,
+  type Tool,
+  type ToolContext,
+} from "../tools/base"
 import type {
   CanvasDocument,
   CanvasElement,
@@ -67,6 +81,7 @@ import {
   computeZoomToFitViewport,
 } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
+import { applyToolOptionsToElement } from "./tool-options"
 import {
   bringElementsToFront,
   sendElementsToBack,
@@ -152,6 +167,10 @@ export class CanvasEngine {
   private keyboardScope: KeyboardScope
   private snapGuides: SnapGuide[] = []
   private strokeColor: string = STROKE_COLOR
+  private toolOptions = new Map<
+    ConfigurableToolType,
+    ToolOptionsMap[ConfigurableToolType]
+  >()
   private hideOverlayWhileTransforming: boolean
   private history = createHistoryState()
   // Depth counter for `withoutHistory`; suppresses checkpoint pushes while > 0.
@@ -185,15 +204,25 @@ export class CanvasEngine {
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
 
+    for (const tool of CONFIGURABLE_TOOLS) {
+      const overrides = options.tools?.[tool]
+      if (overrides) {
+        this.toolOptions.set(tool, { ...overrides })
+      }
+    }
+
     this.tools.set("select", createSelectTool())
     this.tools.set("hand", createHandTool())
-    this.tools.set("rectangle", createRectangleTool())
-    this.tools.set("ellipse", createEllipseTool())
-    this.tools.set("line", createLineTool())
-    this.tools.set("arrow", createArrowTool())
-    this.tools.set("draw", createDrawTool())
+    this.tools.set(
+      "rectangle",
+      createRectangleTool(this.getToolOptions("rectangle")),
+    )
+    this.tools.set("ellipse", createEllipseTool(this.getToolOptions("ellipse")))
+    this.tools.set("line", createLineTool(this.getToolOptions("line")))
+    this.tools.set("arrow", createArrowTool(this.getToolOptions("arrow")))
+    this.tools.set("draw", createDrawTool(this.getToolOptions("draw")))
     this.tools.set("eraser", createEraserTool())
-    this.tools.set("text", createTextTool())
+    this.tools.set("text", createTextTool(this.getToolOptions("text")))
 
     this.activeTool = this.tools.get("select")!
     this.activeTool.onActivate(this.createToolContext())
@@ -212,6 +241,12 @@ export class CanvasEngine {
       getSelectedIds: () => this.selectedIds,
       getSnappingConfig: () => this.snappingConfig,
       getStrokeColor: () => this.strokeColor,
+      getToolOptions: () => {
+        const tool = this.activeTool.type
+        return isConfigurableTool(tool)
+          ? this.getToolOptions(tool)
+          : getDefaultToolOptions()
+      },
       getViewport: () => this.viewport,
       pushHistory: () => {
         this.commitHistory()
@@ -674,11 +709,116 @@ export class CanvasEngine {
   }
 
   /**
-   * Set the active stroke color, applying it to the current selection.
+   * Get a tool's fully resolved style options, including defaults and the
+   * engine's current global stroke color.
+   *
+   * @param tool Configurable tool identifier.
+   * @returns Every option the tool uses, with defaults filled in.
+   * @example
+   * ```ts
+   * canvas.getToolOptions("draw")
+   * // { strokeColor, fillColor, strokeWidth: 2, smoothing: 0.5 }
+   * ```
+   */
+  getToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+  ): ResolvedToolOptions<T> {
+    const overrides = this.toolOptions.get(tool) as
+      | ToolOptionsMap[T]
+      | undefined
+    const resolved = resolveToolOptions(tool, overrides)
+    if (overrides?.strokeColor === undefined) {
+      resolved.strokeColor = this.strokeColor
+    }
+    return resolved
+  }
+
+  /**
+   * Merge partial style options for a tool. Future elements created with the
+   * tool use the new values, and matching elements in the current selection
+   * are restyled immediately.
+   *
+   * @param tool Configurable tool identifier.
+   * @param options Partial options to merge over the tool's current values.
+   * @example
+   * ```ts
+   * canvas.setToolOptions("rectangle", { cornerRadius: 8, strokeWidth: 3 })
+   * canvas.setToolOptions("text", { fontSize: 28 })
+   * ```
+   */
+  setToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+    options: ToolOptionsMap[T],
+  ): void {
+    const previous = this.toolOptions.get(tool) as ToolOptionsMap[T] | undefined
+    const merged: Record<string, unknown> = { ...previous }
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) {
+        merged[key] = value
+      }
+    }
+    this.toolOptions.set(tool, merged as ToolOptionsMap[T])
+
+    const changed = this.applyToolOptionsToSelection(
+      tool,
+      merged as ToolOptionsMap[T],
+    )
+    if (changed) {
+      syncArrowBindings(this.elements)
+      this.emit("change", { elements: this.elements })
+      // Style changes can alter bounds (e.g. a text font size), so refresh
+      // consumers that cache selection geometry.
+      this.emit("selectionChange", { selectedIds: this.selectedIds })
+    }
+
+    this.emit("toolOptionsChange", {
+      options: this.getToolOptions(tool),
+      tool,
+    } as ToolOptionsChangeEvent)
+  }
+
+  // Restyle selected elements that the given tool owns, ignoring other types.
+  private applyToolOptionsToSelection<T extends ConfigurableToolType>(
+    tool: T,
+    options: ToolOptionsMap[T],
+  ): boolean {
+    if (this.selectedIds.size === 0) {
+      return false
+    }
+
+    const elementType = getElementTypeForTool(tool)
+    let changed = false
+    for (const id of this.selectedIds) {
+      const element = this.elements.get(id)
+      if (!element || element.type !== elementType) {
+        continue
+      }
+      const next = applyToolOptionsToElement(element, options)
+      if (next !== element) {
+        this.elements.set(id, next)
+        changed = true
+      }
+    }
+    return changed
+  }
+
+  /**
+   * Set the active stroke color, applying it to the current selection. Clears
+   * per-tool `strokeColor` overrides so every tool follows the new color.
+   *
    * @param color Stroke color.
    */
   setStrokeColor(color: string): void {
     this.strokeColor = color
+
+    for (const tool of CONFIGURABLE_TOOLS) {
+      const overrides = this.toolOptions.get(tool)
+      if (overrides?.strokeColor !== undefined) {
+        const next = { ...overrides }
+        delete next.strokeColor
+        this.toolOptions.set(tool, next)
+      }
+    }
 
     if (this.selectedIds.size > 0) {
       for (const id of this.selectedIds) {
@@ -690,6 +830,12 @@ export class CanvasEngine {
     }
 
     this.emit("change", { elements: this.elements })
+    for (const tool of CONFIGURABLE_TOOLS) {
+      this.emit("toolOptionsChange", {
+        options: this.getToolOptions(tool),
+        tool,
+      } as ToolOptionsChangeEvent)
+    }
   }
 
   /**

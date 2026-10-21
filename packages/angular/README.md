@@ -90,12 +90,15 @@ export class App {}
 Returns the providers that register a component-scoped `CanvasService`. Add it to the `providers` array of the component that hosts `<adraw-canvas>` and its controls.
 
 ```ts
-provideCanvas({ snapping: { threshold: 8 } })
+provideCanvas({
+  snapping: { threshold: 8 },
+  tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+})
 ```
 
-| Argument  | Type                   | Description                        |
-| --------- | ---------------------- | ---------------------------------- |
-| `options` | `CanvasAngularOptions` | Initial snapping / viewport config |
+| Argument  | Type                   | Description                                 |
+| --------- | ---------------------- | ------------------------------------------- |
+| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool style config |
 
 ### `Canvas` (`<adraw-canvas>`)
 
@@ -107,7 +110,7 @@ Standalone component that mounts the drawing surface into its own host element (
 
 ### `CanvasService`
 
-The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, the imperative methods used by the hooks, and `instance` (the raw `AdrawCanvas`).
+The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `toolOptions`, the imperative methods used by the hooks (including `getToolOptions` / `setToolOptions`), and `instance` (the raw `AdrawCanvas`).
 
 ## Hooks
 
@@ -147,6 +150,30 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 // selectedIds, elements: Signal
 ```
+
+### `useToolOptions()`
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions: Signal<ToolOptionsState>
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle(tool?)`
+
+Returns signals for one tool. Omit `tool` to infer it from a homogeneous
+selection (or the active tool):
+
+```ts
+const { tool, style, setStyle } = useStyle()
+// or: const { style, setStyle } = useStyle("rectangle")
+// tool() and style() may be null when nothing applies
+
+setStyle({ strokeWidth: 4 })
+```
+
+Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
+`smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

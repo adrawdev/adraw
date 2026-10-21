@@ -3,6 +3,7 @@ import type { PathElement, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolState,
@@ -43,11 +44,10 @@ export function createDrawTool(options: DrawToolOptions = {}): Tool {
       state.currentPoint = point
       currentPoints.push(point)
 
-      const color = context.getStrokeColor() ?? toolOptions.strokeColor
-      const element = createPathElement(currentPoints, {
-        ...toolOptions,
-        strokeColor: color,
-      })
+      const element = createPathElement(
+        currentPoints,
+        getToolOptionsForContext(toolOptions, context),
+      )
 
       if (element) {
         temporaryElement = element
@@ -62,10 +62,9 @@ export function createDrawTool(options: DrawToolOptions = {}): Tool {
         return
       }
 
-      const color = context.getStrokeColor() ?? toolOptions.strokeColor
       const element = createPathElement(
         currentPoints,
-        { ...toolOptions, strokeColor: color },
+        getToolOptionsForContext(toolOptions, context),
         {
           zIndex: getNextZIndex(context.getElements().values()),
         },

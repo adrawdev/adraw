@@ -1,4 +1,10 @@
-import { useCanvas, useHistory, useTool, useViewport } from "@adraw/angular"
+import {
+  useCanvas,
+  useHistory,
+  useStyle,
+  useTool,
+  useViewport,
+} from "@adraw/angular"
 import type { ToolType } from "@adraw/core"
 import { Component, input } from "@angular/core"
 
@@ -46,6 +52,12 @@ import { Component, input } from "@angular/core"
         width: 1px;
         align-self: stretch;
       }
+      .control {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+      }
     `,
   ],
   template: `
@@ -59,6 +71,24 @@ import { Component, input } from "@angular/core"
         >
           {{ t.label }}
         </button>
+      }
+      <div class="separator"></div>
+      @if (styleApi.style(); as style) {
+        <label class="control">
+          Stroke
+          <input
+            type="range"
+            min="1"
+            max="16"
+            [value]="style.strokeWidth"
+            (input)="
+              styleApi.setStyle({
+                strokeWidth: Number($any($event.target).value),
+              })
+            "
+          />
+          {{ style.strokeWidth }}
+        </label>
       }
       <div class="separator"></div>
       <button [disabled]="!historyApi.canUndo()" (click)="historyApi.undo()">
@@ -92,6 +122,7 @@ export class Toolbar {
   protected readonly toolApi = useTool()
   protected readonly viewportApi = useViewport()
   protected readonly historyApi = useHistory()
+  protected readonly styleApi = useStyle()
 
   protected readonly tools: {
     id: ToolType

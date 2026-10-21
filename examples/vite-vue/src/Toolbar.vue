@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { ToolType } from "@adraw/core"
-import { useCanvas, useHistory, useTool, useViewport } from "@adraw/vue"
+import {
+  useCanvas,
+  useHistory,
+  useStyle,
+  useTool,
+  useViewport,
+} from "@adraw/vue"
 
 defineProps<{ label: string }>()
 
@@ -8,6 +14,7 @@ const canvasApi = useCanvas()
 const toolApi = useTool()
 const viewportApi = useViewport()
 const historyApi = useHistory()
+const styleApi = useStyle()
 
 const tools: { id: ToolType; label: string; shortcut: string }[] = [
   { id: "select", label: "Select", shortcut: "V" },
@@ -33,6 +40,22 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
     >
       {{ tool.label }}
     </button>
+    <div class="separator" />
+    <label v-if="styleApi.style" class="control">
+      Stroke
+      <input
+        type="range"
+        min="1"
+        max="16"
+        :value="styleApi.style.strokeWidth"
+        @input="
+          styleApi.setStyle({
+            strokeWidth: Number(($event.target as HTMLInputElement).value),
+          })
+        "
+      />
+      {{ styleApi.style.strokeWidth }}
+    </label>
     <div class="separator" />
     <button :disabled="!historyApi.canUndo()" @click="historyApi.undo()">
       Undo
@@ -93,5 +116,11 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
   background: #ddd;
   margin: 0 4px;
   width: 1px;
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
 }
 </style>

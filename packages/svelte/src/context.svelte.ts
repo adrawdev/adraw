@@ -1,10 +1,12 @@
-import type {
-  AdrawCanvas,
-  CanvasElement,
-  CanvasOptions,
-  ElementId,
-  ToolType,
-  ViewportState,
+import {
+  type AdrawCanvas,
+  type CanvasElement,
+  type CanvasOptions,
+  type ElementId,
+  resolveAllToolOptions,
+  type ToolOptionsState,
+  type ToolType,
+  type ViewportState,
 } from "@adraw/core"
 import { getContext, setContext } from "svelte"
 
@@ -22,6 +24,7 @@ export interface CanvasState {
   activeTool: ToolType
   selectedIds: Set<ElementId>
   hideWhileTransforming: boolean
+  toolOptions: ToolOptionsState
 }
 
 /**
@@ -49,6 +52,7 @@ export function createCanvasContext(
     elements: new Map(),
     hideWhileTransforming: getOptions?.()?.hideOverlayWhileTransforming ?? true,
     selectedIds: new Set(),
+    toolOptions: resolveAllToolOptions(getOptions?.()?.tools),
     viewport: { x: 0, y: 0, zoom: 1 },
   })
 

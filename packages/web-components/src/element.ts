@@ -3,7 +3,14 @@ import {
   type CanvasElement,
   type CanvasEventMap,
   type CanvasOptions,
+  type ConfigurableToolType,
   type ElementId,
+  resolveAllToolOptions,
+  type ResolvedToolOptions,
+  resolveToolOptions,
+  type ToolOptionsChangeEvent,
+  type ToolOptionsMap,
+  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
@@ -20,6 +27,7 @@ export interface AdrawCanvasEventMap {
   "adraw:viewportchange": CustomEvent<{ viewport: ViewportState }>
   "adraw:toolchange": CustomEvent<{ tool: ToolType }>
   "adraw:selectionchange": CustomEvent<{ selectedIds: Set<ElementId> }>
+  "adraw:tooloptionschange": CustomEvent<ToolOptionsChangeEvent>
 }
 
 /**
@@ -41,10 +49,56 @@ export class AdrawCanvasElement extends HTMLElement {
   viewport: ViewportState = { x: 0, y: 0, zoom: 1 }
   activeTool: ToolType = "select"
   selectedIds = new Set<ElementId>()
+  toolOptions: ToolOptionsState = resolveAllToolOptions()
 
   /** The underlying core instance, or `null` while the element is disconnected. */
   get canvas(): AdrawCanvas | null {
     return this.instance
+  }
+
+  /**
+   * Get a tool's fully resolved style options.
+   * @param tool Configurable tool identifier.
+   * @returns Resolved style options.
+   */
+  getToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+  ): ResolvedToolOptions<T> {
+    if (this.instance) {
+      return this.instance.getToolOptions(tool)
+    }
+    return resolveToolOptions(tool, this.options?.tools?.[tool])
+  }
+
+  /**
+   * Merge partial style options for a tool. Works before connect; the values
+   * are applied when the element mounts.
+   * @param tool Configurable tool identifier.
+   * @param options Partial options.
+   */
+  setToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+    options: ToolOptionsMap[T],
+  ): void {
+    if (this.instance) {
+      this.instance.setToolOptions(tool, options)
+      return
+    }
+
+    this.options = {
+      ...this.options,
+      tools: {
+        ...this.options?.tools,
+        [tool]: { ...this.options?.tools?.[tool], ...options },
+      },
+    }
+    this.toolOptions = {
+      ...this.toolOptions,
+      [tool]: resolveToolOptions(tool, {
+        ...this.toolOptions[tool],
+        ...options,
+      }),
+    } as ToolOptionsState
   }
 
   connectedCallback(): void {
@@ -61,12 +115,11 @@ export class AdrawCanvasElement extends HTMLElement {
     this.container = container
     this.appendChild(container)
 
+    this.toolOptions = resolveAllToolOptions(this.options?.tools)
+
     const instance = new AdrawCanvas({
+      ...this.options,
       container,
-      initialViewport: this.options?.initialViewport,
-      isSnapMode: this.options?.isSnapMode,
-      keyboard: this.options?.keyboard,
-      snapping: this.options?.snapping,
     })
     this.instance = instance
 
@@ -110,6 +163,20 @@ export class AdrawCanvasElement extends HTMLElement {
           new CustomEvent("adraw:selectionchange", {
             detail: { selectedIds: this.selectedIds },
           }),
+        )
+      },
+    )
+
+    instance.on<"toolOptionsChange">(
+      "toolOptionsChange",
+      (event: ToolOptionsChangeEvent) => {
+        const { tool, options } = event
+        this.toolOptions = {
+          ...this.toolOptions,
+          [tool]: options,
+        } as ToolOptionsState
+        this.dispatchEvent(
+          new CustomEvent("adraw:tooloptionschange", { detail: event }),
         )
       },
     )

@@ -4,6 +4,7 @@ import {
   CanvasProvider,
   useCanvas,
   useHistory,
+  useStyle,
   useTool,
   useViewport,
 } from "@adraw/react"
@@ -100,11 +101,85 @@ function Toolbar() {
   )
 }
 
+function StyleBar() {
+  const { style, setStyle, tool } = useStyle()
+
+  if (!style || !tool) {
+    return null
+  }
+
+  return (
+    <div style={styles.styleBar}>
+      <span style={styles.styleTool}>{tool}</span>
+      <label style={styles.control}>
+        Stroke
+        <input
+          type="range"
+          min="1"
+          max="16"
+          value={style.strokeWidth}
+          onChange={(event) =>
+            setStyle({ strokeWidth: Number(event.target.value) })
+          }
+        />
+        <span>{style.strokeWidth}</span>
+      </label>
+      {"cornerRadius" in style && (
+        <label style={styles.control}>
+          Radius
+          <input
+            type="range"
+            min="0"
+            max="60"
+            value={style.cornerRadius}
+            onChange={(event) =>
+              setStyle({ cornerRadius: Number(event.target.value) })
+            }
+          />
+          <span>{style.cornerRadius}</span>
+        </label>
+      )}
+      {"fontSize" in style && (
+        <label style={styles.control}>
+          Font
+          <input
+            type="range"
+            min="8"
+            max="72"
+            value={style.fontSize}
+            onChange={(event) =>
+              setStyle({ fontSize: Number(event.target.value) })
+            }
+          />
+          <span>{style.fontSize}</span>
+        </label>
+      )}
+      {"smoothing" in style && (
+        <label style={styles.control}>
+          Smooth
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={style.smoothing}
+            onChange={(event) =>
+              setStyle({ smoothing: Number(event.target.value) })
+            }
+          />
+          <span>{style.smoothing.toFixed(2)}</span>
+        </label>
+      )}
+    </div>
+  )
+}
+
 function App() {
   return (
     <CanvasProvider>
       <div style={styles.app}>
         <Toolbar />
+        <StyleBar />
         <Canvas
           style={{
             background: "white",
@@ -137,6 +212,26 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: "14px",
     padding: "8px 12px",
+  },
+  control: {
+    alignItems: "center",
+    display: "flex",
+    fontSize: "13px",
+    gap: "6px",
+  },
+  styleBar: {
+    alignItems: "center",
+    background: "#fafafa",
+    borderBottom: "1px solid #ddd",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "16px",
+    padding: "6px 8px",
+  },
+  styleTool: {
+    fontSize: "12px",
+    fontWeight: 600,
+    textTransform: "uppercase",
   },
   separator: {
     background: "#ddd",

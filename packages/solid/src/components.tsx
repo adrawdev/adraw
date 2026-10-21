@@ -4,18 +4,27 @@ import {
   type CanvasEventMap,
   type CanvasOptions,
   type ElementId,
+  resolveAllToolOptions,
+  resolveToolOptions,
+  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
 import {
   createComponent,
+  createEffect,
   createSignal,
   onCleanup,
   onMount,
   type JSX,
 } from "solid-js"
 
-import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
+import {
+  CanvasContext,
+  useCanvas,
+  type CanvasContextValue,
+  type SetToolOptions,
+} from "./hooks"
 
 /**
  * Solid-specific canvas options; currently an alias of {@link CanvasOptions}.
@@ -47,6 +56,33 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   const [hideWhileTransforming, setHideWhileTransforming] = createSignal(
     props.options?.hideOverlayWhileTransforming ?? true,
   )
+  const [toolOptions, setToolOptions] = createSignal<ToolOptionsState>(
+    resolveAllToolOptions(props.options?.tools),
+  )
+
+  const updateToolOptions: SetToolOptions = (tool, options) => {
+    const canvas = canvasRef.current
+    if (canvas) {
+      canvas.setToolOptions(tool, options)
+      return
+    }
+    setToolOptions((previous) => ({
+      ...previous,
+      [tool]: resolveToolOptions(tool, {
+        ...previous[tool],
+        ...options,
+      }),
+    }))
+  }
+
+  // Keep toolbar state in step when provider options are replaced.
+  createEffect(() => {
+    const tools = props.options?.tools
+    setToolOptions((previous) => ({
+      ...previous,
+      ...resolveAllToolOptions(tools),
+    }))
+  })
 
   const value: CanvasContextValue = {
     activeTool,
@@ -65,7 +101,10 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
     setElements,
     setHideWhileTransforming,
     setSelectedIds,
+    setToolOptions,
     setViewport,
+    toolOptions,
+    updateToolOptions,
     viewport,
   }
 
@@ -95,6 +134,7 @@ export function Canvas(props: CanvasProps): JSX.Element {
     setSelectedIds,
     setCanUndo,
     setCanRedo,
+    setToolOptions,
   } = useCanvas()
   let containerRef: HTMLDivElement | undefined
 
@@ -104,12 +144,8 @@ export function Canvas(props: CanvasProps): JSX.Element {
     }
 
     const canvas = new AdrawCanvas({
+      ...options,
       container: containerRef,
-      hideOverlayWhileTransforming: options?.hideOverlayWhileTransforming,
-      initialViewport: options?.initialViewport,
-      isSnapMode: options?.isSnapMode,
-      keyboard: options?.keyboard,
-      snapping: options?.snapping,
     })
 
     canvasRef.current = canvas
@@ -150,6 +186,16 @@ export function Canvas(props: CanvasProps): JSX.Element {
       "selectionChange",
       ({ selectedIds: newSelectedIds }: CanvasEventMap["selectionChange"]) => {
         setSelectedIds(new Set(newSelectedIds))
+      },
+    )
+
+    canvas.on<"toolOptionsChange">(
+      "toolOptionsChange",
+      ({ tool, options: nextOptions }) => {
+        setToolOptions(
+          (previous) =>
+            ({ ...previous, [tool]: nextOptions }) as ToolOptionsState,
+        )
       },
     )
 

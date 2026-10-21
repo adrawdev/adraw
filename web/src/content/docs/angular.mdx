@@ -89,12 +89,15 @@ export class App {}
 Returns the providers that register a component-scoped `CanvasService`.
 
 ```ts
-provideCanvas({ snapping: { threshold: 8 } })
+provideCanvas({
+  snapping: { threshold: 8 },
+  tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+})
 ```
 
-| Argument  | Type                   | Description                        |
-| --------- | ---------------------- | ---------------------------------- |
-| `options` | `CanvasAngularOptions` | Initial snapping / viewport config |
+| Argument  | Type                   | Description                                 |
+| --------- | ---------------------- | ------------------------------------------- |
+| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool style config |
 
 ### `Canvas` (`<adraw-canvas>`)
 
@@ -144,6 +147,30 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 // selectedIds, elements: Signal
 ```
+
+### `useToolOptions()`
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions: Signal<ToolOptionsState>
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle(tool?)`
+
+Returns signals for one tool. Omit `tool` to infer it from a homogeneous
+selection (or the active tool):
+
+```ts
+const { tool, style, setStyle } = useStyle()
+// or: const { style, setStyle } = useStyle("rectangle")
+// tool() and style() may be null when nothing applies
+
+setStyle({ strokeWidth: 4 })
+```
+
+Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
+`smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

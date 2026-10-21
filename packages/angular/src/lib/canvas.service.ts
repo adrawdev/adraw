@@ -1,7 +1,12 @@
 import {
   AdrawCanvas,
   type CanvasElement,
+  type ConfigurableToolType,
   type ElementId,
+  resolveAllToolOptions,
+  type ResolvedToolOptions,
+  type ToolOptionsMap,
+  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
@@ -34,6 +39,9 @@ export class CanvasService {
   private readonly _activeTool = signal<ToolType>("select")
   private readonly _selectedIds = signal<Set<ElementId>>(new Set())
   private readonly _hideWhileTransforming = signal(true)
+  private readonly _toolOptions = signal<ToolOptionsState>(
+    resolveAllToolOptions(),
+  )
 
   // Read-only views of the mirrored core state. Consumers read them by calling
   // the signal (including in templates); state only ever changes via the core.
@@ -42,6 +50,7 @@ export class CanvasService {
   readonly activeTool = this._activeTool.asReadonly()
   readonly selectedIds = this._selectedIds.asReadonly()
   readonly hideWhileTransforming = this._hideWhileTransforming.asReadonly()
+  readonly toolOptions = this._toolOptions.asReadonly()
 
   // Bumped on every "change" event (draw, erase, undo, redo, delete) so the
   // canUndo/canRedo computeds recompute even though the core's history stack
@@ -67,6 +76,7 @@ export class CanvasService {
     this._activeTool.set(this.core.getActiveTool())
     this._selectedIds.set(new Set(this.core.getSelectedIds()))
     this._hideWhileTransforming.set(this.core.getHideOverlayWhileTransforming())
+    this._toolOptions.set(resolveAllToolOptions(options?.tools))
 
     this.core.on("change", ({ elements }) => {
       this._elements.set(new Map(elements))
@@ -80,6 +90,12 @@ export class CanvasService {
     })
     this.core.on("selectionChange", ({ selectedIds }) => {
       this._selectedIds.set(new Set(selectedIds))
+    })
+    this.core.on("toolOptionsChange", ({ tool, options: nextOptions }) => {
+      this._toolOptions.update(
+        (previous) =>
+          ({ ...previous, [tool]: nextOptions }) as ToolOptionsState,
+      )
     })
 
     inject(DestroyRef).onDestroy(() => {
@@ -107,6 +123,29 @@ export class CanvasService {
    */
   setTool(tool: ToolType): void {
     this.core.setActiveTool(tool)
+  }
+
+  /**
+   * Get a tool's fully resolved style options.
+   * @param tool Configurable tool identifier.
+   * @returns Resolved style options.
+   */
+  getToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+  ): ResolvedToolOptions<T> {
+    return this.core.getToolOptions(tool)
+  }
+
+  /**
+   * Merge partial style options for a tool.
+   * @param tool Configurable tool identifier.
+   * @param options Partial options.
+   */
+  setToolOptions<T extends ConfigurableToolType>(
+    tool: T,
+    options: ToolOptionsMap[T],
+  ): void {
+    this.core.setToolOptions(tool, options)
   }
 
   /**

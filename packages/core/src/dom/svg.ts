@@ -183,9 +183,13 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       rect.setAttribute("width", `${element.width}`)
       rect.setAttribute("height", `${element.height}`)
       rect.setAttribute("rx", `${element.cornerRadius}`)
+      rect.setAttribute("ry", `${element.cornerRadius}`)
       rect.setAttribute("fill", FILL_COLOR)
       rect.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
-      rect.setAttribute("stroke-width", `${STROKE_WIDTH}`)
+      rect.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       group.appendChild(rect)
       break
     }
@@ -198,7 +202,10 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       ellipse.setAttribute("ry", `${element.height / 2}`)
       ellipse.setAttribute("fill", FILL_COLOR)
       ellipse.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
-      ellipse.setAttribute("stroke-width", `${STROKE_WIDTH}`)
+      ellipse.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       group.appendChild(ellipse)
       break
     }

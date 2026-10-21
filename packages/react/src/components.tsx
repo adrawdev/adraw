@@ -5,11 +5,17 @@ import {
   type CanvasElement,
   type CanvasEventMap,
   type CanvasOptions,
+  type ConfigurableToolType,
   type ElementId,
+  resolveAllToolOptions,
+  type ResolvedToolOptions,
+  resolveToolOptions,
+  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -17,7 +23,12 @@ import React, {
   type ReactNode,
 } from "react"
 
-import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
+import {
+  CanvasContext,
+  useCanvas,
+  type CanvasContextValue,
+  type SetToolOptions,
+} from "./hooks"
 
 /**
  * React-specific canvas options; currently an alias of {@link CanvasOptions}.
@@ -60,6 +71,45 @@ export function CanvasProvider({
   const [hideWhileTransforming, setHideWhileTransforming] = useState<boolean>(
     defaultOptions?.hideOverlayWhileTransforming ?? true,
   )
+  const [toolOptions, setToolOptions] = useState<ToolOptionsState>(() =>
+    resolveAllToolOptions(defaultOptions?.tools),
+  )
+
+  const updateToolOptions = useCallback<SetToolOptions>((tool, nextOptions) => {
+    const canvas = vanillaRef.current
+    canvas?.setToolOptions(tool, nextOptions)
+    setToolOptions((previous) => ({
+      ...previous,
+      [tool]: canvas
+        ? canvas.getToolOptions(tool)
+        : resolveToolOptions(tool, {
+            ...previous[tool],
+            ...nextOptions,
+          }),
+    }))
+  }, [])
+
+  const syncToolOptions = useCallback(
+    (
+      tool: ConfigurableToolType,
+      nextOptions: ResolvedToolOptions<ConfigurableToolType>,
+    ) => {
+      setToolOptions(
+        (previous) =>
+          ({ ...previous, [tool]: nextOptions }) as ToolOptionsState,
+      )
+    },
+    [],
+  )
+
+  // Keep toolbar state in step when the provider options are replaced through
+  // `setOptions` (the canvas is re-created with the new defaults).
+  useEffect(() => {
+    setToolOptions((previous) => ({
+      ...previous,
+      ...resolveAllToolOptions(options?.tools),
+    }))
+  }, [options?.tools])
 
   const value = useMemo<CanvasContextValue>(
     () => ({
@@ -73,7 +123,10 @@ export function CanvasProvider({
       setHideWhileTransforming,
       setOptions,
       setSelectedIds,
+      setToolOptions: updateToolOptions,
       setViewport,
+      syncToolOptions,
+      toolOptions,
       vanillaRef,
       viewport,
     }),
@@ -84,6 +137,9 @@ export function CanvasProvider({
       selectedIds,
       hideWhileTransforming,
       options,
+      updateToolOptions,
+      syncToolOptions,
+      toolOptions,
     ],
   )
 
@@ -113,6 +169,7 @@ export function Canvas({ className, style }: CanvasProps) {
     setViewport,
     setActiveTool,
     setSelectedIds,
+    syncToolOptions,
   } = useCanvas()
 
   useEffect(() => {
@@ -121,12 +178,8 @@ export function Canvas({ className, style }: CanvasProps) {
     }
 
     const vanilla = new AdrawCanvas({
+      ...options,
       container: containerRef.current,
-      hideOverlayWhileTransforming: options?.hideOverlayWhileTransforming,
-      initialViewport: options?.initialViewport,
-      isSnapMode: options?.isSnapMode,
-      keyboard: options?.keyboard,
-      snapping: options?.snapping,
     })
 
     vanillaRef.current = vanilla
@@ -161,6 +214,13 @@ export function Canvas({ className, style }: CanvasProps) {
       },
     )
 
+    core.on<"toolOptionsChange">(
+      "toolOptionsChange",
+      ({ tool, options: nextOptions }) => {
+        syncToolOptions(tool, nextOptions)
+      },
+    )
+
     vanilla.render()
 
     return () => {
@@ -168,15 +228,12 @@ export function Canvas({ className, style }: CanvasProps) {
       vanillaRef.current = null
     }
   }, [
-    options?.hideOverlayWhileTransforming,
-    options?.initialViewport,
-    options?.isSnapMode,
-    options?.keyboard,
-    options?.snapping,
+    options,
     setActiveTool,
     setElements,
     setSelectedIds,
     setViewport,
+    syncToolOptions,
     vanillaRef,
   ])
 

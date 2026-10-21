@@ -1,4 +1,5 @@
 import type { SnappingConfig } from "./snapping"
+import type { ToolOptionsChangeEvent, ToolOptionsConfig } from "./tool-options"
 import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
 
 /**
@@ -46,6 +47,13 @@ export interface CanvasOptions {
   initialViewport?: ViewportState
   /** Snapping configuration (threshold in pixels). */
   snapping?: Partial<SnappingConfig>
+  /**
+   * Per-tool style defaults, e.g.
+   * `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24 } }`.
+   * Changing options later (via `setToolOptions`) also restyles matching
+   * elements in the current selection.
+   */
+  tools?: ToolOptionsConfig
   /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `true`. */
   hideOverlayWhileTransforming?: boolean
 }
@@ -104,4 +112,6 @@ export interface CanvasEventMap {
   toolChange: { tool: ToolType }
   /** Fired after the selection changes. */
   selectionChange: { selectedIds: Set<ElementId> }
+  /** Fired after a tool's style options change, with the resolved options. */
+  toolOptionsChange: ToolOptionsChangeEvent
 }

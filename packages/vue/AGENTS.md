@@ -16,9 +16,11 @@ All defined in `src/index.ts` (single file):
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
+- `useToolOptions()` — returns `{ toolOptions, setToolOptions }` (reactive getter + generic setter)
+- `useStyle(tool?)` — returns `{ tool, style, setStyle }` reactive getters; infers from selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasVueOptions` — interface extending `CanvasOptions` (adds `initialViewport`)
-- `CanvasState` — reactive state interface
+- `CanvasState` — reactive state interface (includes `toolOptions`)
 - `CanvasContext` — return type of `createCanvas`
 
 ## Usage
@@ -46,7 +48,7 @@ function Toolbar() {
 
 1. `CanvasProvider` calls `createCanvas(options)` in `setup()`, `provide()`s the context key
 2. `Canvas` component calls `useCanvas()` to get the context, mounts the canvas in `onMounted`
-3. All four core events are subscribed in `createCanvas`, copying payloads into a reactive `state` object
+3. Core events (including `toolOptionsChange`) are subscribed in `createCanvas`, copying payloads into a reactive `state` object
 4. `useCanvas()` must be called synchronously during `setup()` (Vue `inject()` requirement)
 5. Multiple `<CanvasProvider>` instances can coexist (each provides its own context symbol)
 

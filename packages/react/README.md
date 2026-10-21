@@ -60,14 +60,23 @@ export default function App() {
 Context provider that initialises shared canvas state. All hooks and `<Canvas>` must be rendered inside it.
 
 ```tsx
-<CanvasProvider options={{ snapping: { threshold: 8 } }}>
+<CanvasProvider
+  options={{
+    snapping: { threshold: 8 },
+    tools: {
+      draw: { strokeWidth: 4, smoothing: 0.7 },
+      rectangle: { cornerRadius: 8 },
+      text: { fontSize: 24 },
+    },
+  }}
+>
   {children}
 </CanvasProvider>
 ```
 
-| Prop      | Type                 | Description                        |
-| --------- | -------------------- | ---------------------------------- |
-| `options` | `CanvasReactOptions` | Initial snapping / viewport config |
+| Prop      | Type                 | Description                                 |
+| --------- | -------------------- | ------------------------------------------- |
+| `options` | `CanvasReactOptions` | Snapping / viewport / per-tool style config |
 
 ### `<Canvas>`
 
@@ -118,6 +127,43 @@ const { undo, redo, canUndo, canRedo } = useHistory()
 const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
+
+### `useToolOptions()`
+
+Returns resolved style options for every configurable tool plus a setter:
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions.rectangle.cornerRadius, toolOptions.draw.smoothing, ...
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle()`
+
+Convenience hook for one tool's style. Pass the tool explicitly, or omit it to
+follow a homogeneous selection and fall back to the active tool:
+
+```tsx
+const { style, setStyle, tool } = useStyle()
+// or: const { style, setStyle } = useStyle("rectangle")
+
+if (style && tool) {
+  return (
+    <input
+      type="range"
+      value={style.strokeWidth}
+      onChange={(event) =>
+        setStyle({ strokeWidth: Number(event.target.value) })
+      }
+    />
+  )
+}
+```
+
+Tool-specific fields are available when the inferred tool matches:
+`cornerRadius` (rectangle), `fontSize` (text), `smoothing` (draw). Changing a
+style restyles matching elements in the current selection, so the same control
+works for the selected shape and the next one.
 
 ### `useTransformOverlay()`
 

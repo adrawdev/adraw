@@ -15,6 +15,8 @@ All exported from `src/index.ts` (re-exports from `src/components.tsx`):
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
+- `useToolOptions()` — returns `{ toolOptions, setToolOptions }` (resolved per-tool styles)
+- `useStyle(tool?)` — returns `{ tool, style, setStyle }` for one tool, inferring from the selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasReactOptions` — type extending `CanvasOptions`
 
@@ -47,7 +49,7 @@ function Toolbar() {
 ## How it works
 
 1. `CanvasProvider` creates context with state signals (`useState`) and a `useRef` for the canvas instance
-2. `Canvas` creates `new AdrawCanvas({ container, ...options })` in `useEffect`, subscribes to all 4 core events, copies payloads into React state
+2. `Canvas` creates `new AdrawCanvas({ container, ...options })` in `useEffect`, subscribes to the core events (including `toolOptionsChange`), copies payloads into React state
 3. Hooks read/write through the context — all methods no-op when canvas isn't mounted (ref is null)
 4. Multiple `<CanvasProvider>` instances can coexist on the same page (each has independent context)
 

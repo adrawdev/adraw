@@ -4,6 +4,7 @@ import {
   CanvasProvider,
   useCanvas,
   useHistory,
+  useStyle,
   useTool,
   useViewport,
 } from "@adraw/solid"
@@ -25,6 +26,7 @@ function Toolbar() {
   const toolCtx = useTool()
   const { zoomIn, zoomOut, zoomToFit, resetZoom } = useViewport()
   const { undo, redo, canUndo, canRedo } = useHistory()
+  const styleApi = useStyle()
 
   return (
     <div style={styles.toolbar}>
@@ -43,6 +45,24 @@ function Toolbar() {
           </button>
         )}
       </For>
+      <div style={styles.separator} />
+      {styleApi.style && (
+        <label style={styles.control}>
+          Stroke
+          <input
+            type="range"
+            min="1"
+            max="16"
+            value={styleApi.style.strokeWidth}
+            onInput={(event) =>
+              styleApi.setStyle({
+                strokeWidth: Number(event.currentTarget.value),
+              })
+            }
+          />
+          {styleApi.style.strokeWidth}
+        </label>
+      )}
       <div style={styles.separator} />
       <button
         type="button"
@@ -144,6 +164,12 @@ const styles: Record<string, JSX.CSSProperties> = {
     cursor: "pointer",
     "font-size": "14px",
     padding: "8px 12px",
+  },
+  control: {
+    "align-items": "center",
+    display: "flex",
+    "font-size": "13px",
+    gap: "6px",
   },
   pane: {
     display: "flex",

@@ -53,14 +53,19 @@ Each `CanvasProvider` creates its own isolated canvas instance — composables c
 Creates the underlying canvas instance and makes it available to `Canvas` and all composables rendered inside it.
 
 ```vue
-<CanvasProvider :options="{ snapping: { threshold: 8 } }">
+<CanvasProvider
+  :options="{
+    snapping: { threshold: 8 },
+    tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+  }"
+>
   ...
 </CanvasProvider>
 ```
 
-| Prop      | Type               | Description                        |
-| --------- | ------------------ | ---------------------------------- |
-| `options` | `CanvasVueOptions` | Initial snapping / viewport config |
+| Prop      | Type               | Description                                 |
+| --------- | ------------------ | ------------------------------------------- |
+| `options` | `CanvasVueOptions` | Snapping / viewport / per-tool style config |
 
 ### `Canvas`
 
@@ -109,6 +114,40 @@ const { undo, redo, canUndo, canRedo } = useHistory()
 const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
+
+### `useToolOptions()`
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions: getter — resolved styles for every configurable tool
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle(tool?)`
+
+Reactive getters for one tool. Omit `tool` to infer it from a homogeneous
+selection (or the active tool):
+
+```vue
+<script setup lang="ts">
+import { useStyle } from "@adraw/vue"
+
+const styles = useStyle()
+// or: const styles = useStyle("rectangle")
+</script>
+
+<template>
+  <input
+    v-if="styles.style"
+    type="range"
+    :value="styles.style.strokeWidth"
+    @input="styles.setStyle({ strokeWidth: Number($event.target.value) })"
+  />
+</template>
+```
+
+Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
+`smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

@@ -33,8 +33,10 @@ const canvas = new AdrawCanvas({ container: divElement })
 src/
   canvas.ts          AdrawCanvas extends CanvasEngine — adds mount/render/destroy + DOM event handling
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
+  tool-options.ts    per-tool style types, defaults, resolution helpers
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
+    tool-options.ts  applyToolOptionsToElement: style write-back for selected elements
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements, computeZoomToFitViewport
@@ -68,43 +70,46 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 
 ### Key methods
 
-| Method                                                  | Description                                          |
-| ------------------------------------------------------- | ---------------------------------------------------- |
-| `mount(container)`                                      | Attach DOM adapter to an element                     |
-| `destroy()`                                             | Tear down DOM, remove event listeners                |
-| `render()`                                              | Full re-render of the SVG                            |
-| `getElements()`                                         | Get current elements `Map<ElementId, CanvasElement>` |
-| `setActiveTool(tool)`                                   | Switch active tool                                   |
-| `getActiveTool()`                                       | Get current tool `ToolType`                          |
-| `setViewport(vp)`                                       | Set viewport position/zoom                           |
-| `getViewport()`                                         | Current viewport `{ x, y, zoom }`                    |
-| `zoomIn()` / `zoomOut()`                                | Zoom by ZOOM_STEP                                    |
-| `resetZoom()`                                           | Reset zoom to 1, center to 0,0                       |
-| `zoomToFit()`                                           | Fit all elements in viewport                         |
-| `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                 |
-| `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)       |
-| `setZIndex(id, z)`                                      | Set one element's exact stacking index               |
-| `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                |
-| `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text         |
-| `undo()` / `redo()`                                     | History navigation                                   |
-| `canUndo()` / `canRedo()`                               | History stack state                                  |
-| `pushHistory()`                                         | Record an explicit undo checkpoint                   |
-| `clearHistory()`                                        | Reset history with the current state as new baseline |
-| `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints               |
-| `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                |
-| `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                         |
-| `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                            |
+| Method                                                  | Description                                            |
+| ------------------------------------------------------- | ------------------------------------------------------ |
+| `mount(container)`                                      | Attach DOM adapter to an element                       |
+| `destroy()`                                             | Tear down DOM, remove event listeners                  |
+| `render()`                                              | Full re-render of the SVG                              |
+| `getElements()`                                         | Get current elements `Map<ElementId, CanvasElement>`   |
+| `setActiveTool(tool)`                                   | Switch active tool                                     |
+| `getActiveTool()`                                       | Get current tool `ToolType`                            |
+| `setViewport(vp)`                                       | Set viewport position/zoom                             |
+| `getViewport()`                                         | Current viewport `{ x, y, zoom }`                      |
+| `zoomIn()` / `zoomOut()`                                | Zoom by ZOOM_STEP                                      |
+| `resetZoom()`                                           | Reset zoom to 1, center to 0,0                         |
+| `zoomToFit()`                                           | Fit all elements in viewport                           |
+| `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                   |
+| `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)         |
+| `setZIndex(id, z)`                                      | Set one element's exact stacking index                 |
+| `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                  |
+| `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text           |
+| `undo()` / `redo()`                                     | History navigation                                     |
+| `canUndo()` / `canRedo()`                               | History stack state                                    |
+| `pushHistory()`                                         | Record an explicit undo checkpoint                     |
+| `clearHistory()`                                        | Reset history with the current state as new baseline   |
+| `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                 |
+| `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                  |
+| `getToolOptions(tool)`                                  | Resolved style options for a drawing tool              |
+| `setToolOptions(tool, partial)`                         | Merge tool styles; restyles matching selected elements |
+| `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                           |
+| `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                              |
 
 ### Events
 
 `canvas.on(event, handler)` / `canvas.off(event, handler)` — emitted by the engine:
 
-| Event               | Payload                                       |
-| ------------------- | --------------------------------------------- |
-| `"change"`          | `{ elements: Map<ElementId, CanvasElement> }` |
-| `"viewportChange"`  | `{ viewport: ViewportState }`                 |
-| `"toolChange"`      | `{ tool: ToolType }`                          |
-| `"selectionChange"` | `{ selectedIds: Set<ElementId> }`             |
+| Event                 | Payload                                       |
+| --------------------- | --------------------------------------------- |
+| `"change"`            | `{ elements: Map<ElementId, CanvasElement> }` |
+| `"viewportChange"`    | `{ viewport: ViewportState }`                 |
+| `"toolChange"`        | `{ tool: ToolType }`                          |
+| `"selectionChange"`   | `{ selectedIds: Set<ElementId> }`             |
+| `"toolOptionsChange"` | `{ tool, options }` (resolved style options)  |
 
 Always copy the payload when storing (`new Map(elements)`, `new Set(selectedIds)`).
 
@@ -119,6 +124,11 @@ Passed to constructor as `CanvasOptions`:
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
 - `keyboard?: "canvas" | "document" | "none"` — shortcut scope; defaults to `"canvas"` (SVG is focusable and focuses on pointer down), `"document"` handles shortcuts page-wide, `"none"` disables them
 - `clipboard?: ClipboardOptions` — `{ serialize?, deserialize? }` hooks bridging the in-memory clipboard to the system clipboard
+- `tools?: ToolOptionsConfig` — per-tool style defaults, e.g. `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24 } }`
+
+### Tool styles
+
+`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
 
 ## Type system
 
@@ -231,7 +241,7 @@ The DOM adapter renders to an `<svg>` with three `<g>` child layers: `.adraw-ele
 - `src/dom/render/overlay.ts` — `renderTransformOverlay()`
 - `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
 
-The adapter subscribes to the engine's four events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes.
+The adapter subscribes to the engine's change/viewport/tool/selection events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes. `toolOptionsChange` is consumed by framework bindings (React mirrors it into toolbar state).
 
 Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-background`, `--adraw-selection`. Defaults in `src/constants.ts`.
 

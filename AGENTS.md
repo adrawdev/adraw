@@ -62,25 +62,28 @@ Every publicly exported function, class, type, interface, and constant must have
 
 `AdrawCanvas` (`src/canvas.ts`) extends the headless `CanvasEngine`. `new AdrawCanvas({ container })` mounts immediately; `new AdrawCanvas()` stays headless until `mount(container)`; `destroy()` removes the DOM adapter.
 
-- `src/engine/` — DOM-free state, tools, history, snapping, clipboard, and the narrow `EngineInternal` interface exposed for adapter-facing helpers.
+- `src/engine/` — DOM-free state, tools, history, snapping, clipboard, per-tool styles, and the narrow `EngineInternal` interface exposed for adapter-facing helpers.
 - `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
 - `src/bindings.ts` — arrow-to-shape binding/synchronization math.
 
 Engine events are the adapter contract:
 
-| Event             | Payload                                       |
-| ----------------- | --------------------------------------------- |
-| `change`          | `{ elements: Map<ElementId, CanvasElement> }` |
-| `viewportChange`  | `{ viewport: ViewportState }`                 |
-| `toolChange`      | `{ tool: ToolType }`                          |
-| `selectionChange` | `{ selectedIds: Set<ElementId> }`             |
+| Event               | Payload                                       |
+| ------------------- | --------------------------------------------- |
+| `change`            | `{ elements: Map<ElementId, CanvasElement> }` |
+| `viewportChange`    | `{ viewport: ViewportState }`                 |
+| `toolChange`        | `{ tool: ToolType }`                          |
+| `selectionChange`   | `{ selectedIds: Set<ElementId> }`             |
+| `toolOptionsChange` | `{ tool, options }` (resolved tool styles)    |
 
 Always copy payloads before storing (`new Map(...)`, `new Set(...)`).
 
+Per-tool styles are configured with `CanvasOptions.tools` or `engine.setToolOptions(tool, partial)`; `getToolOptions(tool)` returns resolved defaults and matching selected elements are restyled. All framework adapters expose `useToolOptions()` / `useStyle(tool?)` for headless toolbars (Web Components exposes `toolOptions`, `getToolOptions` and `setToolOptions`).
+
 ### Framework bindings
 
-Each adapter creates an `AdrawCanvas` imperatively, mounts it, subscribes to all four events, and mirrors state into its framework's reactivity system.
+Each adapter creates an `AdrawCanvas` imperatively, mounts it, subscribes to the core events, and mirrors state into its framework's reactivity system (React also mirrors `toolOptionsChange`).
 
 | Hook                    | Returns                                                                |
 | ----------------------- | ---------------------------------------------------------------------- |
@@ -89,6 +92,8 @@ Each adapter creates an `AdrawCanvas` imperatively, mounts it, subscribes to all
 | `useViewport()`         | `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`     |
 | `useHistory()`          | `{ undo, redo, canUndo, canRedo }`                                     |
 | `useSelection()`        | `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` |
+| `useToolOptions()`      | `{ toolOptions, setToolOptions }` (all adapters)                       |
+| `useStyle(tool?)`       | `{ tool, style, setStyle }` (React/Solid/Vue/Svelte/Angular)           |
 | `useTransformOverlay()` | `{ hideWhileTransforming, setHideWhileTransforming }`                  |
 
 Operations no-op when the canvas is not mounted. Patterns differ:

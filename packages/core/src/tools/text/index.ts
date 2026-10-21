@@ -4,6 +4,7 @@ import type { Point, TextElement, ToolType } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolOptions,
@@ -29,12 +30,16 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
   }
   let pendingText = ""
   let temporaryElement: TextElement | null = null
+  let gestureOptions = toolOptions
 
   const refreshTemporary = () => {
     if (!state.startPoint || !temporaryElement) {
       return
     }
-    const size = measureTextSize(pendingText, toolOptions.fontSize)
+    const size = measureTextSize(
+      pendingText,
+      gestureOptions.fontSize ?? TEXT_FONT_SIZE,
+    )
     temporaryElement = {
       ...temporaryElement,
       height: size.height,
@@ -61,15 +66,16 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
     onPointerDown(context: ToolContext, point: Point, _event: PointerEvent) {
       state.startPoint = point
       state.currentPoint = point
+      gestureOptions = getToolOptionsForContext(toolOptions, context)
 
-      const size = measureTextSize(pendingText, toolOptions.fontSize)
+      const fontSize = gestureOptions.fontSize ?? TEXT_FONT_SIZE
+      const size = measureTextSize(pendingText, fontSize)
       temporaryElement = createText({
-        fontSize: toolOptions.fontSize,
+        fontSize,
         height: size.height,
         locked: false,
         rotation: 0,
-        strokeColor:
-          context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
+        strokeColor: gestureOptions.strokeColor ?? STROKE_COLOR,
         text: pendingText,
         visible: true,
         width: size.width,

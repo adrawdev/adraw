@@ -4,6 +4,7 @@ import type { LineElement, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolOptions,
@@ -50,6 +51,7 @@ export function createLineTool(options: ToolOptions = {}): Tool {
       const width = Math.abs(snapped.point.x - state.startPoint.x)
       const height = Math.abs(snapped.point.y - state.startPoint.y)
 
+      const currentOptions = getToolOptionsForContext(toolOptions, context)
       temporaryElement = createLine({
         endX: snapped.point.x,
         endY: snapped.point.y,
@@ -58,9 +60,8 @@ export function createLineTool(options: ToolOptions = {}): Tool {
         rotation: 0,
         startX: state.startPoint.x,
         startY: state.startPoint.y,
-        strokeColor:
-          context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-        strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+        strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+        strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
         visible: true,
         width: Math.max(width, 1),
         x,
@@ -82,6 +83,7 @@ export function createLineTool(options: ToolOptions = {}): Tool {
         const width = Math.abs(dx)
         const height = Math.abs(dy)
 
+        const currentOptions = getToolOptionsForContext(toolOptions, context)
         const element = createLine({
           endX: state.currentPoint.x,
           endY: state.currentPoint.y,
@@ -90,9 +92,8 @@ export function createLineTool(options: ToolOptions = {}): Tool {
           rotation: 0,
           startX: state.startPoint.x,
           startY: state.startPoint.y,
-          strokeColor:
-            context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-          strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+          strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+          strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
           visible: true,
           width: Math.max(width, 1),
           x,

@@ -140,6 +140,10 @@ export function updateElementGeometry(
       lineElement.setAttribute("x2", `${element.endX}`)
       lineElement.setAttribute("y2", `${element.endY}`)
       lineElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      lineElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       break
     }
     case "arrow": {
@@ -177,13 +181,23 @@ export function updateElementGeometry(
         pointsToPath(element.points, element.smoothing),
       )
       pathElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      pathElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       break
     }
     case "rectangle": {
       const rectElement = group.getElementsByTagName("rect")[0]
       rectElement.setAttribute("width", `${element.width}`)
       rectElement.setAttribute("height", `${element.height}`)
+      rectElement.setAttribute("rx", `${element.cornerRadius}`)
+      rectElement.setAttribute("ry", `${element.cornerRadius}`)
       rectElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      rectElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       break
     }
     case "ellipse": {
@@ -193,6 +207,10 @@ export function updateElementGeometry(
       ellipseElement.setAttribute("rx", `${element.width / 2}`)
       ellipseElement.setAttribute("ry", `${element.height / 2}`)
       ellipseElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      ellipseElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
       break
     }
     case "media": {
@@ -244,14 +262,13 @@ export function positionTextEditor(
     (state.textEditPoint.y - viewport.y) * viewport.zoom +
     canvasHeight / 2
 
-  const fontSize =
-    (state.textEditElementId
-      ? (
-          engine.getElements().get(state.textEditElementId) as
-            | TextElement
-            | undefined
-        )?.fontSize
-      : undefined) ?? TEXT_FONT_SIZE
+  const fontSize = state.textEditElementId
+    ? ((
+        engine.getElements().get(state.textEditElementId) as
+          | TextElement
+          | undefined
+      )?.fontSize ?? TEXT_FONT_SIZE)
+    : engine.getToolOptions("text").fontSize
 
   const style = state.textEditor.style
   style.fontSize = `${fontSize * viewport.zoom}px`

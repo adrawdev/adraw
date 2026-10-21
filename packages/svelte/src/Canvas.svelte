@@ -15,12 +15,8 @@ let container: HTMLDivElement
 
 $effect(() => {
   const canvas = new AdrawCanvas({
+    ...context.options,
     container,
-    hideOverlayWhileTransforming: context.options?.hideOverlayWhileTransforming,
-    initialViewport: context.options?.initialViewport,
-    isSnapMode: context.options?.isSnapMode,
-    keyboard: context.options?.keyboard,
-    snapping: context.options?.snapping,
   })
 
   context.instance.current = canvas
@@ -44,6 +40,16 @@ $effect(() => {
     "selectionChange",
     ({ selectedIds }: CanvasEventMap["selectionChange"]) => {
       context.state.selectedIds = new Set(selectedIds)
+    },
+  )
+
+  canvas.on(
+    "toolOptionsChange",
+    ({ tool, options }: CanvasEventMap["toolOptionsChange"]) => {
+      context.state.toolOptions = {
+        ...context.state.toolOptions,
+        [tool]: options,
+      } as typeof context.state.toolOptions
     },
   )
 

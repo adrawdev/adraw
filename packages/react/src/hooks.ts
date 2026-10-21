@@ -3,13 +3,26 @@
 import {
   type AdrawCanvas,
   type CanvasElement,
+  type ConfigurableToolType,
   type ElementId,
+  inferConfigurableTool,
+  type ResolvedToolOptions,
+  type ToolOptionsMap,
+  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
 import React, { createContext, useCallback, useContext } from "react"
 
 import type { CanvasReactOptions } from "./components"
+
+/**
+ * Merge partial style options into a tool's current options.
+ */
+export type SetToolOptions = <T extends ConfigurableToolType>(
+  tool: T,
+  options: ToolOptionsMap[T],
+) => void
 
 /**
  * React context value synced with an adraw canvas instance.
@@ -26,6 +39,13 @@ export interface CanvasContextValue {
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>
   hideWhileTransforming: boolean
   setHideWhileTransforming: React.Dispatch<React.SetStateAction<boolean>>
+  toolOptions: ToolOptionsState
+  setToolOptions: SetToolOptions
+  /** @internal Mirror engine tool-style events into React state. */
+  syncToolOptions: (
+    tool: ConfigurableToolType,
+    options: ResolvedToolOptions<ConfigurableToolType>,
+  ) => void
   options?: CanvasReactOptions
   setOptions: React.Dispatch<
     React.SetStateAction<CanvasReactOptions | undefined>
@@ -163,6 +183,81 @@ export function useSelection() {
     selectAll,
     selectedIds,
   }
+}
+
+/**
+ * Access resolved style options for every configurable tool and a setter.
+ * Useful when a toolbar exposes controls for several tools at once.
+ *
+ * @returns `{ toolOptions, setToolOptions }`.
+ */
+export function useToolOptions() {
+  const { toolOptions, setToolOptions } = useCanvas()
+  return { setToolOptions, toolOptions }
+}
+
+/** Result of {@link useStyle} when a tool is passed explicitly. */
+export interface StyleResult<T extends ConfigurableToolType> {
+  /** Tool whose style is exposed. */
+  tool: T
+  /** Resolved style options for the tool. */
+  style: ResolvedToolOptions<T>
+  /** Merge partial style options into the tool. */
+  setStyle: (options: ToolOptionsMap[T]) => void
+}
+
+/** Result of {@link useStyle} when the tool is inferred. */
+export interface InferredStyleResult {
+  /** Inferred tool, or `null` when no tool applies (e.g. hand/select). */
+  tool: ConfigurableToolType | null
+  /** Resolved style options, or `null` when no tool applies. */
+  style: ResolvedToolOptions<ConfigurableToolType> | null
+  /** Merge partial style options into the inferred tool. No-op when null. */
+  setStyle: (options: ToolOptionsMap[ConfigurableToolType]) => void
+}
+
+/**
+ * Access the style of one drawing tool. Pass a tool explicitly for a fixed
+ * style panel, or omit it to follow the current selection / active tool.
+ *
+ * @param tool Optional configurable tool. When omitted, the tool of a
+ * homogeneous selection wins; otherwise the active tool is used when it has
+ * style options.
+ * @returns `{ tool, style, setStyle }`.
+ * @example
+ * ```tsx
+ * const { style, setStyle } = useStyle("rectangle")
+ * <input
+ *   type="range"
+ *   value={style.cornerRadius}
+ *   onChange={(event) => setStyle({ cornerRadius: Number(event.target.value) })}
+ * />
+ * ```
+ */
+export function useStyle<T extends ConfigurableToolType>(
+  tool: T,
+): StyleResult<T>
+export function useStyle(): InferredStyleResult
+export function useStyle(
+  tool?: ConfigurableToolType,
+): StyleResult<ConfigurableToolType> | InferredStyleResult {
+  const { activeTool, elements, selectedIds, toolOptions, setToolOptions } =
+    useCanvas()
+
+  const resolvedTool =
+    tool ?? inferConfigurableTool(activeTool, elements, selectedIds)
+  const style = resolvedTool ? toolOptions[resolvedTool] : null
+
+  const setStyle = useCallback(
+    (options: ToolOptionsMap[ConfigurableToolType]) => {
+      if (resolvedTool) {
+        setToolOptions(resolvedTool, options)
+      }
+    },
+    [resolvedTool, setToolOptions],
+  )
+
+  return { setStyle, style, tool: resolvedTool }
 }
 
 /**

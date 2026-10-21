@@ -5,6 +5,7 @@ import {
   calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolOptions,
@@ -55,14 +56,14 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
         fromCenter: event.altKey,
       })
 
+      const currentOptions = getToolOptionsForContext(toolOptions, context)
       temporaryElement = createRectangle({
-        cornerRadius: toolOptions.cornerRadius ?? 0,
+        cornerRadius: currentOptions.cornerRadius ?? 0,
         height: bounds.height,
         locked: false,
         rotation: 0,
-        strokeColor:
-          context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-        strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+        strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+        strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
         visible: true,
         width: bounds.width,
         x: bounds.x,
@@ -85,14 +86,14 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
       )
 
       if (bounds.width > 5 && bounds.height > 5) {
+        const currentOptions = getToolOptionsForContext(toolOptions, context)
         const element = createRectangle({
-          cornerRadius: toolOptions.cornerRadius ?? 0,
+          cornerRadius: currentOptions.cornerRadius ?? 0,
           height: bounds.height,
           locked: false,
           rotation: 0,
-          strokeColor:
-            context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-          strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+          strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+          strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
           visible: true,
           width: bounds.width,
           x: bounds.x,

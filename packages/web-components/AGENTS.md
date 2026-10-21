@@ -8,7 +8,7 @@ Framework-agnostic custom element for adraw. No framework runtime, no reactive s
 
 Web Components deliberately skips the shared `useCanvas/useTool/useViewport/useHistory/useSelection/useTransformOverlay` hook surface. Other adapters bridge core state into a reactivity system; Web Components has none, so hooks would be redundant wrappers.
 
-Drive the canvas through `element.canvas` (the `AdrawCanvas` instance) and read state from the element's mirrored fields directly.
+Drive the canvas through `element.canvas` (the `AdrawCanvas` instance) and read state from the element's mirrored fields directly. Tool styles have shorthands: `element.getToolOptions(tool)` and `element.setToolOptions(tool, partial)` (the latter also works before connect).
 
 ## Exports
 
@@ -49,19 +49,20 @@ From `src/index.ts`:
 ## How it works
 
 1. `connectedCallback`: creates an internal `<div>` container, instantiates `AdrawCanvas` and mounts it
-2. Subscribes to all 4 core events, copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`
-3. Re-dispatches core events as `adraw:*` CustomEvents: `adraw:change`, `adraw:viewportchange`, `adraw:toolchange`, `adraw:selectionchange`
+2. Subscribes to the core events, copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`, `toolOptions`
+3. Re-dispatches core events as `adraw:*` CustomEvents: `adraw:change`, `adraw:viewportchange`, `adraw:toolchange`, `adraw:selectionchange`, `adraw:tooloptionschange`
 4. `disconnectedCallback`: calls `destroy()` on the canvas, removes the container
 5. Exposes `.canvas` getter returning the `AdrawCanvas` instance (or `null` when disconnected)
 
 ## Event map
 
-| CustomEvent             | detail                                        |
-| ----------------------- | --------------------------------------------- |
-| `adraw:change`          | `{ elements: Map<ElementId, CanvasElement> }` |
-| `adraw:viewportchange`  | `{ viewport: ViewportState }`                 |
-| `adraw:toolchange`      | `{ tool: ToolType }`                          |
-| `adraw:selectionchange` | `{ selectedIds: Set<ElementId> }`             |
+| CustomEvent               | detail                                        |
+| ------------------------- | --------------------------------------------- |
+| `adraw:change`            | `{ elements: Map<ElementId, CanvasElement> }` |
+| `adraw:viewportchange`    | `{ viewport: ViewportState }`                 |
+| `adraw:toolchange`        | `{ tool: ToolType }`                          |
+| `adraw:selectionchange`   | `{ selectedIds: Set<ElementId> }`             |
+| `adraw:tooloptionschange` | `{ tool, options }` (resolved styles)         |
 
 ## Public fields
 
@@ -73,6 +74,7 @@ From `src/index.ts`:
 | `viewport`    | `ViewportState`                 | Mirrored viewport              |
 | `activeTool`  | `ToolType`                      | Mirrored active tool           |
 | `selectedIds` | `Set<ElementId>`                | Mirrored selection             |
+| `toolOptions` | `ToolOptionsState`              | Resolved per-tool styles       |
 
 ## Build
 

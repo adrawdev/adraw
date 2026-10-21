@@ -9,6 +9,7 @@ import type { ArrowBinding, ArrowElement, ElementId, Point } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolOptions,
@@ -33,6 +34,7 @@ export function createArrowTool(options: ToolOptions = {}): Tool {
     startLink: ArrowBinding | null,
     endLink: ArrowBinding | null,
   ): ArrowElement => {
+    const currentOptions = getToolOptionsForContext(toolOptions, context)
     const element = createArrow({
       endArrowhead: true,
       endBinding: endLink,
@@ -44,9 +46,8 @@ export function createArrowTool(options: ToolOptions = {}): Tool {
       startBinding: startLink,
       startX: start.x,
       startY: start.y,
-      strokeColor:
-        context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-      strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+      strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+      strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
       visible: true,
       width: Math.max(Math.abs(end.x - start.x), 1),
       x: Math.min(start.x, end.x),

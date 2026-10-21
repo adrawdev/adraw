@@ -30,6 +30,8 @@ From `src/public-api.ts`:
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }` (viewport is a signal)
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }` (canUndo/canRedo are signals)
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (signals)
+- `useToolOptions()` — returns `{ toolOptions: Signal<ToolOptionsState>, setToolOptions }`
+- `useStyle(tool?)` — returns `{ tool, style, setStyle }` signals; infers from selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }` (signal)
 
 ## Usage
@@ -59,7 +61,7 @@ All hooks return signals for reactive values — read by calling them.
 ## How it works
 
 1. `provideCanvas()` creates the `CanvasService` singleton at the component injector level
-2. `Canvas` component mounts `AdrawCanvas` in `ngOnInit`, subscribes to all 4 events, mirrors into Angular signals
+2. `Canvas` component mounts `AdrawCanvas` in `ngOnInit`, subscribes to the core events (including `toolOptionsChange`), mirrors into Angular signals
 3. Hooks call `inject(CanvasService)` and return the signal + method surface
 4. `CanvasService` is scoped to the providing injector — multiple independent canvases possible via different component injectors
 

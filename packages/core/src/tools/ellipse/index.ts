@@ -5,6 +5,7 @@ import {
   calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
+  getToolOptionsForContext,
   type Tool,
   type ToolContext,
   type ToolOptions,
@@ -53,13 +54,13 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
         fromCenter: event.altKey,
       })
 
+      const currentOptions = getToolOptionsForContext(toolOptions, context)
       temporaryElement = createEllipse({
         height: bounds.height,
         locked: false,
         rotation: 0,
-        strokeColor:
-          context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-        strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+        strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+        strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
         visible: true,
         width: bounds.width,
         x: bounds.x,
@@ -82,13 +83,13 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
       )
 
       if (bounds.width > 5 && bounds.height > 5) {
+        const currentOptions = getToolOptionsForContext(toolOptions, context)
         const element = createEllipse({
           height: bounds.height,
           locked: false,
           rotation: 0,
-          strokeColor:
-            context.getStrokeColor() ?? toolOptions.strokeColor ?? STROKE_COLOR,
-          strokeWidth: toolOptions.strokeWidth ?? STROKE_WIDTH,
+          strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
+          strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
           visible: true,
           width: bounds.width,
           x: bounds.x,

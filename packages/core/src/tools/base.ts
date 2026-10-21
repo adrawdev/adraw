@@ -23,6 +23,13 @@ export interface ToolContext {
   setViewport: (viewport: ViewportState) => void
   getCanvasSize: () => { width: number; height: number }
   getStrokeColor: () => string
+  /**
+   * Resolved style options for the active tool. Engines provide this so
+   * `setToolOptions` changes apply to future gestures without recreating the
+   * tool; standalone tool factories may omit it and fall back to their factory
+   * options.
+   */
+  getToolOptions?: () => ToolOptions
   getSnappingConfig: () => SnappingConfig
   getIsSnapMode: () => boolean
   setSnapGuides: (guides: SnapGuide[]) => void
@@ -101,6 +108,28 @@ export function getDefaultToolOptions(): ToolOptions {
     strokeColor: STROKE_COLOR,
     strokeWidth: STROKE_WIDTH,
   }
+}
+
+/**
+ * Merge a tool's factory options with the live options supplied by the engine.
+ * Engines provide `getToolOptions()`; standalone tools fall back to their
+ * factory defaults and the context's global stroke color.
+ *
+ * @param defaults Options captured when the tool was created.
+ * @param context Current tool context.
+ * @returns The effective options for the gesture about to start.
+ */
+export function getToolOptionsForContext<T extends ToolOptions>(
+  defaults: T,
+  context: ToolContext,
+): T {
+  const live = context.getToolOptions?.()
+  return {
+    ...defaults,
+    ...live,
+    strokeColor:
+      live?.strokeColor ?? context.getStrokeColor() ?? defaults.strokeColor,
+  } as T
 }
 
 /**

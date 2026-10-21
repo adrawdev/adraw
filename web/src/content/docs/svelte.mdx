@@ -53,14 +53,19 @@ Wrap the part of your app that needs the canvas with `CanvasProvider`, then rend
 Sets up an isolated canvas context (via Svelte's context API) for its children.
 
 ```svelte
-<CanvasProvider options={{ snapping: { threshold: 8 } }}>
+<CanvasProvider
+  options={{
+    snapping: { threshold: 8 },
+    tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+  }}
+>
   {@render children()}
 </CanvasProvider>
 ```
 
-| Prop      | Type                  | Description                        |
-| --------- | --------------------- | ---------------------------------- |
-| `options` | `CanvasSvelteOptions` | Initial snapping / viewport config |
+| Prop      | Type                  | Description                                 |
+| --------- | --------------------- | ------------------------------------------- |
+| `options` | `CanvasSvelteOptions` | Snapping / viewport / per-tool style config |
 
 ### `<Canvas>`
 
@@ -119,6 +124,40 @@ selection.selectAll()
 selection.clearSelection()
 selection.deleteSelected()
 ```
+
+### `useToolOptions()`
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions: getter — resolved styles for every configurable tool
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle(tool?)`
+
+Reactive getters for one tool. Omit `tool` to infer it from a homogeneous
+selection (or the active tool):
+
+```svelte
+<script lang="ts">
+  import { useStyle } from "@adraw/svelte"
+
+  const styles = useStyle()
+  // or: const styles = useStyle("rectangle")
+</script>
+
+{#if styles.style}
+  <input
+    type="range"
+    value={styles.style.strokeWidth}
+    oninput={(event) =>
+      styles.setStyle({ strokeWidth: Number(event.currentTarget.value) })}
+  />
+{/if}
+```
+
+Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
+`smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

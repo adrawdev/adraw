@@ -64,7 +64,12 @@ To render multiple independent canvases, use multiple `CanvasProvider`/`Canvas` 
 ### `CanvasProvider`
 
 ```tsx
-<CanvasProvider options={{ snapping: { threshold: 8 } }}>
+<CanvasProvider
+  options={{
+    snapping: { threshold: 8 },
+    tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+  }}
+>
   {/* ... */}
 </CanvasProvider>
 ```
@@ -112,6 +117,37 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 // selectedIds / elements: reactive getters
 ```
+
+### `useToolOptions()`
+
+```ts
+const { toolOptions, setToolOptions } = useToolOptions()
+// toolOptions: getter — resolved styles for every configurable tool
+setToolOptions("rectangle", { cornerRadius: 12 })
+```
+
+### `useStyle(tool?)`
+
+Reactive getters for one tool. Omit `tool` to infer it from a homogeneous
+selection (or the active tool):
+
+```tsx
+const { style, setStyle } = useStyle()
+// or: const { style, setStyle } = useStyle("rectangle")
+
+if (style()) {
+  ;<input
+    type="range"
+    value={style().strokeWidth}
+    onInput={(event) =>
+      setStyle({ strokeWidth: Number(event.currentTarget.value) })
+    }
+  />
+}
+```
+
+Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
+`smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

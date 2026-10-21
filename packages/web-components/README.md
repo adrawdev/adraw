@@ -60,6 +60,7 @@ Mounts the drawing surface. Owns one core `AdrawCanvas`, created on connect and 
 | `viewport`    | `ViewportState`                 | Latest mirrored viewport                             |
 | `activeTool`  | `ToolType`                      | Latest mirrored active tool                          |
 | `selectedIds` | `Set<ElementId>`                | Latest mirrored selection                            |
+| `toolOptions` | `ToolOptionsState`              | Latest resolved per-tool styles                      |
 
 Configure it before the element connects (e.g. right after `createElement`):
 
@@ -73,12 +74,27 @@ container.appendChild(canvas) // connect → mounts with these options
 
 The element re-dispatches core state changes as `CustomEvent`s:
 
-| Event                   | `event.detail`                    |
-| ----------------------- | --------------------------------- |
-| `adraw:change`          | `{ elements: Map<ElementId, …> }` |
-| `adraw:viewportchange`  | `{ viewport: ViewportState }`     |
-| `adraw:toolchange`      | `{ tool: ToolType }`              |
-| `adraw:selectionchange` | `{ selectedIds: Set<ElementId> }` |
+| Event                     | `event.detail`                        |
+| ------------------------- | ------------------------------------- |
+| `adraw:change`            | `{ elements: Map<ElementId, …> }`     |
+| `adraw:viewportchange`    | `{ viewport: ViewportState }`         |
+| `adraw:toolchange`        | `{ tool: ToolType }`                  |
+| `adraw:selectionchange`   | `{ selectedIds: Set<ElementId> }`     |
+| `adraw:tooloptionschange` | `{ tool, options }` (resolved styles) |
+
+### `getToolOptions(tool)` / `setToolOptions(tool, partial)`
+
+Read resolved per-tool styles or update them. `setToolOptions` works before the
+element connects; the values are applied on mount. It also restyles matching
+selected elements.
+
+```ts
+const el = document.querySelector("adraw-canvas")!
+
+el.setToolOptions("rectangle", { cornerRadius: 12, strokeWidth: 4 })
+el.getToolOptions("rectangle") // resolved options
+el.toolOptions.draw.smoothing
+```
 
 ### `defineAdrawCanvas(tagName?)`
 

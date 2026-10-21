@@ -5,29 +5,29 @@ import type { DomState } from "../state"
 import { createElementGroup, elementClass, selectedClass } from "../svg"
 
 // Fingerprint of everything `updateElementGeometry` writes to the DOM for an
-// element (group transform plus type-specific geometry). Nodes whose element
-// fingerprints identically skip DOM writes, so a `change` event only touches
-// the elements that actually changed. Attributes written only at creation time
-// (cornerRadius, strokeWidth, media src) are excluded — `updateElementGeometry`
-// doesn't rewrite them either, so skipping keeps the previous behavior.
+// element (group transform plus type-specific geometry and style). Nodes whose
+// element fingerprints identically skip DOM writes, so a `change` event only
+// touches the elements that actually changed. Media `src` is still creation-only.
 function geometrySignature(state: DomState, element: CanvasElement): string {
   const base = `${element.x}|${element.y}|${element.width}|${element.height}|${element.rotation}`
   switch (element.type) {
     case "line": {
-      return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}`
+      return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}`
     }
     case "arrow": {
       return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}`
     }
     case "path": {
-      return `path|${base}|${element.smoothing ?? ""}|${pathPointsSignature(state, element.id, element.points)}|${element.strokeColor}`
+      return `path|${base}|${element.smoothing ?? ""}|${pathPointsSignature(state, element.id, element.points)}|${element.strokeColor}|${element.strokeWidth}`
     }
     case "text": {
       return `text|${base}|${element.text}|${element.fontSize}|${element.strokeColor}`
     }
-    case "rectangle":
+    case "rectangle": {
+      return `rectangle|${base}|${element.strokeColor}|${element.strokeWidth}|${element.cornerRadius}`
+    }
     case "ellipse": {
-      return `${element.type}|${base}|${element.strokeColor}`
+      return `ellipse|${base}|${element.strokeColor}|${element.strokeWidth}`
     }
     default: {
       return `${element.type}|${base}`

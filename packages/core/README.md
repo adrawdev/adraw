@@ -43,6 +43,44 @@ canvas.setActiveTool("draw")
 canvas.getActiveTool() // "draw"
 ```
 
+### Tool styles
+
+Set per-tool defaults when constructing the canvas, or change them at runtime
+with `setToolOptions`. Changing an option also restyles matching elements in the
+current selection, so a toolbar can update both the next shape and the selected
+one.
+
+```ts
+const canvas = new AdrawCanvas({
+  container,
+  tools: {
+    draw: { smoothing: 0.7, strokeWidth: 4 },
+    rectangle: { cornerRadius: 8, strokeWidth: 3 },
+    text: { fontSize: 24, strokeColor: "#111" },
+  },
+})
+
+canvas.setToolOptions("draw", { strokeWidth: 6 })
+canvas.setToolOptions("text", { fontSize: 32 })
+
+canvas.getToolOptions("rectangle")
+// { strokeColor, strokeWidth: 3, cornerRadius: 8 }
+```
+
+Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow` and
+`text`. Shared options are `strokeColor` and `strokeWidth`; the tool-specific
+ones are `smoothing` (draw), `cornerRadius` (rectangle) and `fontSize`
+(text). `setStrokeColor` remains a shortcut for changing the global
+stroke color and clears per-tool color overrides.
+
+Subscribe to `toolOptionsChange` to mirror style state in custom UI:
+
+```ts
+canvas.on("toolOptionsChange", ({ tool, options }) => {
+  console.log(tool, options)
+})
+```
+
 ## Elements
 
 Each element on the canvas has a type:
