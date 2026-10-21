@@ -85,6 +85,9 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text         |
 | `undo()` / `redo()`                                     | History navigation                                   |
 | `canUndo()` / `canRedo()`                               | History stack state                                  |
+| `pushHistory()`                                         | Record an explicit undo checkpoint                   |
+| `clearHistory()`                                        | Reset history with the current state as new baseline |
+| `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints               |
 | `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                |
 | `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                         |
 | `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                            |
@@ -202,7 +205,9 @@ Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection
 
 ## History
 
-File: `src/history.ts`. Stack-based undo/redo. Call `pushHistory()` before each mutation. `undo()`/`redo()` restore elements and trigger a `"change"` event.
+File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the current state as a checkpoint, and `undo()`/`redo()` restore elements and trigger a `"change"` event.
+
+Programmatic changes can stay out of history: `addElement`, `insertMedia`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it emits `"change"` so reactive bindings refresh undo availability. `pushHistory()` is a no-op inside `withoutHistory`.
 
 ## Clipboard
 

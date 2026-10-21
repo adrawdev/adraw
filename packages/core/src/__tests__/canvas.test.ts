@@ -325,4 +325,67 @@ describe("insertMedia", () => {
       expect(result[0].y).toBe(350)
     })
   })
+
+  describe("history", () => {
+    it("pushes history by default so the insertion is undoable", () => {
+      const canvas = new AdrawCanvas()
+      canvas.insertMedia({
+        height: 10,
+        mimeType: "image/png",
+        naturalHeight: 100,
+        naturalWidth: 100,
+        src: "data:image/png,1",
+        width: 10,
+      })
+
+      expect(canvas.canUndo()).toBe(true)
+      expect(canvas.undo()).toBe(true)
+      expect(canvas.getElements().size).toBe(0)
+    })
+
+    it("skips history when { history: false }", () => {
+      const canvas = new AdrawCanvas()
+      canvas.insertMedia(
+        {
+          height: 10,
+          mimeType: "image/png",
+          naturalHeight: 100,
+          naturalWidth: 100,
+          src: "data:image/png,1",
+          width: 10,
+        },
+        { history: false },
+      )
+
+      expect(canvas.canUndo()).toBe(false)
+      expect(canvas.getElements().size).toBe(1)
+    })
+
+    it("keeps a non-undoable image across later undo", () => {
+      const canvas = new AdrawCanvas()
+      canvas.insertMedia(
+        {
+          height: 10,
+          mimeType: "image/png",
+          naturalHeight: 100,
+          naturalWidth: 100,
+          src: "data:image/png,1",
+          width: 10,
+        },
+        { history: false },
+      )
+
+      canvas.setActiveTool("rectangle")
+      canvas.handlePointerDown(20, 20, pointerEvent())
+      canvas.handlePointerMove(40, 40, pointerEvent())
+      canvas.handlePointerUp(40, 40, pointerEvent())
+
+      expect(canvas.undo()).toBe(true)
+      expect(
+        [...canvas.getElements().values()].some(
+          (element) => element.type === "media",
+        ),
+      ).toBe(true)
+    })
+  })
 })

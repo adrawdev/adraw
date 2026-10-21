@@ -12,6 +12,7 @@ import {
   canUndo,
   createHistoryState,
   pushHistory,
+  type HistoryEntry,
   /**
    * Redo the last undone change.
    * @returns `true` if a redo was applied.
@@ -67,6 +68,15 @@ const DOCUMENT_VERSION = 1
 type EventListener<K extends keyof CanvasEventMap> = (
   event: CanvasEventMap[K],
 ) => void
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof value.then === "function"
+  )
+}
 
 /**
  * Internal access shape used by adapter and engine hooks.
@@ -127,6 +137,8 @@ export class CanvasEngine {
   private strokeColor: string = STROKE_COLOR
   private hideOverlayWhileTransforming: boolean
   private history = createHistoryState()
+  // Depth counter for `withoutHistory`; suppresses checkpoint pushes while > 0.
+  private historySuppressionDepth = 0
   private clipboard: ClipboardManager
   // Last pointer position in canvas space, tracked by the dispatch helpers so
   // keyboard paste can land at the cursor.
@@ -171,7 +183,7 @@ export class CanvasEngine {
     // Seed the baseline checkpoint so the first edit can be undone back to the
     // empty canvas. The top of the undo stack always mirrors the current
     // committed state.
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    this.commitHistory()
   }
 
   private createToolContext(): ToolContext {
@@ -184,11 +196,7 @@ export class CanvasEngine {
       getStrokeColor: () => this.strokeColor,
       getViewport: () => this.viewport,
       pushHistory: () => {
-        this.history = pushHistory(
-          this.history,
-          this.elements,
-          this.selectedIds,
-        )
+        this.commitHistory()
       },
       setActiveTool: (tool) => this.setActiveTool(tool),
       setElements: (elements) => {
@@ -207,6 +215,70 @@ export class CanvasEngine {
         this.viewport = viewport
         this.emit("viewportChange", { viewport: this.viewport })
       },
+    }
+  }
+
+  // Record a checkpoint unless `withoutHistory` is currently suppressing them.
+  private commitHistory(): void {
+    if (this.historySuppressionDepth > 0) {
+      return
+    }
+    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+  }
+
+  // Fold the net change between `before` and the current elements into every
+  // checkpoint. Changes made outside history must survive undo/redo instead of
+  // reappearing/disappearing when an older snapshot is restored.
+  private rebaseHistory(before: Map<ElementId, CanvasElement>): void {
+    const added = new Map<ElementId, CanvasElement>()
+    const changed = new Map<ElementId, CanvasElement>()
+    const removed = new Set<ElementId>()
+
+    for (const [id, element] of this.elements) {
+      const previous = before.get(id)
+      if (previous === undefined) {
+        added.set(id, element)
+      } else if (previous !== element) {
+        changed.set(id, element)
+      }
+    }
+    for (const id of before.keys()) {
+      if (!this.elements.has(id)) {
+        removed.add(id)
+      }
+    }
+
+    if (added.size === 0 && changed.size === 0 && removed.size === 0) {
+      return
+    }
+
+    const rebaseEntries = (entries: HistoryEntry[]): HistoryEntry[] =>
+      entries.map((entry) => {
+        const elements = new Map(entry.elements)
+        for (const [id, element] of added) {
+          elements.set(id, element)
+        }
+        for (const [id, element] of changed) {
+          if (elements.has(id)) {
+            elements.set(id, element)
+          }
+        }
+        for (const id of removed) {
+          elements.delete(id)
+        }
+
+        const selectedIds = new Set(entry.selectedIds)
+        for (const id of removed) {
+          selectedIds.delete(id)
+        }
+
+        return { elements, selectedIds, timestamp: entry.timestamp }
+      })
+
+    this.history = {
+      ...this.history,
+      redoStack: rebaseEntries(this.history.redoStack),
+      undoStack: rebaseEntries(this.history.undoStack),
     }
   }
 
@@ -273,9 +345,13 @@ export class CanvasEngine {
   /**
    * Insert one or more media (image) elements, sizing them to fit the viewport.
    * @param descriptors Media input(s).
+   * @param options `{ history }` to skip the checkpoint.
    * @returns The created media elements.
    */
-  insertMedia(descriptors: MediaInput | MediaInput[]): MediaElement[] {
+  insertMedia(
+    descriptors: MediaInput | MediaInput[],
+    options: { history?: boolean } = {},
+  ): MediaElement[] {
     const inputs = Array.isArray(descriptors) ? descriptors : [descriptors]
     if (inputs.length === 0) {
       return []
@@ -288,17 +364,24 @@ export class CanvasEngine {
       getNextZIndex(this.elements.values()),
     )
 
-    for (const element of elements) {
-      this.elements.set(element.id, element)
-    }
-    syncArrowBindings(this.elements)
+    const insert = () => {
+      for (const element of elements) {
+        this.elements.set(element.id, element)
+      }
+      syncArrowBindings(this.elements)
 
-    this.selectedIds = new Set(elements.map((elem) => elem.id))
-    if (this.activeTool.type !== "select") {
-      this.setActiveTool("select")
+      this.selectedIds = new Set(elements.map((elem) => elem.id))
+      if (this.activeTool.type !== "select") {
+        this.setActiveTool("select")
+      }
     }
 
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    if (options.history === false) {
+      this.withoutHistory(insert)
+    } else {
+      insert()
+      this.commitHistory()
+    }
 
     this.emit("change", { elements: this.elements })
     this.emit("selectionChange", { selectedIds: this.selectedIds })
@@ -325,13 +408,18 @@ export class CanvasEngine {
       return []
     }
 
-    for (const element of inputs) {
-      this.elements.set(element.id, element)
+    const add = () => {
+      for (const element of inputs) {
+        this.elements.set(element.id, element)
+      }
+      syncArrowBindings(this.elements)
     }
-    syncArrowBindings(this.elements)
 
-    if (options.history !== false) {
-      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    if (options.history === false) {
+      this.withoutHistory(add)
+    } else {
+      add()
+      this.commitHistory()
     }
 
     this.emit("change", { elements: this.elements })
@@ -348,16 +436,21 @@ export class CanvasEngine {
    * @param options `{ history }` to skip the checkpoint.
    */
   loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
-    const next = new Map<ElementId, CanvasElement>()
-    for (const element of doc?.elements ?? []) {
-      next.set(element.id, element)
+    const load = () => {
+      const next = new Map<ElementId, CanvasElement>()
+      for (const element of doc?.elements ?? []) {
+        next.set(element.id, element)
+      }
+      this.elements = next
+      syncArrowBindings(this.elements)
+      this.selectedIds = new Set()
     }
-    this.elements = next
-    syncArrowBindings(this.elements)
-    this.selectedIds = new Set()
 
-    if (options.history !== false) {
-      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    if (options.history === false) {
+      this.withoutHistory(load)
+    } else {
+      load()
+      this.commitHistory()
     }
 
     this.emit("change", { elements: this.elements })
@@ -406,19 +499,22 @@ export class CanvasEngine {
     elements: Map<ElementId, CanvasElement> | CanvasElement[],
     options: { history?: boolean } = {},
   ): void {
-    const next =
-      elements instanceof Map
-        ? new Map(elements)
-        : new Map(elements.map((element) => [element.id, element]))
+    const replace = () => {
+      this.elements =
+        elements instanceof Map
+          ? new Map(elements)
+          : new Map(elements.map((element) => [element.id, element]))
+      syncArrowBindings(this.elements)
+      this.selectedIds = new Set(
+        [...this.selectedIds].filter((id) => this.elements.has(id)),
+      )
+    }
 
-    this.elements = next
-    syncArrowBindings(this.elements)
-    this.selectedIds = new Set(
-      [...this.selectedIds].filter((id) => this.elements.has(id)),
-    )
-
-    if (options.history !== false) {
-      this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    if (options.history === false) {
+      this.withoutHistory(replace)
+    } else {
+      replace()
+      this.commitHistory()
     }
 
     this.emit("change", { elements: this.elements })
@@ -561,6 +657,62 @@ export class CanvasEngine {
   }
 
   /**
+   * Record the current canvas state as an undo checkpoint. No-op while inside
+   * {@link CanvasEngine.withoutHistory}.
+   */
+  pushHistory(): void {
+    this.commitHistory()
+  }
+
+  /**
+   * Clear undo and redo history. The current canvas state becomes the new
+   * baseline, so later edits are undoable but changes made before this call
+   * are not. Emits `change` so reactive bindings refresh undo availability.
+   */
+  clearHistory(): void {
+    this.history = pushHistory(
+      createHistoryState(this.history.maxSize),
+      this.elements,
+      this.selectedIds,
+    )
+    this.emit("change", { elements: this.elements })
+  }
+
+  /**
+   * Run a function without recording undo checkpoints. Changes made inside the
+   * callback are folded into existing checkpoints, so undo/redo preserves them
+   * instead of restoring a state that predates the callback. Nested calls are
+   * coalesced; async callbacks keep history suppressed until they settle.
+   * Returns the callback's result.
+   *
+   * @param fn Callback to run with history recording disabled.
+   * @returns The callback's return value.
+   */
+  withoutHistory<T>(fn: () => T): T {
+    const before = new Map(this.elements)
+    this.historySuppressionDepth += 1
+
+    const finish = (): void => {
+      this.historySuppressionDepth -= 1
+      if (this.historySuppressionDepth === 0) {
+        this.rebaseHistory(before)
+      }
+    }
+
+    try {
+      const result = fn()
+      if (isPromiseLike(result)) {
+        return Promise.resolve(result).finally(finish) as T
+      }
+      finish()
+      return result
+    } catch (error) {
+      finish()
+      throw error
+    }
+  }
+
+  /**
    * Handle a keyboard shortcut event.
    * @param event Keyboard event.
    */
@@ -588,17 +740,13 @@ export class CanvasEngine {
    * Delete the selected elements.
    */
   deleteSelected(): void {
-    const result = deleteSelectedElements(
-      this.elements,
-      this.selectedIds,
-      this.history,
-    )
+    const result = deleteSelectedElements(this.elements, this.selectedIds)
     if (!result) {
       return
     }
     this.elements = result.elements
-    this.history = result.history
     this.selectedIds = result.selectedIds
+    this.commitHistory()
     this.emit("change", { elements: this.elements })
     this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
@@ -660,7 +808,7 @@ export class CanvasEngine {
     this.selectedIds = new Set(pasted.map((element) => element.id))
     // Push after mutating so the top of the undo stack mirrors the pasted
     // state (same convention as the tools).
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    this.commitHistory()
 
     this.emit("change", { elements: this.elements })
     this.emit("selectionChange", { selectedIds: this.selectedIds })
@@ -815,11 +963,6 @@ export class CanvasEngine {
   /** @internal */
   setPointerPoint(point: Point): void {
     this.pointerPoint = point
-  }
-
-  /** @internal */
-  pushHistory(): void {
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
   }
 
   /** @internal */

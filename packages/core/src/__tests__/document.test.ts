@@ -95,6 +95,17 @@ describe("addElement", () => {
     expect(canvas.getElements().size).toBe(2)
   })
 
+  it("keeps skipped elements across a later undo", () => {
+    const canvas = new AdrawCanvas()
+    canvas.addElement(makeRectangle("recorded"))
+    canvas.addElement(makeRectangle("skipped", 20), { history: false })
+
+    canvas.undo()
+
+    expect(canvas.getElements().has("recorded")).toBe(false)
+    expect(canvas.getElements().has("skipped")).toBe(true)
+  })
+
   it("preserves selection state", () => {
     const canvas = new AdrawCanvas()
 
@@ -199,6 +210,20 @@ describe("loadDocument", () => {
     )
 
     expect(canvas.canUndo()).toBe(false)
+  })
+
+  it("does not reintroduce the previous document on undo when history is skipped", () => {
+    const canvas = new AdrawCanvas()
+    canvas.addElement(makeRectangle("old"))
+
+    canvas.loadDocument(
+      { elements: [makeRectangle("new")], version: 1 },
+      { history: false },
+    )
+    canvas.undo()
+
+    expect(canvas.getElements().has("new")).toBe(true)
+    expect(canvas.getElements().has("old")).toBe(false)
   })
 
   it("tolerates a missing or empty elements array", () => {

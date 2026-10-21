@@ -1,5 +1,4 @@
 import { syncArrowBindings } from "../bindings"
-import { pushHistory, type HistoryState } from "../history"
 import type { CanvasElement, ElementId, ViewportState } from "../types"
 
 export function selectAllIds(
@@ -11,10 +10,8 @@ export function selectAllIds(
 export function deleteSelectedElements(
   elements: Map<ElementId, CanvasElement>,
   selectedIds: Set<ElementId>,
-  history: HistoryState,
 ): {
   elements: Map<ElementId, CanvasElement>
-  history: HistoryState
   selectedIds: Set<ElementId>
 } | null {
   if (selectedIds.size === 0) {
@@ -31,7 +28,6 @@ export function deleteSelectedElements(
 
   return {
     elements: nextElements,
-    history: pushHistory(history, nextElements, selectedIds),
     selectedIds: new Set(),
   }
 }

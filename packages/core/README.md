@@ -121,6 +121,22 @@ canvas.canUndo() // boolean
 canvas.canRedo() // boolean
 canvas.undo()
 canvas.redo()
+canvas.pushHistory() // record an explicit checkpoint
+canvas.clearHistory() // current state becomes the new baseline
+```
+
+Programmatic inserts accept `{ history: false }`, and `withoutHistory(fn)`
+suppresses checkpoints for a whole block. Changes made outside history survive
+undo/redo:
+
+```ts
+canvas.withoutHistory(() => {
+  canvas.loadDocument(doc)
+  canvas.insertMedia(image)
+})
+
+canvas.insertMedia(image, { history: false })
+canvas.clearHistory() // make the loaded state the undo baseline
 ```
 
 Keyboard shortcuts `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) are handled automatically when the canvas has keyboard focus.

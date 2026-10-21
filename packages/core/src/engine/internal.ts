@@ -64,7 +64,8 @@ export function updateTextElement(
 }
 
 // Commit an edited text element: empty text deletes it (and drops it from the
-// selection); otherwise the edits are kept. Always pushes history.
+// selection); otherwise the edits are kept. Pushes history unless recording is
+// suppressed by `withoutHistory`.
 /** @internal */
 export function commitTextEdit(engine: EngineInternal, id: ElementId): void {
   const element = engine.getElements().get(id)
