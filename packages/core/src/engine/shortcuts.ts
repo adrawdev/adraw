@@ -12,16 +12,25 @@ export interface ShortcutActions {
   undo: () => boolean
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  ) {
+    return true
+  }
+
+  return target instanceof HTMLElement && target.isContentEditable
+}
+
 // Keyboard shortcuts for the canvas. Pure — the engine (or any headless
 // consumer) injects the operations it performs.
 export function handleShortcutKey(
   event: KeyboardEvent,
   actions: ShortcutActions,
 ): void {
-  if (
-    event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement
-  ) {
+  if (isEditableTarget(event.target)) {
     return
   }
 

@@ -139,7 +139,16 @@ canvas.insertMedia(image, { history: false })
 canvas.clearHistory() // make the loaded state the undo baseline
 ```
 
-Keyboard shortcuts `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) are handled automatically when the canvas has keyboard focus.
+Keyboard shortcuts are scoped to the canvas by default: the SVG is focusable and
+takes focus on pointer down, so shortcuts never leak into forms, dialogs or
+other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo
+while the canvas has focus.
+
+```ts
+new AdrawCanvas({ container, keyboard: "canvas" }) // default: only while focused
+new AdrawCanvas({ container, keyboard: "document" }) // anywhere on the page
+new AdrawCanvas({ container, keyboard: "none" }) // call canvas.handleKeyDown yourself
+```
 
 ## Selection
 
@@ -264,7 +273,8 @@ canvas.mount(document.getElementById("app")!)
 canvas.destroy()
 ```
 
-Disconnects the resize observer and removes the SVG element.
+Disconnects the resize observer, removes the SVG element, and unsubscribes all
+DOM and engine event listeners. Safe to call before mounting or more than once.
 
 ## CSS variables
 

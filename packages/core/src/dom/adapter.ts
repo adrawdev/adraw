@@ -1,5 +1,6 @@
 import { BACKGROUND_COLOR } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
+import type { CanvasEventMap } from "../options"
 import { setupEventListeners, updateCursor } from "./events"
 import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
@@ -29,36 +30,46 @@ export function mountDom(
   const state = createDomState()
   state.container = container
   initDom(state, engine)
-  setupEventListeners(state, engine)
+  const removeEventListeners = setupEventListeners(state, engine)
 
   engine.renderRequested = () => renderAll(state, engine)
   engine.onToolWillChange = () => commitTextEditing(state, engine)
 
-  engine.on("change", () => {
+  const handleChange = (): void => {
     if (engine.getActiveTool() === "select") {
       renderSelectElements(state, engine)
     }
     reconcileElements(state, engine)
     renderGuides(state, engine)
-  })
+  }
 
-  engine.on("viewportChange", () => {
+  const handleViewportChange = (): void => {
     renderAll(state, engine)
-  })
+  }
 
-  engine.on("toolChange", ({ tool }) => {
+  const handleToolChange = ({ tool }: CanvasEventMap["toolChange"]): void => {
     renderGuides(state, engine)
     renderTransformOverlay(state, engine)
     updateCursor(state, tool)
-  })
+  }
 
-  engine.on("selectionChange", () => {
+  const handleSelectionChange = (): void => {
     renderSelectElements(state, engine)
     renderTransformOverlay(state, engine)
-  })
+  }
+
+  engine.on("change", handleChange)
+  engine.on("viewportChange", handleViewportChange)
+  engine.on("toolChange", handleToolChange)
+  engine.on("selectionChange", handleSelectionChange)
 
   return {
     destroy: () => {
+      removeEventListeners()
+      engine.off("change", handleChange)
+      engine.off("viewportChange", handleViewportChange)
+      engine.off("toolChange", handleToolChange)
+      engine.off("selectionChange", handleSelectionChange)
       engine.renderRequested = null
       engine.onToolWillChange = null
       state.resizeObserver?.disconnect()

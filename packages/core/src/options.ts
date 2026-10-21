@@ -20,6 +20,18 @@ export interface ClipboardOptions {
 }
 
 /**
+ * Where the canvas handles its built-in keyboard shortcuts.
+ *
+ * - `"canvas"` (default): only while the canvas has focus. The SVG is made
+ *   focusable and takes focus on pointer down, so shortcuts never leak into
+ *   forms, dialogs or other widgets on the page.
+ * - `"document"`: anywhere on the page. Form controls are still ignored.
+ * - `"none"`: built-in shortcuts are disabled; call `canvas.handleKeyDown`
+ *   yourself when needed.
+ */
+export type KeyboardScope = "canvas" | "document" | "none"
+
+/**
  * Options passed to the {@link AdrawCanvas} constructor and to the
  * framework-binding canvas providers.
  */
@@ -28,6 +40,8 @@ export interface CanvasOptions {
   clipboard?: ClipboardOptions
   /** When `true`, snapping is active by default during a drag. When `false` (default), snapping only activates while Ctrl/Cmd is held. */
   isSnapMode?: boolean
+  /** Keyboard shortcut scope. Defaults to `"canvas"`; use `"document"` for page-wide shortcuts or `"none"` to disable them. */
+  keyboard?: KeyboardScope
   /** Starting viewport; defaults to origin/zoom 1. */
   initialViewport?: ViewportState
   /** Snapping configuration (threshold in pixels). */

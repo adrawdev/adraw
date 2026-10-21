@@ -21,6 +21,7 @@ export type {
   CanvasEventMap,
   CanvasOptions,
   ClipboardOptions,
+  KeyboardScope,
   MediaInput,
   ToImageOptions,
 } from "./options"

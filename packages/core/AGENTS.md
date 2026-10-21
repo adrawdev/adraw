@@ -117,6 +117,7 @@ Passed to constructor as `CanvasOptions`:
 - `hideOverlayWhileTransforming?: boolean`
 - `snapping?: SnappingConfig` (`{ threshold }`)
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
+- `keyboard?: "canvas" | "document" | "none"` — shortcut scope; defaults to `"canvas"` (SVG is focusable and focuses on pointer down), `"document"` handles shortcuts page-wide, `"none"` disables them
 - `clipboard?: ClipboardOptions` — `{ serialize?, deserialize? }` hooks bridging the in-memory clipboard to the system clipboard
 
 ## Type system

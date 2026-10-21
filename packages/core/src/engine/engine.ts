@@ -24,7 +24,12 @@ import {
    */
   undo,
 } from "../history"
-import type { CanvasEventMap, CanvasOptions, MediaInput } from "../options"
+import type {
+  CanvasEventMap,
+  CanvasOptions,
+  KeyboardScope,
+  MediaInput,
+} from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import {
   createArrowTool,
@@ -144,6 +149,7 @@ export class CanvasEngine {
   private activeTool: Tool
   private snappingConfig: SnappingConfig
   private isSnapMode: boolean
+  private keyboardScope: KeyboardScope
   private snapGuides: SnapGuide[] = []
   private strokeColor: string = STROKE_COLOR
   private hideOverlayWhileTransforming: boolean
@@ -175,6 +181,7 @@ export class CanvasEngine {
     this.clipboard = new ClipboardManager(options.clipboard)
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.isSnapMode = options.isSnapMode ?? false
+    this.keyboardScope = options.keyboard ?? "canvas"
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
 
@@ -807,6 +814,13 @@ export class CanvasEngine {
       finish()
       throw error
     }
+  }
+
+  /**
+   * Where the canvas handles built-in keyboard shortcuts.
+   */
+  getKeyboardScope(): KeyboardScope {
+    return this.keyboardScope
   }
 
   /**

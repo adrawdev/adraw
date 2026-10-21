@@ -65,6 +65,7 @@ export class AdrawCanvasElement extends HTMLElement {
       container,
       initialViewport: this.options?.initialViewport,
       isSnapMode: this.options?.isSnapMode,
+      keyboard: this.options?.keyboard,
       snapping: this.options?.snapping,
     })
     this.instance = instance

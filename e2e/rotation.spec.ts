@@ -38,6 +38,7 @@ test.describe("rotation", () => {
     await drag(page, svg, { x: 450, y: 200 }, { x: 650, y: 350 })
 
     await pickTool(page, "select")
+    await svg.focus()
     await page.keyboard.press("ControlOrMeta+a")
     expect(await selectedCount(page)).toBe(2)
 

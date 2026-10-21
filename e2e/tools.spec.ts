@@ -55,7 +55,8 @@ test.describe("tool selection", () => {
 
     for (const [key, tool] of shortcuts) {
       test(`"${key}" selects the ${tool} tool`, async ({ page }) => {
-        await openCanvas(page)
+        const svg = await openCanvas(page)
+        await svg.focus()
         await page.keyboard.press(key)
 
         const state = await snapshot(page)
@@ -66,12 +67,29 @@ test.describe("tool selection", () => {
     test("the toolbar reflects a keyboard-driven tool change", async ({
       page,
     }) => {
-      await openCanvas(page)
+      const svg = await openCanvas(page)
+      await svg.focus()
       await page.keyboard.press("r")
 
       await expect(
         page.locator('.toolbar button[data-tool="rectangle"]'),
       ).toHaveClass(/active/)
+    })
+
+    test("shortcuts stay scoped to the canvas", async ({ page }) => {
+      const svg = await openCanvas(page)
+
+      await page.evaluate(() =>
+        (document.activeElement as HTMLElement | null)?.blur(),
+      )
+      await page.keyboard.press("r")
+      const blurred = await snapshot(page)
+      expect(blurred.activeTool).toBe("select")
+
+      await svg.click({ position: { x: 20, y: 20 } })
+      await page.keyboard.press("r")
+      const focused = await snapshot(page)
+      expect(focused.activeTool).toBe("rectangle")
     })
   })
 })

@@ -75,6 +75,7 @@ test.describe("selection", () => {
     await drag(page, svg, { x: 260, y: 120 }, { x: 380, y: 240 })
 
     await pickTool(page, "select")
+    await svg.focus()
     await page.keyboard.press("ControlOrMeta+a")
 
     expect(await selectedCount(page)).toBe(2)
@@ -93,6 +94,7 @@ test.describe("selection", () => {
     await drag(page, svg, { x: 300, y: 100 }, { x: 380, y: 180 })
 
     await pickTool(page, "select")
+    await svg.focus()
     await page.keyboard.press("ControlOrMeta+a")
     expect(await selectedCount(page)).toBe(2)
 

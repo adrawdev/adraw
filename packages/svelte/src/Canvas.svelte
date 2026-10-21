@@ -19,6 +19,7 @@ $effect(() => {
     hideOverlayWhileTransforming: context.options?.hideOverlayWhileTransforming,
     initialViewport: context.options?.initialViewport,
     isSnapMode: context.options?.isSnapMode,
+    keyboard: context.options?.keyboard,
     snapping: context.options?.snapping,
   })
 

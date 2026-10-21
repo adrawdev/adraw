@@ -125,6 +125,7 @@ export function Canvas({ className, style }: CanvasProps) {
       hideOverlayWhileTransforming: options?.hideOverlayWhileTransforming,
       initialViewport: options?.initialViewport,
       isSnapMode: options?.isSnapMode,
+      keyboard: options?.keyboard,
       snapping: options?.snapping,
     })
 
@@ -170,6 +171,7 @@ export function Canvas({ className, style }: CanvasProps) {
     options?.hideOverlayWhileTransforming,
     options?.initialViewport,
     options?.isSnapMode,
+    options?.keyboard,
     options?.snapping,
     setActiveTool,
     setElements,

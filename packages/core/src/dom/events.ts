@@ -34,22 +34,32 @@ export function updateCursor(state: DomState, tool: ToolType): void {
 export function setupEventListeners(
   state: DomState,
   engine: CanvasEngine,
-): void {
+): () => void {
   if (!state.svgElement) {
-    return
+    return () => {}
   }
+
+  const svgElement = state.svgElement
+  const keyboardScope = engine.getKeyboardScope()
 
   setupTouchListeners(state, engine)
 
-  state.svgElement.addEventListener("pointerdown", (event) => {
+  if (keyboardScope === "canvas") {
+    svgElement.tabIndex = 0
+  }
+
+  svgElement.addEventListener("pointerdown", (event) => {
     const { x, y } = getRelativePoint(state, event)
     handlePointerDown(state, engine, x, y, event)
     // Capture the pointer so pointermove/pointerup keep firing while the
     // cursor leaves the container — or the browser window — mid-drag.
     try {
-      state.svgElement?.setPointerCapture(event.pointerId)
+      svgElement.setPointerCapture(event.pointerId)
     } catch {
       // Capture unavailable (e.g. synthetic events in tests) — ignore.
+    }
+    if (keyboardScope === "canvas") {
+      svgElement.focus({ preventScroll: true })
     }
     renderAll(state, engine)
   })
@@ -113,8 +123,21 @@ export function setupEventListeners(
     { passive: false },
   )
 
-  document.addEventListener("keydown", (event) => {
+  const handleKeyDown = (event: KeyboardEvent): void => {
     engine.handleKeyDown(event)
     renderAll(state, engine)
-  })
+  }
+
+  if (keyboardScope === "document") {
+    const doc = svgElement.ownerDocument
+    doc.addEventListener("keydown", handleKeyDown)
+    return () => doc.removeEventListener("keydown", handleKeyDown)
+  }
+
+  if (keyboardScope === "canvas") {
+    svgElement.addEventListener("keydown", handleKeyDown)
+    return () => svgElement.removeEventListener("keydown", handleKeyDown)
+  }
+
+  return () => {}
 }
