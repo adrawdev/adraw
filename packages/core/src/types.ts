@@ -35,7 +35,6 @@ export type ElementId = string
 export type ElementType =
   | "rectangle"
   | "ellipse"
-  | "star"
   | "line"
   | "arrow"
   | "path"
