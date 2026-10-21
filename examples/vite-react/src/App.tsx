@@ -219,6 +219,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "13px",
     gap: "6px",
   },
+  separator: {
+    background: "#ddd",
+    margin: "0 8px",
+    width: "1px",
+  },
   styleBar: {
     alignItems: "center",
     background: "#fafafa",
@@ -232,11 +237,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "12px",
     fontWeight: 600,
     textTransform: "uppercase",
-  },
-  separator: {
-    background: "#ddd",
-    margin: "0 8px",
-    width: "1px",
   },
   toolbar: {
     background: "#f5f5f5",

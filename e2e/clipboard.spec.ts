@@ -10,7 +10,8 @@ test.describe("clipboard", () => {
     await pickTool(page, "rectangle")
     await drag(page, svg, { x: 120, y: 120 }, { x: 220, y: 200 })
 
-    expect((await snapshot(page)).elementCount).toBe(1)
+    const initial = await snapshot(page)
+    expect(initial.elementCount).toBe(1)
 
     await clickAction(page, "copy")
     await clickAction(page, "paste")
@@ -28,10 +29,12 @@ test.describe("clipboard", () => {
     await drag(page, svg, { x: 120, y: 120 }, { x: 220, y: 200 })
 
     await clickAction(page, "cut")
-    expect((await snapshot(page)).elementCount).toBe(0)
+    const afterCut = await snapshot(page)
+    expect(afterCut.elementCount).toBe(0)
 
     await clickAction(page, "paste")
-    expect((await snapshot(page)).elementCount).toBe(1)
+    const afterPaste = await snapshot(page)
+    expect(afterPaste.elementCount).toBe(1)
   })
 
   test("Ctrl+C / Ctrl+V duplicate the selection", async ({ page }) => {
@@ -42,6 +45,7 @@ test.describe("clipboard", () => {
     await page.keyboard.press("Control+c")
     await page.keyboard.press("Control+v")
 
-    expect((await snapshot(page)).elementCount).toBe(2)
+    const state = await snapshot(page)
+    expect(state.elementCount).toBe(2)
   })
 })
