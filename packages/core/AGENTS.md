@@ -128,7 +128,7 @@ Passed to constructor as `CanvasOptions`:
 
 ### Tool styles
 
-`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
 
 ## Type system
 
@@ -136,18 +136,20 @@ Defined in `src/types.ts`.
 
 ### Element types
 
-All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locked, visible):
+All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locked, visible, opacity?):
 
 | Type          | Interface          | Extra fields                                                                                                           |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `"rectangle"` | `RectangleElement` | `cornerRadius`                                                                                                         |
-| `"ellipse"`   | `EllipseElement`   | —                                                                                                                      |
+| `"rectangle"` | `RectangleElement` | `cornerRadius`, `strokeWidth`, `strokeColor`, `fillColor?`                                                             |
+| `"ellipse"`   | `EllipseElement`   | `strokeWidth`, `strokeColor`, `fillColor?`                                                                             |
 | `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`                                                                     |
 | `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?` |
-| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?`                                                                 |
+| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` (paths are never filled)                                        |
 | `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                               |
 | `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                |
 | `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`                                                                                      |
+
+`opacity` (0–1) is rendered on the element's SVG group, so it fades stroke and fill together. `fillColor` only exists on rectangles and ellipses; omitting it uses the `--adraw-fill` CSS variable (transparent).
 
 ### Tool types
 

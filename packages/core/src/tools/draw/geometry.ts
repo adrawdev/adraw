@@ -96,6 +96,7 @@ function getPathBounds(points: Point[]): {
 export function createPathElement(
   points: Point[],
   {
+    opacity = 1,
     smoothing = DEFAULT_PATH_SMOOTHING,
     strokeColor = STROKE_COLOR,
     strokeWidth = STROKE_WIDTH,
@@ -112,6 +113,7 @@ export function createPathElement(
   return createPath({
     height: Math.max(bounds.height, 1),
     locked: false,
+    opacity,
     points: simplifiedPoints,
     rotation: 0,
     smoothing,

@@ -717,7 +717,7 @@ export class CanvasEngine {
    * @example
    * ```ts
    * canvas.getToolOptions("draw")
-   * // { strokeColor, fillColor, strokeWidth: 2, smoothing: 0.5 }
+   * // { fillColor, opacity: 1, strokeColor, strokeWidth: 2, smoothing: 0.5 }
    * ```
    */
   getToolOptions<T extends ConfigurableToolType>(
@@ -743,6 +743,7 @@ export class CanvasEngine {
    * @example
    * ```ts
    * canvas.setToolOptions("rectangle", { cornerRadius: 8, strokeWidth: 3 })
+   * canvas.setToolOptions("rectangle", { fillColor: "#ffd43b", opacity: 0.35 })
    * canvas.setToolOptions("text", { fontSize: 28 })
    * ```
    */

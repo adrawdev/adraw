@@ -9,7 +9,7 @@ import { createElementGroup, elementClass, selectedClass } from "../svg"
 // element fingerprints identically skip DOM writes, so a `change` event only
 // touches the elements that actually changed. Media `src` is still creation-only.
 function geometrySignature(state: DomState, element: CanvasElement): string {
-  const base = `${element.x}|${element.y}|${element.width}|${element.height}|${element.rotation}`
+  const base = `${element.x}|${element.y}|${element.width}|${element.height}|${element.rotation}|${element.opacity ?? 1}`
   switch (element.type) {
     case "line": {
       return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}`
@@ -24,10 +24,10 @@ function geometrySignature(state: DomState, element: CanvasElement): string {
       return `text|${base}|${element.text}|${element.fontSize}|${element.strokeColor}`
     }
     case "rectangle": {
-      return `rectangle|${base}|${element.strokeColor}|${element.strokeWidth}|${element.cornerRadius}`
+      return `rectangle|${base}|${element.strokeColor}|${element.strokeWidth}|${element.cornerRadius}|${element.fillColor ?? ""}`
     }
     case "ellipse": {
-      return `ellipse|${base}|${element.strokeColor}|${element.strokeWidth}`
+      return `ellipse|${base}|${element.strokeColor}|${element.strokeWidth}|${element.fillColor ?? ""}`
     }
     default: {
       return `${element.type}|${base}`

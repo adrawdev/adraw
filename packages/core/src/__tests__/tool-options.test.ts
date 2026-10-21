@@ -13,6 +13,7 @@ import {
 import { inferConfigurableTool } from "../tool-options"
 import type {
   CanvasElement,
+  ElementId,
   PathElement,
   RectangleElement,
   TextElement,
@@ -86,7 +87,7 @@ describe("tool options", () => {
       y: 0,
       zIndex: 0,
     })
-    const elements = new Map([
+    const elements = new Map<ElementId, CanvasElement>([
       [rectangle.id, rectangle],
       [path.id, path],
     ])
@@ -109,19 +110,23 @@ describe("tool options", () => {
     const canvas = new AdrawCanvas()
 
     expect(canvas.getToolOptions("draw")).toMatchObject({
+      opacity: 1,
       smoothing: DEFAULT_PATH_SMOOTHING,
       strokeWidth: STROKE_WIDTH,
     })
     expect(canvas.getToolOptions("rectangle").cornerRadius).toBe(0)
     expect(canvas.getToolOptions("text").fontSize).toBe(TEXT_FONT_SIZE)
+    expect(canvas.getToolOptions("rectangle").fillColor).toBeTruthy()
   })
 
   it("applies constructor options to newly drawn elements", () => {
     const canvas = new AdrawCanvas({
       tools: {
-        draw: { smoothing: 0.8, strokeWidth: 7 },
+        draw: { opacity: 0.6, smoothing: 0.8, strokeWidth: 7 },
         rectangle: {
           cornerRadius: 12,
+          fillColor: "#ffd43b",
+          opacity: 0.35,
           strokeColor: "#123456",
           strokeWidth: 5,
         },
@@ -132,14 +137,40 @@ describe("tool options", () => {
     drag(canvas, { x: 10, y: 10 }, { x: 110, y: 110 })
     const rectangle = findElement(canvas, "rectangle")
     expect(rectangle.cornerRadius).toBe(12)
+    expect(rectangle.fillColor).toBe("#ffd43b")
+    expect(rectangle.opacity).toBe(0.35)
     expect(rectangle.strokeColor).toBe("#123456")
     expect(rectangle.strokeWidth).toBe(5)
 
     canvas.setActiveTool("draw")
     drag(canvas, { x: 20, y: 20 }, { x: 120, y: 60 })
     const path = findElement(canvas, "path")
+    expect(path.opacity).toBe(0.6)
     expect(path.smoothing).toBe(0.8)
     expect(path.strokeWidth).toBe(7)
+  })
+
+  it("applies fill and opacity to ellipses", () => {
+    const canvas = new AdrawCanvas({
+      tools: {
+        ellipse: { fillColor: "#d0bfff", opacity: 0.5, strokeWidth: 3 },
+      },
+    })
+
+    canvas.setActiveTool("ellipse")
+    drag(canvas, { x: 10, y: 10 }, { x: 110, y: 60 })
+
+    const ellipse = findElement(canvas, "ellipse")
+    expect(ellipse.fillColor).toBe("#d0bfff")
+    expect(ellipse.opacity).toBe(0.5)
+    expect(ellipse.strokeWidth).toBe(3)
+
+    canvas.selectAll()
+    canvas.setToolOptions("ellipse", { fillColor: "#ffd8a8", opacity: 0.2 })
+
+    const updated = findElement(canvas, "ellipse")
+    expect(updated.fillColor).toBe("#ffd8a8")
+    expect(updated.opacity).toBe(0.2)
   })
 
   it("applies setToolOptions to future elements", () => {
@@ -178,12 +209,16 @@ describe("tool options", () => {
 
     canvas.setToolOptions("rectangle", {
       cornerRadius: 6,
+      fillColor: "#ffd43b",
+      opacity: 0.4,
       strokeColor: "#f00",
       strokeWidth: 4,
     })
 
     const updated = canvas.getElements().get("rect") as RectangleElement
     expect(updated.cornerRadius).toBe(6)
+    expect(updated.fillColor).toBe("#ffd43b")
+    expect(updated.opacity).toBe(0.4)
     expect(updated.strokeColor).toBe("#f00")
     expect(updated.strokeWidth).toBe(4)
   })
@@ -272,7 +307,14 @@ describe("tool options", () => {
     document.body.appendChild(container)
     const canvas = new AdrawCanvas({
       container,
-      tools: { rectangle: { cornerRadius: 9, strokeWidth: 6 } },
+      tools: {
+        rectangle: {
+          cornerRadius: 9,
+          fillColor: "#ffd43b",
+          opacity: 0.4,
+          strokeWidth: 6,
+        },
+      },
     })
     canvas.setCanvasSize(800, 600)
 
@@ -301,11 +343,66 @@ describe("tool options", () => {
     ) as SVGRectElement
     expect(node.getAttribute("rx")).toBe("9")
     expect(node.getAttribute("stroke-width")).toBe("6")
+    expect(node.getAttribute("fill")).toBe("#ffd43b")
+    expect(node.parentElement?.getAttribute("opacity")).toBe("0.4")
 
-    canvas.setToolOptions("rectangle", { cornerRadius: 3, strokeWidth: 2 })
+    canvas.setToolOptions("rectangle", {
+      cornerRadius: 3,
+      fillColor: "#40c057",
+      opacity: 1,
+      strokeWidth: 2,
+    })
 
     expect(node.getAttribute("rx")).toBe("3")
     expect(node.getAttribute("stroke-width")).toBe("2")
+    expect(node.getAttribute("fill")).toBe("#40c057")
+    expect(node.parentElement?.hasAttribute("opacity")).toBe(false)
+  })
+
+  it("keeps freehand paths unfilled", () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        disconnect() {}
+        observe() {}
+      },
+    )
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const canvas = new AdrawCanvas({
+      container,
+      tools: { draw: { fillColor: "#f00", opacity: 0.5 } },
+    })
+    canvas.setCanvasSize(800, 600)
+    canvas.setActiveTool("draw")
+
+    const svg = container.querySelector("svg")!
+    for (const [type, point] of [
+      ["pointerdown", { x: 200, y: 200 }],
+      ["pointermove", { x: 300, y: 260 }],
+      ["pointerup", { x: 300, y: 260 }],
+    ] as const) {
+      svg.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          clientX: point.x,
+          clientY: point.y,
+          pointerId: 1,
+        }),
+      )
+    }
+
+    const path = findElement(canvas, "path")
+    const node = container.querySelector(
+      `[id="${path.id}"] path`,
+    ) as SVGPathElement
+    expect(node.getAttribute("fill")).toBe("none")
+    expect(node.parentElement?.getAttribute("opacity")).toBe("0.5")
+
+    canvas.selectAll()
+    canvas.setToolOptions("draw", { fillColor: "#0f0" })
+    expect(node.getAttribute("fill")).toBe("none")
+    expect("fillColor" in path).toBe(false)
   })
 
   it("uses the text tool font size for the inline editor preview", () => {

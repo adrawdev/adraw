@@ -42,6 +42,7 @@ export function createArrowTool(options: ToolOptions = {}): Tool {
       endY: end.y,
       height: Math.max(Math.abs(end.y - start.y), 1),
       locked: false,
+      opacity: currentOptions.opacity ?? 1,
       rotation: 0,
       startBinding: startLink,
       startX: start.x,

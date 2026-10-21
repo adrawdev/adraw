@@ -55,7 +55,12 @@ const canvas = new AdrawCanvas({
   container,
   tools: {
     draw: { smoothing: 0.7, strokeWidth: 4 },
-    rectangle: { cornerRadius: 8, strokeWidth: 3 },
+    rectangle: {
+      cornerRadius: 8,
+      fillColor: "#ffd43b",
+      opacity: 0.35,
+      strokeWidth: 3,
+    },
     text: { fontSize: 24, strokeColor: "#111" },
   },
 })
@@ -64,14 +69,16 @@ canvas.setToolOptions("draw", { strokeWidth: 6 })
 canvas.setToolOptions("text", { fontSize: 32 })
 
 canvas.getToolOptions("rectangle")
-// { strokeColor, strokeWidth: 3, cornerRadius: 8 }
+// { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
 ```
 
 Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow` and
-`text`. Shared options are `strokeColor` and `strokeWidth`; the tool-specific
-ones are `smoothing` (draw), `cornerRadius` (rectangle) and `fontSize`
-(text). `setStrokeColor` remains a shortcut for changing the global
-stroke color and clears per-tool color overrides.
+`text`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
+`fillColor` applies to `rectangle` and `ellipse` (combine it with `opacity <
+1` for translucent highlights). The tool-specific ones are `smoothing`
+(draw), `cornerRadius` (rectangle) and `fontSize` (text). `setStrokeColor`
+remains a shortcut for changing the global stroke color and clears per-tool
+color overrides.
 
 Subscribe to `toolOptionsChange` to mirror style state in custom UI:
 
@@ -92,6 +99,10 @@ Each element on the canvas has a type:
 - `arrow` — line with optional arrowheads; either endpoint can bind to a shape
 - `media` — raster image
 - `group` — container for other elements
+
+Rectangles and ellipses accept `fillColor`; every element accepts `opacity`
+(`0`–`1`). A translucent highlighter background is just a rectangle with
+`fillColor: "#ffd43b"` and `opacity: 0.35`. Freehand paths are stroked only.
 
 ## Arrows and bindings
 

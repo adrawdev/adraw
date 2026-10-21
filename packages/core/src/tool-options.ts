@@ -77,6 +77,7 @@ export const CONFIGURABLE_TOOLS = [
 
 const DEFAULT_BASE_OPTIONS: Required<ToolOptions> = {
   fillColor: FILL_COLOR,
+  opacity: 1,
   strokeColor: STROKE_COLOR,
   strokeWidth: STROKE_WIDTH,
 }

@@ -146,8 +146,10 @@ if (style()) {
 }
 ```
 
-Tool-specific fields: `cornerRadius` (rectangle), `fontSize` (text),
-`smoothing` (draw). Changes also restyle matching selected elements.
+All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
+to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
+highlights). Tool-specific fields: `cornerRadius` (rectangle), `fontSize`
+(text), `smoothing` (draw). Changes also restyle matching selected elements.
 
 ### `useTransformOverlay()`
 

@@ -11,8 +11,8 @@ type ApplicableToolOptions = ToolOptions & {
 
 /**
  * Apply the style fields a tool owns to one element. Fields the element does
- * not support are ignored, so `cornerRadius` only touches rectangles and
- * `fontSize` only touches text.
+ * not support are ignored, so `fillColor` only touches rectangles/ellipses,
+ * `cornerRadius` only touches rectangles and `fontSize` only touches text.
  *
  * @param element Element to restyle.
  * @param options Tool style options.
@@ -29,6 +29,16 @@ export function applyToolOptionsToElement(
   }
   if ("strokeWidth" in next && options.strokeWidth !== undefined) {
     next = { ...next, strokeWidth: options.strokeWidth }
+  }
+  if (
+    (next.type === "rectangle" || next.type === "ellipse") &&
+    options.fillColor !== undefined &&
+    next.fillColor !== options.fillColor
+  ) {
+    next = { ...next, fillColor: options.fillColor }
+  }
+  if (options.opacity !== undefined && next.opacity !== options.opacity) {
+    next = { ...next, opacity: options.opacity }
   }
   if (next.type === "rectangle" && options.cornerRadius !== undefined) {
     next = { ...next, cornerRadius: options.cornerRadius }

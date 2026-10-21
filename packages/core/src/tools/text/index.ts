@@ -74,6 +74,7 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
         fontSize,
         height: size.height,
         locked: false,
+        opacity: gestureOptions.opacity ?? 1,
         rotation: 0,
         strokeColor: gestureOptions.strokeColor ?? STROKE_COLOR,
         text: pendingText,

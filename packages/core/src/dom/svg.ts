@@ -172,10 +172,26 @@ function arrowHeadPath(tip: Point, dir: Point, headLength: number): string {
   return `M ${tip.x} ${tip.y} L ${a.x} ${a.y} L ${b.x} ${b.y} Z`
 }
 
+/**
+ * Mirror an element's `opacity` onto its SVG group. Omitted or fully opaque
+ * elements get no attribute so the common case stays clean.
+ */
+export function applyElementOpacity(
+  group: SVGGElement,
+  element: CanvasElement,
+): void {
+  if (element.opacity === undefined || element.opacity === 1) {
+    group.removeAttribute("opacity")
+  } else {
+    group.setAttribute("opacity", `${element.opacity}`)
+  }
+}
+
 export function createElementGroup(element: CanvasElement): SVGGElement {
   const group = document.createElementNS(svgNamespaceURI, "g")
   group.id = element.id
   group.setAttribute("transform", getTransformElementAttribute(element))
+  applyElementOpacity(group, element)
 
   switch (element.type) {
     case "rectangle": {
@@ -184,7 +200,7 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       rect.setAttribute("height", `${element.height}`)
       rect.setAttribute("rx", `${element.cornerRadius}`)
       rect.setAttribute("ry", `${element.cornerRadius}`)
-      rect.setAttribute("fill", FILL_COLOR)
+      rect.setAttribute("fill", element.fillColor || FILL_COLOR)
       rect.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
       rect.setAttribute(
         "stroke-width",
@@ -200,7 +216,7 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
       ellipse.setAttribute("cy", `${element.height / 2}`)
       ellipse.setAttribute("rx", `${element.width / 2}`)
       ellipse.setAttribute("ry", `${element.height / 2}`)
-      ellipse.setAttribute("fill", FILL_COLOR)
+      ellipse.setAttribute("fill", element.fillColor || FILL_COLOR)
       ellipse.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
       ellipse.setAttribute(
         "stroke-width",

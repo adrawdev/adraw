@@ -49,7 +49,7 @@ export interface CanvasOptions {
   snapping?: Partial<SnappingConfig>
   /**
    * Per-tool style defaults, e.g.
-   * `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24 } }`.
+   * `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8, fillColor: "#ffd43b", opacity: 0.35 }, text: { fontSize: 24 } }`.
    * Changing options later (via `setToolOptions`) also restyles matching
    * elements in the current selection.
    */

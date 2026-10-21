@@ -3,6 +3,7 @@ import type { SnappingConfig } from "../snapping"
 import type {
   BoundingBox,
   CanvasElement,
+  CanvasElementStyle,
   ElementId,
   Point,
   SnapGuide,
@@ -91,13 +92,11 @@ export function createBaseToolState(): ToolState {
 }
 
 /**
- * Optional visual style overrides for a tool.
+ * Optional visual style overrides for a tool. Shared with
+ * {@link CanvasElementStyle}; `fillColor` only affects rectangles and
+ * ellipses, while `opacity` affects every element type.
  */
-export interface ToolOptions {
-  strokeColor?: string
-  fillColor?: string
-  strokeWidth?: number
-}
+export type ToolOptions = CanvasElementStyle
 
 /**
  * Default tool options derived from the global constants.
@@ -105,6 +104,7 @@ export interface ToolOptions {
 export function getDefaultToolOptions(): ToolOptions {
   return {
     fillColor: FILL_COLOR,
+    opacity: 1,
     strokeColor: STROKE_COLOR,
     strokeWidth: STROKE_WIDTH,
   }

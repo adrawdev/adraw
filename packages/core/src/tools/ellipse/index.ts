@@ -1,4 +1,4 @@
-import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
+import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createEllipse, getNextZIndex } from "../../elements"
 import type { EllipseElement, Point, ToolType } from "../../types"
 import {
@@ -56,8 +56,10 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
 
       const currentOptions = getToolOptionsForContext(toolOptions, context)
       temporaryElement = createEllipse({
+        fillColor: currentOptions.fillColor ?? FILL_COLOR,
         height: bounds.height,
         locked: false,
+        opacity: currentOptions.opacity ?? 1,
         rotation: 0,
         strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
         strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
@@ -85,8 +87,10 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
       if (bounds.width > 5 && bounds.height > 5) {
         const currentOptions = getToolOptionsForContext(toolOptions, context)
         const element = createEllipse({
+          fillColor: currentOptions.fillColor ?? FILL_COLOR,
           height: bounds.height,
           locked: false,
+          opacity: currentOptions.opacity ?? 1,
           rotation: 0,
           strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
           strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,

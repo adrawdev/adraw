@@ -58,6 +58,11 @@ export interface BaseElement {
   zIndex: number
   locked: boolean
   visible: boolean
+  /**
+   * Opacity from `0` (transparent) to `1` (opaque). Applies to the element's
+   * stroke and fill as a whole. Defaults to `1` when omitted.
+   */
+  opacity?: number
 }
 
 /**
@@ -68,6 +73,11 @@ export interface RectangleElement extends BaseElement {
   cornerRadius: number
   strokeWidth: number
   strokeColor: string
+  /**
+   * Fill color. Defaults to the `--adraw-fill` CSS variable (transparent)
+   * when omitted; use `"none"` for no fill.
+   */
+  fillColor?: string
 }
 
 /**
@@ -77,6 +87,11 @@ export interface EllipseElement extends BaseElement {
   type: "ellipse"
   strokeWidth: number
   strokeColor: string
+  /**
+   * Fill color. Defaults to the `--adraw-fill` CSS variable (transparent)
+   * when omitted; use `"none"` for no fill.
+   */
+  fillColor?: string
 }
 
 /**
@@ -224,12 +239,19 @@ export interface CanvasState {
 }
 
 /**
- * Optional visual styling overrides for an element.
+ * Optional visual styling shared by elements and tool options. Element
+ * interfaces expose the concrete values: `strokeColor` and `strokeWidth` on
+ * stroked shapes, `fillColor` on rectangles/ellipses, and `opacity` on every
+ * element.
  */
 export interface CanvasElementStyle {
+  /** Stroke color. */
   strokeColor?: string
+  /** Fill color. Applies to rectangles and ellipses. */
   fillColor?: string
+  /** Stroke width in pixels. */
   strokeWidth?: number
+  /** Opacity from `0` (transparent) to `1` (opaque). */
   opacity?: number
 }
 

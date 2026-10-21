@@ -1,4 +1,4 @@
-import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
+import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createRectangle, getNextZIndex } from "../../elements"
 import type { Point, RectangleElement, ToolType } from "../../types"
 import {
@@ -59,8 +59,10 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
       const currentOptions = getToolOptionsForContext(toolOptions, context)
       temporaryElement = createRectangle({
         cornerRadius: currentOptions.cornerRadius ?? 0,
+        fillColor: currentOptions.fillColor ?? FILL_COLOR,
         height: bounds.height,
         locked: false,
+        opacity: currentOptions.opacity ?? 1,
         rotation: 0,
         strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
         strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,
@@ -89,8 +91,10 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
         const currentOptions = getToolOptionsForContext(toolOptions, context)
         const element = createRectangle({
           cornerRadius: currentOptions.cornerRadius ?? 0,
+          fillColor: currentOptions.fillColor ?? FILL_COLOR,
           height: bounds.height,
           locked: false,
+          opacity: currentOptions.opacity ?? 1,
           rotation: 0,
           strokeColor: currentOptions.strokeColor ?? STROKE_COLOR,
           strokeWidth: currentOptions.strokeWidth ?? STROKE_WIDTH,

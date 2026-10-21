@@ -41,8 +41,10 @@ describe("elements", () => {
     it("createRectangle assigns type and generated id", () => {
       const rect = createRectangle({
         cornerRadius: 4,
+        fillColor: "#ffd43b",
         height: 10,
         locked: false,
+        opacity: 0.5,
         rotation: 0,
         strokeColor: "#000",
         strokeWidth: 2,
@@ -56,6 +58,8 @@ describe("elements", () => {
       expect(rect.type).toBe("rectangle")
       expect(rect.id).toBeTruthy()
       expect(rect.cornerRadius).toBe(4)
+      expect(rect.fillColor).toBe("#ffd43b")
+      expect(rect.opacity).toBe(0.5)
     })
 
     it("respects an explicitly provided id", () => {
@@ -83,9 +87,9 @@ describe("elements", () => {
 
     it("createPath defaults points to an empty array", () => {
       const path = createPath({
-        fillColor: "#000",
         height: 0,
         locked: false,
+        points: [],
         rotation: 0,
         strokeColor: "#000",
         strokeWidth: 1,
@@ -94,7 +98,7 @@ describe("elements", () => {
         x: 0,
         y: 0,
         zIndex: 0,
-      } as never)
+      })
 
       expect(path.type).toBe("path")
       expect(path.points).toEqual([])

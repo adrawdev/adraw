@@ -1,4 +1,9 @@
-import { STROKE_COLOR, STROKE_WIDTH, TEXT_FONT_SIZE } from "../constants"
+import {
+  FILL_COLOR,
+  STROKE_COLOR,
+  STROKE_WIDTH,
+  TEXT_FONT_SIZE,
+} from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import type { CanvasElement, TextElement } from "../types"
 import { renderGuides } from "./render/guides"
@@ -7,6 +12,7 @@ import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"
 import {
   appendTextLines,
+  applyElementOpacity,
   bindingTargetClass,
   createElementGroup,
   getArrowSvgGeometry,
@@ -131,6 +137,7 @@ export function updateElementGeometry(
   element: CanvasElement,
 ): void {
   group.setAttribute("transform", getTransformElementAttribute(element))
+  applyElementOpacity(group, element)
 
   switch (element.type) {
     case "line": {
@@ -193,6 +200,7 @@ export function updateElementGeometry(
       rectElement.setAttribute("height", `${element.height}`)
       rectElement.setAttribute("rx", `${element.cornerRadius}`)
       rectElement.setAttribute("ry", `${element.cornerRadius}`)
+      rectElement.setAttribute("fill", element.fillColor || FILL_COLOR)
       rectElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
       rectElement.setAttribute(
         "stroke-width",
@@ -206,6 +214,7 @@ export function updateElementGeometry(
       ellipseElement.setAttribute("cy", `${element.height / 2}`)
       ellipseElement.setAttribute("rx", `${element.width / 2}`)
       ellipseElement.setAttribute("ry", `${element.height / 2}`)
+      ellipseElement.setAttribute("fill", element.fillColor || FILL_COLOR)
       ellipseElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
       ellipseElement.setAttribute(
         "stroke-width",
