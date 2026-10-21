@@ -5,6 +5,7 @@ import {
   type ToolOptionsMap,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 import { computed, inject, type Signal } from "@angular/core"
 
@@ -48,7 +49,7 @@ export function useViewport() {
     viewport: canvas.viewport,
     zoomIn: () => canvas.zoomIn(),
     zoomOut: () => canvas.zoomOut(),
-    zoomToFit: () => canvas.zoomToFit(),
+    zoomToFit: (options?: ZoomToFitOptions) => canvas.zoomToFit(options),
   }
 }
 

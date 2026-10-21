@@ -91,7 +91,7 @@ function Toolbar() {
       <button type="button" style={styles.button} onClick={zoomOut}>
         -
       </button>
-      <button type="button" style={styles.button} onClick={zoomToFit}>
+      <button type="button" style={styles.button} onClick={() => zoomToFit()}>
         Fit
       </button>
       <button type="button" style={styles.button} onClick={resetZoom}>

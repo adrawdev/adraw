@@ -108,13 +108,36 @@ Rectangles and ellipses accept `fillColor`; every element accepts `opacity`
 ## Viewport
 
 ```ts
+const canvas = new AdrawCanvas({
+  container,
+  viewport: {
+    minZoom: 0.25,
+    maxZoom: 8,
+    zoomSensitivity: 0.001,
+    fitPadding: 32,
+    constrainToContent: true,
+  },
+})
+
 canvas.zoomIn()
 canvas.zoomOut()
 canvas.resetZoom()
 canvas.zoomToFit()
+canvas.zoomToFit({ padding: 64 })
+canvas.zoomToFit({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } })
 canvas.setViewport({ x: 0, y: 0, zoom: 1.5 })
 canvas.getViewport() // ViewportState
 ```
+
+`zoomToFit()` accepts bounds as either `x`/`y`/`width`/`height` or
+`left`/`right`/`top`/`bottom`; without `bounds` it fits every visible element.
+Its padding defaults to `viewport.fitPadding` (32px). When bounds are passed,
+`constrainToContent` uses them as the content region until the next fit.
+
+With `constrainToContent: true`, panning is clamped so content stays in view
+(content is centered when it fits) and zooming out stops at the zoom of the
+last `zoomToFit()`. Call `zoomToFit()` once content is loaded to establish that
+floor.
 
 Mouse wheel zooms when `Ctrl`/`Cmd` is held; otherwise pans. Pinch-to-zoom works on touch devices.
 

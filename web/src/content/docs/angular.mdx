@@ -131,6 +131,8 @@ setTool("draw")
 const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
   useViewport()
 // viewport: Signal<ViewportState> — { x: number, y: number, zoom: number }
+zoomToFit({ padding: 64 })
+zoomToFit({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } })
 ```
 
 ### `useHistory()`

@@ -1,6 +1,7 @@
 import type { SnappingConfig } from "./snapping"
 import type { ToolOptionsChangeEvent, ToolOptionsConfig } from "./tool-options"
 import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
+import type { ViewportConfig } from "./viewport"
 
 /**
  * Serialization hooks bridging the in-memory clipboard to the system clipboard
@@ -45,6 +46,19 @@ export interface CanvasOptions {
   keyboard?: KeyboardScope
   /** Starting viewport; defaults to origin/zoom 1. */
   initialViewport?: ViewportState
+  /**
+   * Zoom/pan behavior. Defaults: `minZoom` 0.1, `maxZoom` 10,
+   * `zoomSensitivity` 0.001, `fitPadding` 32 and `constrainToContent` false.
+   *
+   * @example
+   * ```ts
+   * const canvas = new AdrawCanvas({
+   *   container,
+   *   viewport: { minZoom: 0.25, maxZoom: 8, fitPadding: 64, constrainToContent: true },
+   * })
+   * ```
+   */
+  viewport?: Partial<ViewportConfig>
   /** Snapping configuration (threshold in pixels). */
   snapping?: Partial<SnappingConfig>
   /**

@@ -101,6 +101,8 @@ setTool("rectangle")
 const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
   useViewport()
 // viewport: ViewportState — reactive getter
+zoomToFit({ padding: 64 })
+zoomToFit({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } })
 ```
 
 ### `useHistory()`

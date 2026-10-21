@@ -1,5 +1,6 @@
 import { syncArrowBindings } from "../bindings"
 import { STROKE_COLOR } from "../constants"
+import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import {
   /**
@@ -67,7 +68,17 @@ import type {
   ToolType,
   ViewportState,
 } from "../types"
-import { createViewport, resetViewport, zoomViewport } from "../viewport"
+import {
+  constrainViewportToBounds,
+  createViewport,
+  normalizeViewportBounds,
+  resetViewport,
+  resolveViewportConfig,
+  type ViewportConfig,
+  zoomToFit as fitViewport,
+  type ZoomToFitOptions,
+  zoomViewport,
+} from "../viewport"
 import {
   ClipboardManager,
   cloneElementDeep,
@@ -75,11 +86,7 @@ import {
   createPastedElements,
 } from "./clipboard"
 import { createMediaElements } from "./media"
-import {
-  deleteSelectedElements,
-  selectAllIds,
-  computeZoomToFitViewport,
-} from "./selection"
+import { deleteSelectedElements, selectAllIds } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
 import { applyToolOptionsToElement } from "./tool-options"
 import {
@@ -134,6 +141,10 @@ export interface EngineInternal {
    * Get the current viewport state.
    */
   getViewport: () => ViewportState
+  /**
+   * Get the fully resolved viewport configuration.
+   */
+  getViewportConfig: () => ViewportConfig
   setPointerPoint: (point: Point) => void
   /**
    * Set the viewport state and emit `viewportChange`.
@@ -161,6 +172,19 @@ export class CanvasEngine {
   private elements = new Map<ElementId, CanvasElement>()
   private selectedIds = new Set<ElementId>()
   private viewport: ViewportState
+  private readonly viewportConfig: ViewportConfig
+  // Zoom of the last explicit fit. While `constrainToContent` is enabled it
+  // acts as the effective minimum zoom, so the user cannot zoom out past the
+  // content they fitted.
+  private contentFitZoom: number | null = null
+  // Bounds supplied to the last `zoomToFit({ bounds })`; while set, the
+  // constrainToContent pan clamp uses them instead of the live element bounds.
+  private contentBoundsOverride: {
+    bottom: number
+    left: number
+    right: number
+    top: number
+  } | null = null
   private activeTool: Tool
   private snappingConfig: SnappingConfig
   private isSnapMode: boolean
@@ -196,7 +220,8 @@ export class CanvasEngine {
   onToolWillChange: (() => void) | null = null
 
   constructor(options: CanvasOptions = {}) {
-    this.viewport = createViewport(options.initialViewport)
+    this.viewportConfig = resolveViewportConfig(options.viewport)
+    this.viewport = createViewport(options.initialViewport, this.viewportConfig)
     this.clipboard = new ClipboardManager(options.clipboard)
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.isSnapMode = options.isSnapMode ?? false
@@ -380,12 +405,42 @@ export class CanvasEngine {
   }
 
   /**
-   * Set the viewport state and emit `viewportChange`.
+   * Get the fully resolved viewport configuration.
+   */
+  getViewportConfig(): ViewportConfig {
+    return { ...this.viewportConfig }
+  }
+
+  /**
+   * Set the viewport state and emit `viewportChange`. The zoom is clamped to
+   * the configured range and, when `constrainToContent` is enabled, the pan is
+   * clamped so content stays in view.
    * @param viewport New viewport.
    */
   setViewport(viewport: ViewportState): void {
-    this.viewport = viewport
+    this.viewport = this.constrainViewport(viewport)
     this.emit("viewportChange", { viewport: this.viewport })
+  }
+
+  // Clamp zoom to the configured range plus the last-fit floor, then keep
+  // content in view when requested.
+  private constrainViewport(viewport: ViewportState): ViewportState {
+    const bounds = this.viewportConfig.constrainToContent
+      ? (this.contentBoundsOverride ?? getElementsBounds(this.elements))
+      : null
+    const minZoom =
+      bounds && this.contentFitZoom !== null
+        ? Math.max(this.viewportConfig.minZoom, this.contentFitZoom)
+        : this.viewportConfig.minZoom
+
+    const zoom = clamp(viewport.zoom, minZoom, this.viewportConfig.maxZoom)
+    const clamped = zoom === viewport.zoom ? viewport : { ...viewport, zoom }
+
+    if (!bounds) {
+      return clamped
+    }
+
+    return constrainViewportToBounds(clamped, bounds, this.canvasSize)
   }
 
   /**
@@ -1095,47 +1150,69 @@ export class CanvasEngine {
   }
 
   /**
-   * Zoom in by one step around the origin.
+   * Zoom in by one step around the viewport center.
    */
   zoomIn(): void {
-    const center = { x: 0, y: 0 }
-    this.viewport = zoomViewport(this.viewport, -100, center)
-    this.emit("viewportChange", { viewport: this.viewport })
+    const center = { x: this.viewport.x, y: this.viewport.y }
+    this.setViewport(
+      zoomViewport(this.viewport, -100, center, this.viewportConfig),
+    )
   }
 
   /**
-   * Zoom out by one step around the origin.
+   * Zoom out by one step around the viewport center.
    */
   zoomOut(): void {
-    const center = { x: 0, y: 0 }
-    this.viewport = zoomViewport(this.viewport, 100, center)
-    this.emit("viewportChange", { viewport: this.viewport })
+    const center = { x: this.viewport.x, y: this.viewport.y }
+    this.setViewport(
+      zoomViewport(this.viewport, 100, center, this.viewportConfig),
+    )
   }
 
   /**
-   * Reset zoom to 1 and center to 0,0.
+   * Reset zoom to 1 and center to 0,0. With `constrainToContent` enabled the
+   * zoom floor and pan constraint still apply.
    */
   resetZoom(): void {
-    this.viewport = resetViewport()
-    this.emit("viewportChange", { viewport: this.viewport })
+    this.setViewport(resetViewport())
   }
 
   /**
-   * Zoom and pan to fit all elements.
+   * Zoom and pan to fit content, clamped to the configured zoom range.
+   *
+   * @param options Optional padding in screen pixels (defaults to
+   * `viewport.fitPadding`) and explicit bounds (defaults to all visible
+   * elements). Explicit bounds also become the region used by
+   * `constrainToContent` until the next fit.
    */
-  zoomToFit(): void {
-    const bounds = getElementsBounds(this.elements)
+  zoomToFit(options: ZoomToFitOptions = {}): void {
+    const bounds = options.bounds ?? getElementsBounds(this.elements)
     if (!bounds) {
       return
     }
 
-    const viewport = computeZoomToFitViewport(bounds, this.canvasSize)
-    if (!viewport) {
+    const padding = Math.max(
+      0,
+      options.padding ?? this.viewportConfig.fitPadding,
+    )
+    const viewport = fitViewport(
+      this.viewport,
+      bounds,
+      this.canvasSize,
+      padding,
+      this.viewportConfig,
+    )
+    if (viewport === this.viewport) {
       return
     }
 
-    this.viewport = viewport
-    this.emit("viewportChange", { viewport: this.viewport })
+    // Record the fit bounds and zoom before applying them so the constraint
+    // accepts the fit and later pan/zoom-outs use the same content region.
+    this.contentBoundsOverride = options.bounds
+      ? normalizeViewportBounds(options.bounds)
+      : null
+    this.contentFitZoom = viewport.zoom
+    this.setViewport(viewport)
   }
 
   /**

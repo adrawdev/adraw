@@ -11,6 +11,7 @@ import {
   type ToolOptionsState,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 import React, { createContext, useCallback, useContext } from "react"
 
@@ -115,9 +116,12 @@ export function useViewport() {
     vanillaRef?.current?.resetZoom()
   }, [vanillaRef])
 
-  const zoomToFit = useCallback(() => {
-    vanillaRef?.current?.zoomToFit()
-  }, [vanillaRef])
+  const zoomToFit = useCallback(
+    (options?: ZoomToFitOptions) => {
+      vanillaRef?.current?.zoomToFit(options)
+    },
+    [vanillaRef],
+  )
 
   return {
     resetZoom,

@@ -9,6 +9,7 @@ import {
   type ToolOptionsState,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 import { createContext, useContext, type Accessor, type Setter } from "solid-js"
 
@@ -96,7 +97,8 @@ export function useViewport() {
     },
     zoomIn: () => canvasRef.current?.zoomIn(),
     zoomOut: () => canvasRef.current?.zoomOut(),
-    zoomToFit: () => canvasRef.current?.zoomToFit(),
+    zoomToFit: (options?: ZoomToFitOptions) =>
+      canvasRef.current?.zoomToFit(options),
   }
 }
 

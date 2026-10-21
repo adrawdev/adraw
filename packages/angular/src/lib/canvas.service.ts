@@ -9,6 +9,7 @@ import {
   type ToolOptionsState,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 import {
   computed,
@@ -180,9 +181,9 @@ export class CanvasService {
     this.core.resetZoom()
   }
 
-  /** Zoom to fit all elements. */
-  zoomToFit(): void {
-    this.core.zoomToFit()
+  /** Zoom to fit content, optionally with custom padding or bounds. */
+  zoomToFit(options?: ZoomToFitOptions): void {
+    this.core.zoomToFit(options)
   }
 
   /** Undo the last change. @returns Whether applied. */

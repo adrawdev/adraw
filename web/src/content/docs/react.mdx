@@ -64,6 +64,12 @@ Context provider that initialises shared canvas state. All hooks and `<Canvas>` 
 <CanvasProvider
   options={{
     snapping: { threshold: 8 },
+    viewport: {
+      constrainToContent: true,
+      fitPadding: 64,
+      maxZoom: 8,
+      minZoom: 0.25,
+    },
     tools: {
       draw: { strokeWidth: 4, smoothing: 0.7 },
       rectangle: { cornerRadius: 8 },
@@ -114,6 +120,8 @@ setTool("draw")
 const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
   useViewport()
 // viewport: ViewportState — { x: number, y: number, zoom: number }
+zoomToFit({ padding: 64 })
+zoomToFit({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } })
 ```
 
 ### `useHistory()`

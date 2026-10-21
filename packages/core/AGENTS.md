@@ -39,7 +39,7 @@ src/
     tool-options.ts  applyToolOptionsToElement: style write-back for selected elements
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
-    selection.ts     selectAllIds, deleteSelectedElements, computeZoomToFitViewport
+    selection.ts     selectAllIds, deleteSelectedElements
     z-order.ts       bringToFront / sendToBack / setZIndex math
     shortcuts.ts     handleShortcutKey (pure keyboard-shortcut function)
     internal.ts      text-editing + overlay hooks over EngineInternal
@@ -70,34 +70,34 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 
 ### Key methods
 
-| Method                                                  | Description                                            |
-| ------------------------------------------------------- | ------------------------------------------------------ |
-| `mount(container)`                                      | Attach DOM adapter to an element                       |
-| `destroy()`                                             | Tear down DOM, remove event listeners                  |
-| `render()`                                              | Full re-render of the SVG                              |
-| `getElements()`                                         | Get current elements `Map<ElementId, CanvasElement>`   |
-| `setActiveTool(tool)`                                   | Switch active tool                                     |
-| `getActiveTool()`                                       | Get current tool `ToolType`                            |
-| `setViewport(vp)`                                       | Set viewport position/zoom                             |
-| `getViewport()`                                         | Current viewport `{ x, y, zoom }`                      |
-| `zoomIn()` / `zoomOut()`                                | Zoom by ZOOM_STEP                                      |
-| `resetZoom()`                                           | Reset zoom to 1, center to 0,0                         |
-| `zoomToFit()`                                           | Fit all elements in viewport                           |
-| `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                   |
-| `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)         |
-| `setZIndex(id, z)`                                      | Set one element's exact stacking index                 |
-| `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                  |
-| `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text           |
-| `undo()` / `redo()`                                     | History navigation                                     |
-| `canUndo()` / `canRedo()`                               | History stack state                                    |
-| `pushHistory()`                                         | Record an explicit undo checkpoint                     |
-| `clearHistory()`                                        | Reset history with the current state as new baseline   |
-| `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                 |
-| `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                  |
-| `getToolOptions(tool)`                                  | Resolved style options for a drawing tool              |
-| `setToolOptions(tool, partial)`                         | Merge tool styles; restyles matching selected elements |
-| `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                           |
-| `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                              |
+| Method                                                  | Description                                               |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| `mount(container)`                                      | Attach DOM adapter to an element                          |
+| `destroy()`                                             | Tear down DOM, remove event listeners                     |
+| `render()`                                              | Full re-render of the SVG                                 |
+| `getElements()`                                         | Get current elements `Map<ElementId, CanvasElement>`      |
+| `setActiveTool(tool)`                                   | Switch active tool                                        |
+| `getActiveTool()`                                       | Get current tool `ToolType`                               |
+| `setViewport(vp)`                                       | Set viewport position/zoom                                |
+| `getViewport()`                                         | Current viewport `{ x, y, zoom }`                         |
+| `zoomIn()` / `zoomOut()`                                | Zoom by ZOOM_STEP                                         |
+| `resetZoom()`                                           | Reset zoom to 1, center to 0,0                            |
+| `zoomToFit(options?)`                                   | Fit all elements (or explicit bounds/padding) in viewport |
+| `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                      |
+| `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)            |
+| `setZIndex(id, z)`                                      | Set one element's exact stacking index                    |
+| `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
+| `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text              |
+| `undo()` / `redo()`                                     | History navigation                                        |
+| `canUndo()` / `canRedo()`                               | History stack state                                       |
+| `pushHistory()`                                         | Record an explicit undo checkpoint                        |
+| `clearHistory()`                                        | Reset history with the current state as new baseline      |
+| `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                    |
+| `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                     |
+| `getToolOptions(tool)`                                  | Resolved style options for a drawing tool                 |
+| `setToolOptions(tool, partial)`                         | Merge tool styles; restyles matching selected elements    |
+| `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                              |
+| `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                                 |
 
 ### Events
 
@@ -119,6 +119,7 @@ Passed to constructor as `CanvasOptions`:
 
 - `container?: HTMLElement`
 - `initialViewport?: ViewportState`
+- `viewport?: Partial<ViewportConfig>` — `{ minZoom, maxZoom, zoomSensitivity, fitPadding, constrainToContent }`; applies to wheel zoom, `zoomIn`/`zoomOut`, `resetZoom`, `setViewport` and `zoomToFit`. `constrainToContent` clamps panning to the content and floors zoom at the last `zoomToFit()` level
 - `hideOverlayWhileTransforming?: boolean`
 - `snapping?: SnappingConfig` (`{ threshold }`)
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
@@ -268,6 +269,7 @@ snapping-gestures.test.ts      — move/resize/create snapping via headless canv
 text.test.ts                  — text tool, measurement, hit-testing
 transform-overlay.test.ts      — transform overlay
 viewport.test.ts               — zoom, pan, zoomToFit
+viewport-config.test.ts        — CanvasOptions.viewport, constraints, fit bounds
 ```
 
 Run with `pnpm test` from root or `pnpm test run packages/core/src/__tests__/coordinates.test.ts`.

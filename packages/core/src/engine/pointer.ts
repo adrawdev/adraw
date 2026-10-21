@@ -140,7 +140,9 @@ export function applyZoomAtScreenPoint(
     x: (canvasSize.width / 2 - x) / viewport.zoom + viewport.x,
     y: (canvasSize.height / 2 - y) / viewport.zoom + viewport.y,
   }
-  engine.setViewport(zoomViewport(viewport, deltaY, centerPoint))
+  engine.setViewport(
+    zoomViewport(viewport, deltaY, centerPoint, engine.getViewportConfig()),
+  )
 }
 
 /** @internal */

@@ -83,7 +83,7 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
   <div class="separator"></div>
   <button type="button" onclick={viewport.zoomIn}>+</button>
   <button type="button" onclick={viewport.zoomOut}>-</button>
-  <button type="button" onclick={viewport.zoomToFit}>Fit</button>
+  <button type="button" onclick={() => viewport.zoomToFit()}>Fit</button>
   <button type="button" onclick={viewport.resetZoom}>Reset</button>
 </div>
 

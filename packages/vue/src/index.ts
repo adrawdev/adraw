@@ -11,6 +11,7 @@ import {
   type ToolOptionsState,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 import {
   h,
@@ -169,7 +170,7 @@ export function useViewport() {
     },
     zoomIn: () => canvas.core.zoomIn(),
     zoomOut: () => canvas.core.zoomOut(),
-    zoomToFit: () => canvas.core.zoomToFit(),
+    zoomToFit: (options?: ZoomToFitOptions) => canvas.core.zoomToFit(options),
   }
 }
 

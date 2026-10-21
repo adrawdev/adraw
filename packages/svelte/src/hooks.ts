@@ -5,6 +5,7 @@ import {
   type ToolOptionsMap,
   type ToolType,
   type ViewportState,
+  type ZoomToFitOptions,
 } from "@adraw/core"
 
 import { useCanvas } from "./context.svelte.ts"
@@ -48,7 +49,8 @@ export function useViewport() {
     },
     zoomIn: () => context.instance.current?.zoomIn(),
     zoomOut: () => context.instance.current?.zoomOut(),
-    zoomToFit: () => context.instance.current?.zoomToFit(),
+    zoomToFit: (options?: ZoomToFitOptions) =>
+      context.instance.current?.zoomToFit(options),
   }
 }
 
