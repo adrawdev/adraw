@@ -2,6 +2,7 @@ import { BACKGROUND_COLOR } from "../constants"
 import { getElementBounds } from "../coordinates"
 import type { CanvasEngine } from "../engine/engine"
 import type { ToImageOptions } from "../options"
+import { getBoundTextBounds } from "../text-bindings"
 import type { CanvasElement } from "../types"
 import type { DomState } from "./state"
 import {
@@ -141,7 +142,13 @@ export async function toImage(
   }
 
   for (const element of elements) {
-    svg.appendChild(createElementGroup(element))
+    const arrowLabelBox =
+      element.type === "arrow"
+        ? getBoundTextBounds(engine.getElements(), element.id)
+        : null
+    svg.appendChild(
+      createElementGroup(element, engine.getTextMeasurer(), arrowLabelBox),
+    )
   }
 
   const serializer = new XMLSerializer()

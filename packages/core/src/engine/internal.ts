@@ -1,5 +1,5 @@
 import { syncArrowBindings } from "../bindings"
-import { measureTextSize } from "../elements"
+import { syncTextBindings } from "../text-bindings"
 import type { TextTool } from "../tools"
 import type { BoundingBox, ElementId, TextElement } from "../types"
 import type { EngineInternal } from "./engine"
@@ -52,13 +52,22 @@ export function updateTextElement(
   if (element?.type !== "text") {
     return
   }
-  const size = measureTextSize(text, element.fontSize)
+  const layout = engine.measureText(text, {
+    autoSize: element.autoSize,
+    fontFamily: element.fontFamily,
+    fontSize: element.fontSize,
+    lineHeight: element.lineHeight,
+    maxWidth: element.wrapWidth ?? element.width,
+    shrinkWidth:
+      element.containerId !== null && element.containerId !== undefined,
+  })
   engine.getElements().set(id, {
     ...element,
-    height: size.height,
+    height: layout.height,
     text,
-    width: size.width,
+    width: layout.width,
   })
+  syncTextBindings(engine.getElements(), engine.getTextMeasurer())
   syncArrowBindings(engine.getElements())
   engine.emit("change", { elements: engine.getElements() })
 }

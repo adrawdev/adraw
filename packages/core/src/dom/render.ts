@@ -1,18 +1,16 @@
-import {
-  FILL_COLOR,
-  STROKE_COLOR,
-  STROKE_WIDTH,
-  TEXT_FONT_SIZE,
-} from "../constants"
+import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
-import type { CanvasElement, TextElement } from "../types"
+import { approximateTextMeasurer, type TextMeasurer } from "../text"
+import type { BoundingBox, CanvasElement } from "../types"
 import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
 import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"
 import {
   appendTextLines,
+  applyArrowShaft,
   applyElementOpacity,
+  applyTextAttributes,
   bindingTargetClass,
   createElementGroup,
   getArrowSvgGeometry,
@@ -77,7 +75,7 @@ export function renderTemporary(state: DomState, engine: CanvasEngine): void {
   // there is none yet or the element type changed.
   if (!state.temporaryNode || state.temporaryType !== tempElement.type) {
     state.temporaryNode?.remove()
-    const group = createElementGroup(tempElement)
+    const group = createElementGroup(tempElement, engine.getTextMeasurer())
     group.classList.add(temporaryClass)
     state.temporaryNode = group
     state.temporaryType = tempElement.type
@@ -85,7 +83,11 @@ export function renderTemporary(state: DomState, engine: CanvasEngine): void {
     return
   }
 
-  updateElementGeometry(state.temporaryNode, tempElement)
+  updateElementGeometry(
+    state.temporaryNode,
+    tempElement,
+    engine.getTextMeasurer(),
+  )
 }
 
 export function setTextElementVisibility(
@@ -135,6 +137,8 @@ export function renderBindingHighlight(
 export function updateElementGeometry(
   group: SVGGElement,
   element: CanvasElement,
+  textMeasurer: TextMeasurer = approximateTextMeasurer,
+  arrowLabelBox: BoundingBox | null = null,
 ): void {
   group.setAttribute("transform", getTransformElementAttribute(element))
   applyElementOpacity(group, element)
@@ -154,18 +158,28 @@ export function updateElementGeometry(
       break
     }
     case "arrow": {
-      const geometry = getArrowSvgGeometry(element)
+      const geometry = getArrowSvgGeometry(element, arrowLabelBox)
       const stroke = element.strokeColor || STROKE_COLOR
-      const lineElement = group.getElementsByTagName("line")[0]
-      lineElement.setAttribute("x1", `${geometry.lineStart.x}`)
-      lineElement.setAttribute("y1", `${geometry.lineStart.y}`)
-      lineElement.setAttribute("x2", `${geometry.lineEnd.x}`)
-      lineElement.setAttribute("y2", `${geometry.lineEnd.y}`)
-      lineElement.setAttribute("stroke", stroke)
-      lineElement.setAttribute(
-        "stroke-width",
-        `${element.strokeWidth || STROKE_WIDTH}`,
+      const strokeWidth = element.strokeWidth || STROKE_WIDTH
+      const shafts = group.getElementsByTagName("line")
+      const lineElement = shafts[0]
+      applyArrowShaft(
+        lineElement,
+        geometry.lineStart,
+        geometry.gapStart ?? geometry.lineEnd,
+        stroke,
+        strokeWidth,
       )
+      const tail = shafts[1]
+      if (tail) {
+        applyArrowShaft(
+          tail,
+          geometry.gapEnd ?? geometry.lineEnd,
+          geometry.lineEnd,
+          stroke,
+          strokeWidth,
+        )
+      }
 
       const heads = group.getElementsByTagName("path")
       const data = [geometry.endHead, geometry.startHead]
@@ -230,62 +244,84 @@ export function updateElementGeometry(
     }
     case "text": {
       const textElement = group.getElementsByTagName("text")[0]
-      textElement.setAttribute("font-size", `${element.fontSize}`)
-      textElement.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+      applyTextAttributes(textElement, element)
       textElement.textContent = ""
-      appendTextLines(textElement, element)
+      appendTextLines(textElement, element, textMeasurer)
       break
     }
   }
 }
 
-// Keep the document-positioned editor anchored to its canvas-space point (and
-// sized to its content) across zoom/pan/typing.
+// Keep the document-positioned editor anchored to its canvas-space element
+// across zoom/pan/typing. The textarea uses the element's unscaled font and
+// box; `transform` applies the viewport zoom and the element's rotation about
+// its center, exactly like the SVG group it replaces while editing.
 export function positionTextEditor(
   state: DomState,
   engine: CanvasEngine,
 ): void {
-  if (!state.textEditor || !state.textEditPoint) {
+  const editor = state.textEditor
+  if (!editor) {
     return
   }
 
-  const viewport = engine.getViewport()
-  const canvasSize = engine.getCanvasSize()
   const container = state.container
   const canvasRect = state.svgElement?.getBoundingClientRect()
   if (!canvasRect || !container) {
     return
   }
+
+  const editing = state.textEditElementId
+    ? engine.getElements().get(state.textEditElementId)
+    : engine.getTemporaryElement()
+  const element = editing?.type === "text" ? editing : null
+  const options = engine.getToolOptions("text")
+
+  const fontSize = element?.fontSize ?? options.fontSize
+  const fontFamily = element?.fontFamily ?? options.fontFamily
+  const lineHeight = element?.lineHeight ?? options.lineHeight
+  const autoSize = element?.autoSize ?? options.autoSize
+  const textAlign = element?.textAlign ?? options.textAlign
+  const rotation = element?.rotation ?? 0
+  const x = element?.x ?? state.textEditPoint?.x ?? 0
+  const y = element?.y ?? state.textEditPoint?.y ?? 0
+  const width = Math.max(element?.width ?? 1, fontSize * 0.3)
+  const height = Math.max(fontSize * lineHeight, element?.height ?? 0)
+
+  const viewport = engine.getViewport()
+  const canvasSize = engine.getCanvasSize()
   const canvasWidth = canvasRect.width || canvasSize.width
   const canvasHeight = canvasRect.height || canvasSize.height
   const scrollX = container.ownerDocument.defaultView?.scrollX ?? 0
   const scrollY = container.ownerDocument.defaultView?.scrollY ?? 0
-  const screenX =
+
+  // Position by the box center so `scale(zoom) rotate()` around the center
+  // leaves the text exactly over the element it replaces.
+  const screenCenterX =
     canvasRect.left +
     scrollX +
-    (state.textEditPoint.x - viewport.x) * viewport.zoom +
+    (x + width / 2 - viewport.x) * viewport.zoom +
     canvasWidth / 2
-  const screenY =
+  const screenCenterY =
     canvasRect.top +
     scrollY +
-    (state.textEditPoint.y - viewport.y) * viewport.zoom +
+    (y + height / 2 - viewport.y) * viewport.zoom +
     canvasHeight / 2
 
-  const fontSize = state.textEditElementId
-    ? ((
-        engine.getElements().get(state.textEditElementId) as
-          | TextElement
-          | undefined
-      )?.fontSize ?? TEXT_FONT_SIZE)
-    : engine.getToolOptions("text").fontSize
-
-  const style = state.textEditor.style
-  style.fontSize = `${fontSize * viewport.zoom}px`
-  style.lineHeight = `${fontSize * 1.2 * viewport.zoom}px`
-  style.left = `${screenX}px`
-  style.top = `${screenY}px`
-  style.width = "auto"
-  style.width = `${Math.max(60, state.textEditor.scrollWidth + 8)}px`
-  const lines = state.textEditor.value.split("\n").length
-  style.height = `${Math.max(24, lines * fontSize * 1.2 * viewport.zoom + 4)}px`
+  const style = editor.style
+  style.fontFamily = fontFamily
+  style.fontSize = `${fontSize}px`
+  style.lineHeight = `${fontSize * lineHeight}px`
+  style.textAlign = textAlign
+  style.opacity = `${element?.opacity ?? 1}`
+  style.whiteSpace = autoSize ? "pre" : "pre-wrap"
+  style.wordBreak = autoSize ? "normal" : "break-word"
+  style.overflowWrap = autoSize ? "normal" : "break-word"
+  editor.wrap = autoSize ? "off" : "soft"
+  style.left = `${screenCenterX - width / 2}px`
+  style.top = `${screenCenterY - height / 2}px`
+  style.width = `${width}px`
+  style.height = `${height}px`
+  style.transformOrigin = "center center"
+  style.transform = `scale(${viewport.zoom}) rotate(${rotation}deg)`
 }

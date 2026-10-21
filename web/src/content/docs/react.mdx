@@ -219,9 +219,10 @@ if (style && tool) {
 All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
 to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
 highlights). Tool-specific fields are available when the inferred tool matches:
-`cornerRadius` (rectangle), `fontSize` (text), `smoothing` (draw). Changing a
-style restyles matching elements in the current selection, so the same control
-works for the selected shape and the next one.
+`cornerRadius` (rectangle), `fontSize`, `fontFamily`, `textAlign`, `lineHeight`
+and `autoSize` (text), and `smoothing` (draw). Changing a style restyles
+matching elements in the current selection, so the same control works for the
+selected shape and the next one.
 
 ### `useTransformOverlay()`
 

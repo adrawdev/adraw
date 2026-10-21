@@ -9,6 +9,14 @@ function collectIds(
   ids: Iterable<ElementId>,
 ): Set<ElementId> {
   const collected = new Set<ElementId>()
+  const boundText = new Map<ElementId, ElementId[]>()
+  for (const element of elements.values()) {
+    if (element.type === "text" && element.containerId) {
+      const list = boundText.get(element.containerId) ?? []
+      list.push(element.id)
+      boundText.set(element.containerId, list)
+    }
+  }
 
   const visit = (id: ElementId): void => {
     if (collected.has(id)) {
@@ -23,6 +31,11 @@ function collectIds(
       for (const childId of element.children) {
         visit(childId)
       }
+    }
+    // A container carries its bound label through z-order changes so the label
+    // stays above the shape it belongs to.
+    for (const textId of boundText.get(id) ?? []) {
+      visit(textId)
     }
   }
 

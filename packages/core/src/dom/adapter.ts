@@ -2,6 +2,7 @@ import { BACKGROUND_COLOR } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import type { CanvasEventMap } from "../options"
 import { setupEventListeners, updateCursor } from "./events"
+import { cancelTextGesture } from "./pointer"
 import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
 import { renderGuides } from "./render/guides"
@@ -33,7 +34,11 @@ export function mountDom(
   const removeEventListeners = setupEventListeners(state, engine)
 
   engine.renderRequested = () => renderAll(state, engine)
-  engine.onToolWillChange = () => commitTextEditing(state, engine)
+  engine.onToolWillChange = () => {
+    commitTextEditing(state, engine, { switchTool: false })
+    cancelTextGesture(state, engine)
+    renderAll(state, engine)
+  }
 
   const handleChange = (): void => {
     if (engine.getActiveTool() === "select") {
@@ -77,6 +82,7 @@ export function mountDom(
       state.textEditPoint = null
       state.textEditElementId = null
       state.textEditOriginalElement = null
+      state.textGesture = null
       state.svgElement?.remove()
     },
     state,

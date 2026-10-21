@@ -1,5 +1,6 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
 import type { SnappingConfig } from "../snapping"
+import type { TextMeasurer } from "../text"
 import type {
   BoundingBox,
   CanvasElement,
@@ -31,6 +32,12 @@ export interface ToolContext {
    * options.
    */
   getToolOptions?: () => ToolOptions
+  /**
+   * Text measurer configured on the engine. Text-like tools use it to size
+   * their elements; standalone tool factories may omit it and fall back to the
+   * built-in approximation.
+   */
+  measureText?: TextMeasurer
   getSnappingConfig: () => SnappingConfig
   getIsSnapMode: () => boolean
   setSnapGuides: (guides: SnapGuide[]) => void

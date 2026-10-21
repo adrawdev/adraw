@@ -7,6 +7,7 @@ import type { ArrowBinding, ElementId, Point } from "../../types"
 import { calculateShapeBounds, type ToolContext } from "../base"
 import { snapToolPoint } from "../snap"
 import { resizeRotatedElement } from "./resize-rotated"
+import { resizeTextElement } from "./resize-text"
 import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
 
 // Drag a line/arrow endpoint handle — move that endpoint and update bbox. For
@@ -186,6 +187,27 @@ export function resizeSelection(
     if (original) {
       const element = elements.get(id)
       if (element) {
+        if (element.type === "text") {
+          elements.set(
+            id,
+            resizeTextElement(
+              original,
+              element,
+              {
+                anchorX,
+                anchorY,
+                changesHeight,
+                changesWidth,
+                horizontalOnly:
+                  dragHandle === "left-center" || dragHandle === "right-center",
+                scaleX,
+                scaleY,
+              },
+              context.measureText,
+            ),
+          )
+          continue
+        }
         if (element.type === "path" && original.points) {
           // A path renders from its absolute points, so scale those about the
           // same anchor instead of only resizing the bounding box. A negative

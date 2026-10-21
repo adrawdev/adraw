@@ -1,4 +1,5 @@
 import type { CanvasEngine } from "../../engine/engine"
+import { getBoundTextBounds } from "../../text-bindings"
 import type { CanvasElement, ElementId, Point } from "../../types"
 import { updateElementGeometry } from "../render"
 import type { DomState } from "../state"
@@ -8,20 +9,32 @@ import { createElementGroup, elementClass, selectedClass } from "../svg"
 // element (group transform plus type-specific geometry and style). Nodes whose
 // element fingerprints identically skip DOM writes, so a `change` event only
 // touches the elements that actually changed. Media `src` is still creation-only.
-function geometrySignature(state: DomState, element: CanvasElement): string {
+function geometrySignature(
+  state: DomState,
+  element: CanvasElement,
+  arrowLabelBox: {
+    height: number
+    width: number
+    x: number
+    y: number
+  } | null = null,
+): string {
   const base = `${element.x}|${element.y}|${element.width}|${element.height}|${element.rotation}|${element.opacity ?? 1}`
   switch (element.type) {
     case "line": {
       return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}`
     }
     case "arrow": {
-      return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}`
+      const gap = arrowLabelBox
+        ? `${arrowLabelBox.x}|${arrowLabelBox.y}|${arrowLabelBox.width}|${arrowLabelBox.height}`
+        : ""
+      return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}|label:${gap}`
     }
     case "path": {
       return `path|${base}|${element.smoothing ?? ""}|${pathPointsSignature(state, element.id, element.points)}|${element.strokeColor}|${element.strokeWidth}`
     }
     case "text": {
-      return `text|${base}|${element.text}|${element.fontSize}|${element.strokeColor}`
+      return `text|${base}|${element.text}|${element.fontSize}|${element.fontFamily ?? ""}|${element.textAlign ?? ""}|${element.lineHeight ?? ""}|${element.autoSize ?? ""}|${element.wrapWidth ?? ""}|${element.strokeColor}`
     }
     case "rectangle": {
       return `rectangle|${base}|${element.strokeColor}|${element.strokeWidth}|${element.cornerRadius}|${element.fillColor ?? ""}`
@@ -89,14 +102,25 @@ function syncElementNode(
     return null
   }
 
-  const signature = geometrySignature(state, element)
+  const arrowLabelBox =
+    element.type === "arrow"
+      ? getBoundTextBounds(engine.getElements(), element.id)
+      : null
+  const signature = geometrySignature(state, element, arrowLabelBox)
   if (!group) {
-    group = createElementGroup(element)
+    group = createElementGroup(element, engine.getTextMeasurer(), arrowLabelBox)
     group.classList.add(elementClass)
     state.elementsGroup!.appendChild(group)
     state.nodeById.set(element.id, group)
+    state.renderedGeometry.set(element.id, signature)
   } else if (state.renderedGeometry.get(element.id) !== signature) {
-    updateElementGeometry(group, element)
+    updateElementGeometry(
+      group,
+      element,
+      engine.getTextMeasurer(),
+      arrowLabelBox,
+    )
+    state.renderedGeometry.set(element.id, signature)
   }
   state.renderedGeometry.set(element.id, signature)
 
@@ -232,9 +256,18 @@ export function renderSelectElements(
 
     // The select tool already transforms geometry in canvas space, so just
     // re-render each selected node — but only when its element changed.
-    const signature = geometrySignature(state, element)
+    const arrowLabelBox =
+      element.type === "arrow"
+        ? getBoundTextBounds(engine.getElements(), element.id)
+        : null
+    const signature = geometrySignature(state, element, arrowLabelBox)
     if (state.renderedGeometry.get(element.id) !== signature) {
-      updateElementGeometry(group, element)
+      updateElementGeometry(
+        group,
+        element,
+        engine.getTextMeasurer(),
+        arrowLabelBox,
+      )
       state.renderedGeometry.set(element.id, signature)
     }
   }

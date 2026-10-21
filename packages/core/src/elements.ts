@@ -1,4 +1,5 @@
 import { generateId } from "./coordinates"
+import { measureTextLayout, type TextLayoutOptions } from "./text"
 import type {
   ArrowElement,
   CanvasElement,
@@ -134,24 +135,22 @@ export function createText(factory: ElementFactory<TextElement>): TextElement {
 }
 
 /**
- * Approximate the rendered size of a text element without a DOM. ~0.6em per
- * character on the longest line, 1.2em line height.
+ * Approximate the rendered size of a text element without a DOM. Uses
+ * ~0.6em per character and the default line height; pass layout options to
+ * measure a different font or wrapping mode.
  *
  * @param text Text content.
  * @param fontSize Font size in pixels.
+ * @param options Optional font family, line height and wrapping options.
  * @returns Approximate width/height.
  */
-export function measureTextSize(text: string, fontSize: number): Size {
-  const lines = text.split("\n")
-  const lineHeight = fontSize * 1.2
-  let width = 0
-  for (const line of lines) {
-    width = Math.max(width, line.length * fontSize * 0.6)
-  }
-  return {
-    height: Math.max(lineHeight, lines.length * lineHeight),
-    width: Math.max(1, width),
-  }
+export function measureTextSize(
+  text: string,
+  fontSize: number,
+  options: Omit<TextLayoutOptions, "fontSize"> = {},
+): Size {
+  const layout = measureTextLayout(text, { ...options, fontSize })
+  return { height: layout.height, width: layout.width }
 }
 
 /**

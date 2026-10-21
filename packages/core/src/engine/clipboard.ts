@@ -55,6 +55,14 @@ export function collectClipboardElements(
   selectedIds: Set<ElementId>,
 ): CanvasElement[] {
   const collected = new Map<ElementId, CanvasElement>()
+  const boundText = new Map<ElementId, ElementId[]>()
+  for (const element of elements.values()) {
+    if (element.type === "text" && element.containerId) {
+      const list = boundText.get(element.containerId) ?? []
+      list.push(element.id)
+      boundText.set(element.containerId, list)
+    }
+  }
 
   const visit = (id: ElementId): void => {
     if (collected.has(id)) {
@@ -69,6 +77,10 @@ export function collectClipboardElements(
       for (const childId of element.children) {
         visit(childId)
       }
+    }
+    // Copying a container includes its label so the pasted pair stays linked.
+    for (const textId of boundText.get(id) ?? []) {
+      visit(textId)
     }
   }
 
@@ -129,6 +141,12 @@ export function createPastedElements(
         clone.children = clone.children.map(
           (childId) => idMap.get(childId) ?? childId,
         )
+      } else if (clone.type === "text" && clone.containerId) {
+        const remapped = idMap.get(clone.containerId) ?? null
+        clone.containerId = remapped
+        if (!remapped) {
+          clone.wrapWidth = null
+        }
       }
 
       if (clone.type === "arrow") {

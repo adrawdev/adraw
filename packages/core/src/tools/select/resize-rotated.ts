@@ -1,3 +1,4 @@
+import { measureTextElement } from "../../text"
 import type { ElementId, Point } from "../../types"
 import { calculateShapeBounds, type ToolContext } from "../base"
 import { getPointsBounds, getResizeAxes, type SelectToolState } from "./state"
@@ -176,6 +177,57 @@ export function resizeRotatedElement(
   const anchorWorldY = cy + origDx * sin + origDy * cos
   const newCx = fromCenter ? cx : anchorWorldX - (newDx * cos - newDy * sin)
   const newCy = fromCenter ? cy : anchorWorldY - (newDx * sin + newDy * cos)
+
+  if (element.type === "text") {
+    const horizontalOnly =
+      state.dragHandle === "left-center" || state.dragHandle === "right-center"
+    const source = {
+      autoSize: singleOriginal.autoSize ?? element.autoSize ?? true,
+      fontFamily: singleOriginal.fontFamily ?? element.fontFamily,
+      fontSize: singleOriginal.fontSize ?? element.fontSize,
+      lineHeight: singleOriginal.lineHeight ?? element.lineHeight,
+      textAlign: singleOriginal.textAlign ?? element.textAlign,
+    }
+    let autoSize = horizontalOnly ? false : source.autoSize
+    let fontSize = source.fontSize
+    let textWidth = singleOriginal.width
+
+    if (horizontalOnly) {
+      textWidth = Math.max(1, Math.abs(newWidth))
+    } else {
+      const fontScale = changesWidth
+        ? Math.abs(newWidth / bounds.width)
+        : Math.abs(newHeight / bounds.height)
+      fontSize = Math.max(1, fontSize * fontScale)
+      if (!autoSize) {
+        textWidth = Math.max(
+          1,
+          singleOriginal.width *
+            (changesWidth ? Math.abs(newWidth / bounds.width) : 1),
+        )
+      }
+    }
+
+    const candidate = {
+      ...element,
+      ...source,
+      autoSize,
+      fontSize,
+      width: textWidth,
+    }
+    const layout = measureTextElement(candidate, context.measureText)
+    const finalWidth = autoSize ? layout.width : textWidth
+
+    elements.set(singleId, {
+      ...candidate,
+      height: layout.height,
+      width: finalWidth,
+      x: newCx - finalWidth / 2,
+      y: newCy - layout.height / 2,
+    })
+    context.setElements(new Map(elements))
+    return
+  }
 
   // Store positive dimensions about the same center; a rectangle mirrored about
   // its own center is identical, so abs() is all the flip needs here.

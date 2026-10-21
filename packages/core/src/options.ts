@@ -1,4 +1,5 @@
 import type { SnappingConfig } from "./snapping"
+import type { TextMeasurer } from "./text"
 import type { ToolOptionsChangeEvent, ToolOptionsConfig } from "./tool-options"
 import type {
   CanvasDocument,
@@ -50,6 +51,19 @@ export interface CanvasOptions {
   isSnapMode?: boolean
   /** Keyboard shortcut scope. Defaults to `"canvas"`; use `"document"` for page-wide shortcuts or `"none"` to disable them. */
   keyboard?: KeyboardScope
+  /**
+   * Text measurer used to size and wrap text elements. Defaults to a
+   * character-count approximation in headless mode; `AdrawCanvas.mount`
+   * installs a canvas-backed measurer when this option is omitted.
+   *
+   * @example
+   * ```ts
+   * const canvas = new AdrawCanvas({
+   *   measureText: (text, options) => measureTextLayout(text, options),
+   * })
+   * ```
+   */
+  measureText?: TextMeasurer
   /** Starting viewport; defaults to origin/zoom 1. */
   initialViewport?: ViewportState
   /**

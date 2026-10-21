@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { createPath, createRectangle } from "../elements"
-import type { ElementId, PathElement, RectangleElement } from "../types"
+import type {
+  ElementId,
+  PathElement,
+  RectangleElement,
+  TextElement,
+} from "../types"
 
 // The canvas maps screen → canvas coordinates by subtracting half the canvas
 // size (set to 800×600 below), so a canvas point (x, y) is the screen point
@@ -295,22 +300,25 @@ describe("element node reconciliation", () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it("adopts the temporary node when the text tool commits under the same id", () => {
+  it("adopts the temporary node when a dragged text commits under the same id", () => {
     const { canvas, container } = mount()
     canvas.setActiveTool("text")
 
-    const at = screenOf(20, 20)
-    dispatchPointer(container, "pointerdown", at.screenX, at.screenY)
+    const start = screenOf(20, 20)
+    const end = screenOf(120, 20)
+    dispatchPointer(container, "pointerdown", start.screenX, start.screenY)
+    dispatchPointer(container, "pointermove", end.screenX, end.screenY)
+    dispatchPointer(container, "pointerup", end.screenX, end.screenY)
 
     const preview = container.querySelector(".adraw-temporary") as SVGGElement
     const editor = document.querySelector<HTMLTextAreaElement>("textarea")!
     editor.value = "Hello"
     editor.dispatchEvent(new Event("input", { bubbles: true }))
     editor.dispatchEvent(
-      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }),
+      new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }),
     )
 
-    const element = [...canvas.getElements().values()][0]
+    const element = [...canvas.getElements().values()][0] as TextElement
     const committed = nodesFor(container, element.id)
     expect(committed).toHaveLength(1)
     expect(committed[0]).toBe(preview)

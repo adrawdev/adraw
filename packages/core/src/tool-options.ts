@@ -2,7 +2,9 @@ import {
   FILL_COLOR,
   STROKE_COLOR,
   STROKE_WIDTH,
+  TEXT_FONT_FAMILY,
   TEXT_FONT_SIZE,
+  TEXT_LINE_HEIGHT,
 } from "./constants"
 import { DEFAULT_PATH_SMOOTHING } from "./elements"
 import type { ToolOptions } from "./tools/base"
@@ -92,7 +94,14 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptionsState = {
   ellipse: { ...DEFAULT_BASE_OPTIONS },
   line: { ...DEFAULT_BASE_OPTIONS },
   rectangle: { ...DEFAULT_BASE_OPTIONS, cornerRadius: 0 },
-  text: { ...DEFAULT_BASE_OPTIONS, fontSize: TEXT_FONT_SIZE },
+  text: {
+    ...DEFAULT_BASE_OPTIONS,
+    autoSize: true,
+    fontFamily: TEXT_FONT_FAMILY,
+    fontSize: TEXT_FONT_SIZE,
+    lineHeight: TEXT_LINE_HEIGHT,
+    textAlign: "left",
+  },
 }
 
 const TOOL_ELEMENT_TYPES: Record<ConfigurableToolType, ElementType> = {

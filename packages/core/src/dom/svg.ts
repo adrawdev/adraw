@@ -1,6 +1,26 @@
-import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
+import {
+  FILL_COLOR,
+  STROKE_COLOR,
+  STROKE_WIDTH,
+  TEXT_FONT_FAMILY,
+} from "../constants"
 import { DEFAULT_PATH_SMOOTHING } from "../elements"
-import type { ArrowElement, CanvasElement, Point, TextElement } from "../types"
+import {
+  approximateTextMeasurer,
+  getTextAnchor,
+  getTextLeading,
+  getTextLineHeightPx,
+  getTextLines,
+  getTextLineX,
+  type TextMeasurer,
+} from "../text"
+import type {
+  ArrowElement,
+  BoundingBox,
+  CanvasElement,
+  Point,
+  TextElement,
+} from "../types"
 
 export const svgNamespaceURI = "http://www.w3.org/2000/svg"
 export const elementsGroupClass = "adraw-elements-group"
@@ -125,9 +145,67 @@ interface ArrowSvgGeometry {
   endHead: string | null
   lineStart: Point
   lineEnd: Point
+  // Segment of the shaft hidden under a bound label, if any.
+  gapStart: Point | null
+  gapEnd: Point | null
 }
 
-export function getArrowSvgGeometry(element: ArrowElement): ArrowSvgGeometry {
+// Extra room around a label so the shaft does not touch the glyphs.
+const arrowLabelGap = 4
+
+// Liang–Barsky clipping: parameter interval of segment `start → end` that lies
+// inside an axis-aligned rectangle, or null when it misses.
+function clipSegmentToRect(
+  start: Point,
+  end: Point,
+  rect: { bottom: number; left: number; right: number; top: number },
+): { t0: number; t1: number } | null {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const p = [-dx, dx, -dy, dy]
+  const q = [
+    start.x - rect.left,
+    rect.right - start.x,
+    start.y - rect.top,
+    rect.bottom - start.y,
+  ]
+  let t0 = 0
+  let t1 = 1
+
+  for (let i = 0; i < 4; i++) {
+    const pi = p[i]
+    const qi = q[i]
+    if (pi === 0) {
+      if (qi < 0) {
+        return null
+      }
+      continue
+    }
+    const r = qi / pi
+    if (pi < 0) {
+      if (r > t1) {
+        return null
+      }
+      if (r > t0) {
+        t0 = r
+      }
+    } else {
+      if (r < t0) {
+        return null
+      }
+      if (r < t1) {
+        t1 = r
+      }
+    }
+  }
+
+  return t0 < t1 ? { t0, t1 } : null
+}
+
+export function getArrowSvgGeometry(
+  element: ArrowElement,
+  labelBox: BoundingBox | null = null,
+): ArrowSvgGeometry {
   const start = { x: element.startX, y: element.startY }
   const end = { x: element.endX, y: element.endY }
   const length = Math.hypot(end.x - start.x, end.y - start.y)
@@ -154,8 +232,31 @@ export function getArrowSvgGeometry(element: ArrowElement): ArrowSvgGeometry {
     lineEnd = end
   }
 
+  let gapStart: Point | null = null
+  let gapEnd: Point | null = null
+  if (labelBox) {
+    const clip = clipSegmentToRect(lineStart, lineEnd, {
+      bottom: labelBox.y + labelBox.height + arrowLabelGap,
+      left: labelBox.x - arrowLabelGap,
+      right: labelBox.x + labelBox.width + arrowLabelGap,
+      top: labelBox.y - arrowLabelGap,
+    })
+    if (clip) {
+      gapStart = {
+        x: lineStart.x + (lineEnd.x - lineStart.x) * clip.t0,
+        y: lineStart.y + (lineEnd.y - lineStart.y) * clip.t0,
+      }
+      gapEnd = {
+        x: lineStart.x + (lineEnd.x - lineStart.x) * clip.t1,
+        y: lineStart.y + (lineEnd.y - lineStart.y) * clip.t1,
+      }
+    }
+  }
+
   return {
     endHead: element.endArrowhead ? arrowHeadPath(end, dir, headLength) : null,
+    gapEnd,
+    gapStart,
     lineEnd,
     lineStart,
     startHead: element.startArrowhead
@@ -194,7 +295,46 @@ export function applyElementOpacity(
   }
 }
 
-export function createElementGroup(element: CanvasElement): SVGGElement {
+/**
+ * Write one arrow shaft segment. Zero-length segments are hidden so a label's
+ * gap does not leave a round-cap dot behind.
+ */
+export function applyArrowShaft(
+  line: SVGLineElement,
+  start: Point,
+  end: Point,
+  stroke: string,
+  strokeWidth: number,
+): void {
+  line.setAttribute("stroke-linecap", "round")
+  line.setAttribute("stroke-linejoin", "round")
+  line.setAttribute("x1", `${start.x}`)
+  line.setAttribute("y1", `${start.y}`)
+  line.setAttribute("x2", `${end.x}`)
+  line.setAttribute("y2", `${end.y}`)
+  line.setAttribute("stroke", stroke)
+  line.setAttribute("stroke-width", `${strokeWidth}`)
+  if (Math.hypot(end.x - start.x, end.y - start.y) < 0.01) {
+    line.setAttribute("display", "none")
+  } else {
+    line.removeAttribute("display")
+  }
+}
+
+/**
+ * Build the SVG group for one canvas element.
+ *
+ * @param element Element to render.
+ * @param textMeasurer Measurer used for text elements.
+ * @param arrowLabelBox Bounds of an arrow's bound label. When present, the
+ * shaft is split to leave a gap under the label.
+ * @returns The element's `<g>` node.
+ */
+export function createElementGroup(
+  element: CanvasElement,
+  textMeasurer: TextMeasurer = approximateTextMeasurer,
+  arrowLabelBox: BoundingBox | null = null,
+): SVGGElement {
   const group = document.createElementNS(svgNamespaceURI, "g")
   group.id = element.id
   group.setAttribute("transform", getTransformElementAttribute(element))
@@ -251,21 +391,31 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
     }
 
     case "arrow": {
-      const geometry = getArrowSvgGeometry(element)
+      const geometry = getArrowSvgGeometry(element, arrowLabelBox)
       const stroke = element.strokeColor || STROKE_COLOR
+      const strokeWidth = element.strokeWidth || STROKE_WIDTH
+
       const line = document.createElementNS(svgNamespaceURI, "line")
-      line.setAttribute("stroke-linecap", "round")
-      line.setAttribute("stroke-linejoin", "round")
-      line.setAttribute("x1", `${geometry.lineStart.x}`)
-      line.setAttribute("y1", `${geometry.lineStart.y}`)
-      line.setAttribute("x2", `${geometry.lineEnd.x}`)
-      line.setAttribute("y2", `${geometry.lineEnd.y}`)
-      line.setAttribute("stroke", stroke)
-      line.setAttribute(
-        "stroke-width",
-        `${element.strokeWidth || STROKE_WIDTH}`,
+      applyArrowShaft(
+        line,
+        geometry.lineStart,
+        geometry.gapStart ?? geometry.lineEnd,
+        stroke,
+        strokeWidth,
       )
       group.appendChild(line)
+
+      // The shaft resumes after the label. With no label this segment is
+      // zero-length and hidden.
+      const tail = document.createElementNS(svgNamespaceURI, "line")
+      applyArrowShaft(
+        tail,
+        geometry.gapEnd ?? geometry.lineEnd,
+        geometry.lineEnd,
+        stroke,
+        strokeWidth,
+      )
+      group.appendChild(tail)
 
       for (const d of [geometry.endHead, geometry.startHead]) {
         const head = document.createElementNS(svgNamespaceURI, "path")
@@ -310,15 +460,13 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
     case "text": {
       const text = document.createElementNS(svgNamespaceURI, "text")
       text.setAttribute("dominant-baseline", "hanging")
-      text.setAttribute("font-family", "system-ui, sans-serif")
-      text.setAttribute("font-size", `${element.fontSize}`)
-      text.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+      applyTextAttributes(text, element)
+      text.style.whiteSpace = "pre"
       text.style.userSelect = "none"
       // WebKit does not apply (or serialize) `style.userSelect` on SVG text;
       // only the prefixed property prevents selection there.
       text.style.setProperty("-webkit-user-select", "none")
-      text.style.whiteSpace = "pre"
-      appendTextLines(text, element)
+      appendTextLines(text, element, textMeasurer)
       group.appendChild(text)
       break
     }
@@ -327,18 +475,38 @@ export function createElementGroup(element: CanvasElement): SVGGElement {
   return group
 }
 
-// One tspan per line: SVG text does not lay out "\n" itself, and a tspan per
-// line with a fixed dy also gives the exact line spacing used by
-// `measureTextSize` (1.2em). `dominant-baseline: hanging` on the parent makes
-// the element's (x, y) the top-left of the first line, matching the bbox.
-export function appendTextLines(
+/**
+ * Write the font family, size, color and alignment attributes shared by initial
+ * text creation and in-place updates.
+ */
+export function applyTextAttributes(
   text: SVGTextElement,
   element: TextElement,
 ): void {
-  element.text.split("\n").forEach((line, i) => {
+  text.setAttribute("font-family", element.fontFamily || TEXT_FONT_FAMILY)
+  text.setAttribute("font-size", `${element.fontSize}`)
+  text.setAttribute("fill", element.strokeColor || STROKE_COLOR)
+  text.setAttribute("text-anchor", getTextAnchor(element))
+}
+
+/**
+ * Append one `<tspan>` per line. `dominant-baseline: hanging` makes each
+ * tspan's `y` the top of its line box, and the half-leading above the first
+ * line matches how the HTML editor overlay positions text inside `lineHeight`.
+ */
+export function appendTextLines(
+  text: SVGTextElement,
+  element: TextElement,
+  measurer: TextMeasurer = approximateTextMeasurer,
+): void {
+  const lineHeight = getTextLineHeightPx(element)
+  const leading = getTextLeading(element)
+  const x = getTextLineX(element)
+
+  getTextLines(element, measurer).forEach((line, i) => {
     const tspan = document.createElementNS(svgNamespaceURI, "tspan")
-    tspan.setAttribute("x", "0")
-    tspan.setAttribute("dy", i === 0 ? "0" : `${element.fontSize * 1.2}`)
+    tspan.setAttribute("x", `${x}`)
+    tspan.setAttribute("y", `${leading + i * lineHeight}`)
     tspan.textContent = line
     text.appendChild(tspan)
   })

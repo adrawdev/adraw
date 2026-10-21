@@ -17,7 +17,15 @@ export function updateBrushSelection(
   state.brushBox = calculateBounds(state.brushStart, point)
   const next = new Set(state.brushBaseSelection)
   for (const el of context.getElements().values()) {
-    if (el.visible && !el.locked && boxesIntersect(state.brushBox, el)) {
+    if (!el.visible || el.locked) {
+      continue
+    }
+    // Bound labels move with their container; selecting them directly would
+    // let a drag detach them from the shape.
+    if (el.type === "text" && el.containerId) {
+      continue
+    }
+    if (boxesIntersect(state.brushBox, el)) {
       next.add(el.id)
     }
   }

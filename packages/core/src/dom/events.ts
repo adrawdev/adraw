@@ -1,6 +1,7 @@
 import { getElementAtPoint } from "../elements"
 import type { CanvasEngine } from "../engine/engine"
 import { applyWheelTransform, toCanvasPoint } from "../engine/internal"
+import { isBoundTextContainer } from "../text-bindings"
 import type { ToolType } from "../types"
 import {
   getRelativePoint,
@@ -12,6 +13,7 @@ import { renderAll } from "./render"
 import type { DomState } from "./state"
 import { handleCursorMap } from "./svg"
 import { startExistingTextEditing } from "./text-editor"
+import { startBoundTextEditing, startFreeTextEditing } from "./text-target"
 import { setupTouchListeners } from "./touch"
 
 export function updateCursor(state: DomState, tool: ToolType): void {
@@ -84,7 +86,9 @@ export function setupEventListeners(
     renderAll(state, engine)
   })
 
-  // Double-clicking a text element opens the inline editor for it.
+  // Double-clicking a text element opens the inline editor for it. On empty
+  // canvas it creates free text; on a shape or arrow it creates (or edits) the
+  // container's centered label.
   state.svgElement.addEventListener("dblclick", (event) => {
     if (state.textEditor || engine.getActiveTool() !== "select") {
       return
@@ -94,7 +98,13 @@ export function setupEventListeners(
     const element = getElementAtPoint(engine.getElements(), point)
     if (element?.type === "text") {
       startExistingTextEditing(state, engine, element)
+      return
     }
+    if (isBoundTextContainer(element)) {
+      startBoundTextEditing(state, engine, element)
+      return
+    }
+    startFreeTextEditing(state, engine, point)
   })
 
   // Set cursor based on hovered handle. Skipped mid-drag: with pointer capture,
@@ -108,6 +118,17 @@ export function setupEventListeners(
     const anchor = target.getAttribute("data-anchor")
     if (anchor && handleCursorMap[anchor]) {
       state.svgElement.style.cursor = handleCursorMap[anchor]
+    } else if (
+      engine.getActiveTool() === "select" &&
+      !state.svgElement.style.cursor.startsWith("grab")
+    ) {
+      const { x, y } = getRelativePoint(state, event)
+      const hovered = getElementAtPoint(
+        engine.getElements(),
+        toCanvasPoint(engine, x, y),
+      )
+      state.svgElement.style.cursor =
+        hovered?.type === "text" ? "text" : "default"
     } else if (!state.svgElement.style.cursor.startsWith("grab")) {
       state.svgElement.style.cursor = "default"
     }
@@ -124,6 +145,33 @@ export function setupEventListeners(
   )
 
   const handleKeyDown = (event: KeyboardEvent): void => {
+    const target = event.target
+    const isEditable =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+
+    // Enter / F2 on a selected text element opens the inline editor, matching
+    // Excalidraw and tldraw.
+    if (
+      !isEditable &&
+      !state.textEditor &&
+      engine.getActiveTool() === "select" &&
+      (event.key === "Enter" || event.key === "F2")
+    ) {
+      const selectedIds = engine.getSelectedIds()
+      if (selectedIds.size === 1) {
+        const [id] = selectedIds
+        const element = engine.getElements().get(id)
+        if (element?.type === "text" && !element.locked) {
+          event.preventDefault()
+          startExistingTextEditing(state, engine, element)
+          return
+        }
+      }
+    }
+
     engine.handleKeyDown(event)
     renderAll(state, engine)
   }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TEXT_LINE_HEIGHT } from "../constants"
 import { createText, getElementAtPoint, measureTextSize } from "../elements"
 import { createSelectTool } from "../tools/select"
 import { createTextTool } from "../tools/text"
@@ -72,14 +73,14 @@ describe("measureTextSize", () => {
     const size = measureTextSize("Hello", 20)
 
     expect(size.width).toBe(20 * 5 * 0.6)
-    expect(size.height).toBe(20 * 1.2)
+    expect(size.height).toBe(20 * TEXT_LINE_HEIGHT)
   })
 
   it("uses the longest line for the width", () => {
     const size = measureTextSize("a\nlonger line", 10)
 
     expect(size.width).toBe(10 * "longer line".length * 0.6)
-    expect(size.height).toBe(2 * 10 * 1.2)
+    expect(size.height).toBe(2 * 10 * TEXT_LINE_HEIGHT)
   })
 
   it("never returns a zero size", () => {
@@ -227,5 +228,82 @@ describe("text selection and transform", () => {
     const result = context.getElements().get(text.id) as TextElement
     expect(result.x).toBe(30)
     expect(result.y).toBe(30)
+  })
+
+  it("switches to fixed width and wraps when dragging a side handle", () => {
+    const text = makeText("t1", {
+      height: 25,
+      text: "hello world",
+      width: 120,
+    })
+    const context = makeContext([text])
+    context.setSelectedIds(new Set([text.id]))
+
+    tool.onPointerDown(
+      context,
+      { x: 120, y: 12.5 },
+      pointerEvent("right-center"),
+    )
+    tool.onPointerMove(
+      context,
+      { x: 66, y: 12.5 },
+      pointerEvent("right-center"),
+    )
+    tool.onPointerUp(context, { x: 66, y: 12.5 }, pointerEvent(null))
+
+    const result = context.getElements().get(text.id) as TextElement
+    expect(result.autoSize).toBe(false)
+    expect(result.width).toBeCloseTo(66)
+    expect(result.height).toBeCloseTo(2 * 20 * TEXT_LINE_HEIGHT)
+  })
+
+  it("scales the font size when dragging a corner handle", () => {
+    const text = makeText("t1", { height: 25, width: 60 })
+    const context = makeContext([text])
+    context.setSelectedIds(new Set([text.id]))
+
+    tool.onPointerDown(context, { x: 60, y: 25 }, pointerEvent("bottom-right"))
+    tool.onPointerMove(context, { x: 120, y: 50 }, pointerEvent("bottom-right"))
+    tool.onPointerUp(context, { x: 120, y: 50 }, pointerEvent(null))
+
+    const result = context.getElements().get(text.id) as TextElement
+    expect(result.fontSize).toBe(40)
+    expect(result.width).toBeCloseTo(120)
+    expect(result.height).toBeCloseTo(40 * TEXT_LINE_HEIGHT)
+    expect(result.x).toBeCloseTo(0)
+    expect(result.y).toBeCloseTo(0)
+  })
+})
+
+describe("text tool fixed-width gesture", () => {
+  it("exposes a preview and commits an empty fixed-width element", () => {
+    const tool = createTextTool()
+    const context = makeContext()
+
+    tool.onActivate(context)
+    tool.onPointerDown(context, { x: 10, y: 20 }, pointerEvent())
+    tool.setFixedWidth(80, 10)
+
+    const temporary = tool.getTemporaryElement() as TextElement
+    expect(temporary.autoSize).toBe(false)
+    expect(temporary.width).toBe(80)
+    expect(temporary.height).toBe(20 * TEXT_LINE_HEIGHT)
+    expect(tool.getSelectionBox?.()).toMatchObject({
+      height: 20 * TEXT_LINE_HEIGHT,
+      width: 80,
+      x: 10,
+      y: 20,
+    })
+
+    tool.onPointerUp(context, { x: 90, y: 20 }, pointerEvent())
+
+    const element = context.getElements().values().next().value as TextElement
+    expect(element.autoSize).toBe(false)
+    expect(element.width).toBe(80)
+    expect(element.height).toBe(20 * TEXT_LINE_HEIGHT)
+    expect(element.text).toBe("")
+    expect(element.x).toBe(10)
+    expect(context.historyCount()).toBe(1)
+    expect(context.setActiveTool).toHaveBeenCalledWith("select")
   })
 })

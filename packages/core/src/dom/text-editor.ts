@@ -1,15 +1,14 @@
-import { SELECTION_COLOR, STROKE_COLOR } from "../constants"
+import { STROKE_COLOR } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import {
   commitTextEdit,
-  dispatchPointerDown,
   dispatchPointerUp,
   reactivateActiveTool,
   restoreTextElement,
   setActiveToolText,
   updateTextElement,
 } from "../engine/internal"
-import type { Point, TextElement } from "../types"
+import type { TextElement } from "../types"
 import {
   positionTextEditor,
   renderAll,
@@ -18,29 +17,10 @@ import {
 import type { DomState } from "./state"
 import { textEditorClass } from "./svg"
 
-// Start editing a brand-new text element: the text tool creates its temporary
-// element, then the editor overlay appears on top of it.
-export function startTextEditing(
-  state: DomState,
-  engine: CanvasEngine,
-  point: Point,
-  event: PointerEvent,
-): void {
-  if (!state.container) {
-    return
-  }
-  dispatchPointerDown(engine, point, event)
-  state.textEditPoint = point
-  const temporaryElement = engine.getTemporaryElement()
-  const color =
-    temporaryElement?.type === "text"
-      ? temporaryElement.strokeColor || STROKE_COLOR
-      : undefined
-  openTextEditor(state, engine, "", color)
-}
-
-// Start editing an existing (committed) text element in place. Live edits
-// mutate the element directly; commit pushes history, cancel restores it.
+// Start editing a committed text element in place. Live edits mutate the
+// element directly; commit pushes history, cancel restores it. Selection is
+// cleared while the editor is open so no resize/rotation handles compete with
+// the caret; it comes back when the edit ends.
 export function startExistingTextEditing(
   state: DomState,
   engine: CanvasEngine,
@@ -52,6 +32,12 @@ export function startExistingTextEditing(
   state.textEditElementId = element.id
   state.textEditOriginalElement = element
   state.textEditPoint = { x: element.x, y: element.y }
+  engine.setSelectedIds(new Set())
+  // Editing always happens with the select tool active, so the toolbar and the
+  // next click behave like a finished text gesture.
+  if (engine.getActiveTool() === "text") {
+    engine.setActiveTool("select")
+  }
   openTextEditor(
     state,
     engine,
@@ -79,20 +65,21 @@ function openTextEditor(
   const textarea = state.container.ownerDocument.createElement("textarea")
   textarea.classList.add(textEditorClass)
   textarea.value = value
+  textarea.spellcheck = false
   textarea.style.background = "transparent"
-  textarea.style.border = `1px dashed ${SELECTION_COLOR}`
+  textarea.style.border = "0"
+  textarea.style.boxSizing = "border-box"
+  textarea.style.caretColor = color
   textarea.style.color = color
-  textarea.style.fontFamily = "system-ui, sans-serif"
   textarea.style.margin = "0"
   textarea.style.outline = "none"
   textarea.style.overflow = "hidden"
   textarea.style.padding = "0"
   textarea.style.position = "absolute"
   textarea.style.resize = "none"
+  textarea.style.transformOrigin = "center center"
   textarea.style.userSelect = "text"
-  textarea.style.whiteSpace = "pre"
   textarea.style.zIndex = "10"
-  textarea.setAttribute("wrap", "off")
 
   textarea.addEventListener("input", () => {
     const next = textarea.value
@@ -106,12 +93,17 @@ function openTextEditor(
   })
 
   textarea.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.isComposing) {
+      return
+    }
+    // Excalidraw/tldraw semantics: Enter inserts a newline, while Escape and
+    // Ctrl/Cmd+Enter finish editing.
+    if (
+      event.key === "Escape" ||
+      (event.key === "Enter" && (event.ctrlKey || event.metaKey))
+    ) {
       event.preventDefault()
       commitTextEditing(state, engine)
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      cancelTextEditing(state, engine)
     }
   })
 
@@ -146,7 +138,11 @@ function removeTextEditor(state: DomState): void {
   editor?.remove()
 }
 
-export function commitTextEditing(state: DomState, engine: CanvasEngine): void {
+export function commitTextEditing(
+  state: DomState,
+  engine: CanvasEngine,
+  options: { switchTool?: boolean } = {},
+): void {
   if (!state.textEditor) {
     return
   }
@@ -157,9 +153,19 @@ export function commitTextEditing(state: DomState, engine: CanvasEngine): void {
   removeTextEditor(state)
 
   if (editingExisting && id) {
+    const before = engine.getElements().get(id)
+    if (before?.type === "text") {
+      // Restore a visible selection as the edit ends: the shape for a label,
+      // the text itself for free text. An empty free text is deleted below and
+      // commitTextEdit drops it from the selection again.
+      engine.setSelectedIds(new Set([before.containerId ?? before.id]))
+    }
     state.textEditElementId = null
     state.textEditOriginalElement = null
     commitTextEdit(engine, id)
+    if (options.switchTool !== false && engine.getActiveTool() === "text") {
+      engine.setActiveTool("select")
+    }
   } else if (point) {
     // Commit the text tool's temporary element (pushes history, selects,
     // switches back to select) exactly like a regular tool gesture end.

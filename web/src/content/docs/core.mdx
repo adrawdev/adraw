@@ -81,12 +81,18 @@ const canvas = new AdrawCanvas({
       opacity: 0.35,
       strokeWidth: 3,
     },
-    text: { fontSize: 24, strokeColor: "#111" },
+    text: {
+      fontFamily: "monospace",
+      fontSize: 24,
+      lineHeight: 1.4,
+      strokeColor: "#111",
+      textAlign: "center",
+    },
   },
 })
 
 canvas.setToolOptions("draw", { strokeWidth: 6 })
-canvas.setToolOptions("text", { fontSize: 32 })
+canvas.setToolOptions("text", { fontSize: 32, textAlign: "left" })
 
 canvas.getToolOptions("rectangle")
 // { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
@@ -96,9 +102,9 @@ Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow` and
 `text`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
 `fillColor` applies to `rectangle` and `ellipse` (combine it with `opacity <
 1` for translucent highlights). The tool-specific ones are `smoothing`
-(draw), `cornerRadius` (rectangle) and `fontSize` (text). `setStrokeColor`
-remains a shortcut for the global stroke color and clears per-tool color
-overrides.
+(draw), `cornerRadius` (rectangle), and `fontSize`, `fontFamily`, `textAlign`,
+`lineHeight` and `autoSize` (text). `setStrokeColor` remains a shortcut for the
+global stroke color and clears per-tool color overrides.
 
 Subscribe to `toolOptionsChange` to keep a custom toolbar in sync:
 
@@ -116,12 +122,67 @@ Each element on the canvas has a type:
 - `ellipse` — oval / circle
 - `path` — freehand stroke (Catmull-Rom smoothing)
 - `line` — line
+- `arrow` — two-ended connector with optional bindings
+- `text` — label, free or bound to a shape/arrow
 - `media` — raster image
 - `group` — container for other elements
 
 Rectangles and ellipses accept `fillColor`; every element accepts `opacity`
 (`0`–`1`). A translucent highlighter background is just a rectangle with
 `fillColor: "#ffd43b"` and `opacity: 0.35`. Freehand paths are stroked only.
+
+## Text
+
+Text elements support `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and
+`autoSize`. With `autoSize: true` (the default) the box grows with each line and
+only `\n` breaks lines; with `autoSize: false` the text wraps at the element's
+`width` and the box grows vertically. Dragging the left or right resize handle
+switches a text element to fixed width; dragging a corner scales its font size.
+
+Editing happens inline: double-click a text element (or press `Enter`/`F2` with
+it selected) to edit it, `Enter` inserts a newline, and `Escape` or
+`Ctrl`/`Cmd+Enter` commits. Starting an edit switches the active tool to
+`select` (the text tool's drag-to-create gesture still finishes as select), and
+the element is cleared from the selection while the editor is open so no resize
+handles compete with the caret; the text (or its shape, for a label) is selected
+again when editing ends. While mounted, `AdrawCanvas` measures text with the
+2D canvas API so boxes match the rendered glyphs. Pass `measureText` to
+`AdrawCanvas` to supply your own measurer (for example to use loaded web fonts).
+
+```ts
+const canvas = new AdrawCanvas({
+  container,
+  measureText: (text, options) => measureTextLayout(text, options),
+})
+```
+
+### Labels inside shapes and arrows
+
+Double-clicking a rectangle, ellipse or arrow — or clicking near a shape's
+center with the text tool — creates a centered label. Labels are regular text
+elements with a `containerId`, so they are measured, styled and serialized like
+any other text. A shape label wraps at the shape's inner width but its box
+shrinks to the longest wrapped line, so the editor grows and shrinks
+horizontally until it reaches that width, and grows vertically as lines are
+added. An arrow label sits on the line and follows `labelPosition` (`0`–`1`,
+default `0.5`), and the arrow shaft is split around the label so the line never
+crosses the text. Labels move, rotate and resize with their container, are
+copied and pasted with it, and are deleted when it is.
+
+While a labeled shape is selected, text styles can still be applied to its
+label with `setToolOptions("text", { ... })`. The text tool's click has three
+outcomes: edit the text under the pointer, add/edit a shape label, or create
+free text. Dragging horizontally with the text tool creates a fixed-width text
+instead of a click-sized one.
+
+```ts
+canvas.setToolOptions("text", { fontSize: 18, textAlign: "center" })
+
+const label = [...canvas.getElements().values()].find(
+  (element) => element.type === "text" && element.containerId === rectId,
+)
+// { containerId: rectId, textAlign: "center", labelPosition: null, ... }
+```
 
 ## Viewport
 

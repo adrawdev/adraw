@@ -179,6 +179,7 @@ function sameCreationOptions(
   right: CanvasReactOptions | undefined,
 ): boolean {
   return (
+    left?.measureText === right?.measureText &&
     (left?.isSnapMode ?? false) === (right?.isSnapMode ?? false) &&
     (left?.keyboard ?? "canvas") === (right?.keyboard ?? "canvas") &&
     createSnappingConfig(left?.snapping).threshold ===

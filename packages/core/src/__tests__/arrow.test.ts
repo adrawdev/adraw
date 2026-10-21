@@ -557,6 +557,42 @@ describe("arrow rendering", () => {
     expect(heads[1].getAttribute("display")).toBe("none")
   })
 
+  it("splits the shaft around a bound label", () => {
+    const arrow = makeArrow("a1", 0, 0, 200, 0)
+    const group = createElementGroup(arrow, undefined, {
+      height: 25,
+      width: 20,
+      x: 90,
+      y: -12.5,
+    })
+    const shafts = group.getElementsByTagName("line")
+
+    expect(shafts).toHaveLength(2)
+    const [head, tail] = shafts
+    // Label box 90..110 expands by the 4px gap: the shaft stops at 86 and
+    // resumes at 114.
+    expect(Number(head.getAttribute("x2"))).toBeCloseTo(86, 5)
+    expect(head.getAttribute("display")).toBeNull()
+    expect(Number(tail.getAttribute("x1"))).toBeCloseTo(114, 5)
+    expect(tail.getAttribute("x2")).toBe("190")
+    expect(tail.getAttribute("display")).toBeNull()
+  })
+
+  it("keeps a single visible shaft when the label misses it", () => {
+    const arrow = makeArrow("a1", 0, 0, 200, 0)
+    const group = createElementGroup(arrow, undefined, {
+      height: 20,
+      width: 20,
+      x: 100,
+      y: 60,
+    })
+    const shafts = group.getElementsByTagName("line")
+
+    expect(shafts[0].getAttribute("display")).toBeNull()
+    expect(shafts[0].getAttribute("x2")).toBe("190")
+    expect(shafts[1].getAttribute("display")).toBe("none")
+  })
+
   it("draws a start head when startArrowhead is set", () => {
     const arrow = makeArrow("a1", 0, 0, 200, 0, { startArrowhead: true })
     const group = createElementGroup(arrow)

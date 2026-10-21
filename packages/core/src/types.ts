@@ -170,6 +170,11 @@ export interface GroupElement extends BaseElement {
 }
 
 /**
+ * Horizontal alignment of a text element's lines within its box.
+ */
+export type TextAlign = "left" | "center" | "right"
+
+/**
  * A text label element.
  */
 export interface TextElement extends BaseElement {
@@ -177,6 +182,44 @@ export interface TextElement extends BaseElement {
   text: string
   fontSize: number
   strokeColor: string
+  /**
+   * Font family stack (e.g. `"system-ui, sans-serif"`). Defaults to the
+   * built-in system font stack.
+   */
+  fontFamily?: string
+  /**
+   * Horizontal alignment of each line inside the element's box. Defaults to
+   * `"left"`.
+   */
+  textAlign?: TextAlign
+  /**
+   * Unitless line height multiplier. The rendered line height is
+   * `fontSize * lineHeight`. Defaults to `1.25`.
+   */
+  lineHeight?: number
+  /**
+   * When `true` (default) the box grows horizontally to fit the text and only
+   * explicit `\n` characters create new lines. When `false` the text wraps at
+   * the element's `width` and the box grows vertically.
+   */
+  autoSize?: boolean
+  /**
+   * Id of the rectangle, ellipse or arrow this text labels. Bound text is
+   * centered inside the container, wraps to its inner width and follows it when
+   * it moves, resizes or rotates.
+   */
+  containerId?: ElementId | null
+  /**
+   * Position of an arrow label along the arrow, from `0` (start) to `1` (end).
+   * Defaults to `0.5`. Ignored for shape labels.
+   */
+  labelPosition?: number | null
+  /**
+   * Wrap width for bound text. Bound labels wrap at this width but keep a box
+   * as wide as their longest wrapped line (up to `wrapWidth`), so the inline
+   * editor grows and shrinks horizontally with the content.
+   */
+  wrapWidth?: number | null
 }
 
 /**

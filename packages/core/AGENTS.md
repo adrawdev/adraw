@@ -33,6 +33,8 @@ const canvas = new AdrawCanvas({ container: divElement })
 src/
   canvas.ts          AdrawCanvas extends CanvasEngine — adds mount/render/destroy + DOM event handling
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
+  text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
+  text-bindings.ts   bound text: max width/height, centering, container growth, sync
   tool-options.ts    per-tool style types, defaults, resolution helpers
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
@@ -50,6 +52,8 @@ src/
     touch.ts         pinch/touch listeners
     pointer.ts       mounted pointer handlers + getRelativePoint
     text-editor.ts   inline <textarea> editing lifecycle
+    text-measure.ts  canvas-backed TextMeasurer installed on mount
+    text-target.ts   resolves text-tool clicks and creates shape/arrow labels
     render.ts        renderAll, renderTemporary, updateElementGeometry, positionTextEditor
     render/elements.ts     reconcileElements, renderSelectElements
     render/guides.ts       renderGuides (alignment guides)
@@ -60,6 +64,7 @@ src/
     state.ts          DomState (mutable DOM adapter state)
   elements/          factories (elements.ts) + hit-testing (hit-test.ts)
   tools/<tool>/      one directory per tool; index.ts exports the factory
+  tools/select/      brush, move, rotate, resize, resize-rotated, resize-text
   tools/snap.ts      snapToolPoint: pointer snapping for tool gestures
   coordinates.ts, history.ts, snapping.ts, viewport.ts, types.ts, constants.ts
 ```
@@ -125,11 +130,22 @@ Passed to constructor as `CanvasOptions`:
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
 - `keyboard?: "canvas" | "document" | "none"` — shortcut scope; defaults to `"canvas"` (SVG is focusable and focuses on pointer down), `"document"` handles shortcuts page-wide, `"none"` disables them
 - `clipboard?: ClipboardOptions` — `{ serialize?, deserialize? }` hooks bridging the in-memory clipboard to the system clipboard
-- `tools?: ToolOptionsConfig` — per-tool style defaults, e.g. `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24 } }`
+- `tools?: ToolOptionsConfig` — per-tool style defaults, e.g. `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24, fontFamily: "monospace", textAlign: "center" } }`
+- `measureText?: TextMeasurer` — text layout measurer. Defaults to a character-count approximation; `AdrawCanvas.mount` installs a canvas-backed one unless this option is supplied. Set it later with `setTextMeasurer()` / read it with `getTextMeasurer()`.
 
 ### Tool styles
 
-`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+
+### Text layout
+
+`src/text.ts` owns text measurement and wrapping. `TextMeasurer` receives `TextLayoutOptions` (`fontSize`, `fontFamily`, `lineHeight`, `autoSize`, `maxWidth`) and returns `{ width, height, lines }`. The built-in `approximateTextMeasurer` uses ~0.6em per character so headless tests are deterministic; `measureTextLayout()` exposes the same algorithm with an injectable line measurer. `measureTextElement()` applies an element's style to its measurer. `appendTextLines()` renders one `<tspan>` per line with the element's alignment and a half-leading that matches the HTML editor's line boxes.
+
+`AdrawCanvas.mount()` calls `setAdapterTextMeasurer(createCanvasTextMeasurer(document))`, which re-measures existing text; `destroy()` restores the approximation. `setTextMeasurer(fn)` also re-measures every text element without adding a history entry.
+
+Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` commits. Opening an editor clears the selection and switches the active tool to `select`; committing selects the edited text (or its container for a label). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
+
+`src/text-bindings.ts` handles labels bound to a rectangle, ellipse or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, mirrors the container's rotation/visibility and grows the container vertically when the label no longer fits. Arrows use `labelPosition` (0–1) and auto-size labels; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the label box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes labels whose container disappeared. The DOM creates labels through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
 
 ## Type system
 
@@ -139,16 +155,16 @@ Defined in `src/types.ts`.
 
 All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locked, visible, opacity?):
 
-| Type          | Interface          | Extra fields                                                                                                           |
-| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `"rectangle"` | `RectangleElement` | `cornerRadius`, `strokeWidth`, `strokeColor`, `fillColor?`                                                             |
-| `"ellipse"`   | `EllipseElement`   | `strokeWidth`, `strokeColor`, `fillColor?`                                                                             |
-| `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`                                                                     |
-| `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?` |
-| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` (paths are never filled)                                        |
-| `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                               |
-| `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                |
-| `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`                                                                                      |
+| Type          | Interface          | Extra fields                                                                                                                 |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `"rectangle"` | `RectangleElement` | `cornerRadius`, `strokeWidth`, `strokeColor`, `fillColor?`                                                                   |
+| `"ellipse"`   | `EllipseElement`   | `strokeWidth`, `strokeColor`, `fillColor?`                                                                                   |
+| `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`                                                                           |
+| `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?`       |
+| `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` (paths are never filled)                                              |
+| `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                                     |
+| `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                      |
+| `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`, `fontFamily?`, `textAlign?`, `lineHeight?`, `autoSize?`, `containerId?`, `labelPosition?` |
 
 `opacity` (0–1) is rendered on the element's SVG group, so it fades stroke and fill together. `fillColor` only exists on rectangles and ellipses; omitting it uses the `--adraw-fill` CSS variable (transparent).
 
@@ -266,7 +282,10 @@ select-transform-state.test.ts — isResizing, isRotating
 snapping.test.ts               — snapping math
 snapping-dom.test.ts           — snap guide DOM rendering
 snapping-gestures.test.ts      — move/resize/create snapping via headless canvas
-text.test.ts                  — text tool, measurement, hit-testing
+text.test.ts                  — text tool, measurement, hit-testing, resize
+text-layout.test.ts           — measureTextLayout, wrapping, alignment helpers
+text-bindings.test.ts         — shape/arrow labels, growth, clipboard, z-order
+text-dom.test.ts              — inline editor, drag-to-create, labels
 transform-overlay.test.ts      — transform overlay
 viewport.test.ts               — zoom, pan, zoomToFit
 viewport-config.test.ts        — CanvasOptions.viewport, constraints, fit bounds

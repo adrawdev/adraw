@@ -1,4 +1,10 @@
-import type { BoundingBox, CanvasElement, ElementId, Point } from "../../types"
+import type {
+  BoundingBox,
+  CanvasElement,
+  ElementId,
+  Point,
+  TextAlign,
+} from "../../types"
 
 export interface OriginalPosition {
   x: number
@@ -9,6 +15,13 @@ export interface OriginalPosition {
   points?: Point[]
   lineStart?: Point
   lineEnd?: Point
+  // Text style snapshot. Resizing text scales the font size or switches it to
+  // fixed width, so the gesture must not read the already-mutated live element.
+  autoSize?: boolean
+  fontFamily?: string
+  fontSize?: number
+  lineHeight?: number
+  textAlign?: TextAlign
 }
 
 export interface SelectToolState {

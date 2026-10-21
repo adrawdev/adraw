@@ -79,6 +79,11 @@ export function createSelectTool(
         let element = isInsideSelection
           ? null
           : getElementAtPoint(elements, point)
+        // Clicking a bound label selects the container it belongs to, so moving
+        // the selection moves the shape (and its label) instead of detaching it.
+        if (element?.type === "text" && element.containerId) {
+          element = elements.get(element.containerId) ?? element
+        }
         if (isInsideSelection) {
           // The gap between selected elements is part of the selection box, so
           // it should start moving the selection instead of starting a marquee.
@@ -130,11 +135,15 @@ export function createSelectTool(
         const el = elements.get(id)
         if (el) {
           state.originalPositions.set(id, {
+            autoSize: el.type === "text" ? el.autoSize : undefined,
+            fontFamily: el.type === "text" ? el.fontFamily : undefined,
+            fontSize: el.type === "text" ? el.fontSize : undefined,
             height: el.height,
             lineEnd:
               el.type === "line" || el.type === "arrow"
                 ? { x: el.endX, y: el.endY }
                 : undefined,
+            lineHeight: el.type === "text" ? el.lineHeight : undefined,
             lineStart:
               el.type === "line" || el.type === "arrow"
                 ? { x: el.startX, y: el.startY }
@@ -147,6 +156,7 @@ export function createSelectTool(
                 ? el.points.map((p) => ({ x: p.x, y: p.y }))
                 : undefined,
             rotation: el.rotation,
+            textAlign: el.type === "text" ? el.textAlign : undefined,
             width: el.width,
             x: el.x,
             y: el.y,

@@ -53,7 +53,7 @@ function Toolbar() {
 2. `<Canvas>` only calls `engine.mount(container)` / `engine.destroy()` in an effect and toggles the provider's mounted flag
 3. The provider subscribes to core events (including `toolOptionsChange`) in an effect, copies payloads into React state, and flips `isReady` after mount/subscriptions
 4. `onReady(engine)` fires once per engine instance after those subscriptions exist
-5. `setOptions` applies `tools` and `hideOverlayWhileTransforming` live; constructor-only options (`keyboard`, `snapping`, `viewport` config, `isSnapMode`, clipboard hooks) recreate the engine while preserving document, viewport and resolved tool styles
+5. `setOptions` applies `tools` and `hideOverlayWhileTransforming` live; constructor-only options (`keyboard`, `snapping`, `viewport` config, `isSnapMode`, `clipboard` hooks, `measureText`) recreate the engine while preserving document, viewport and resolved tool styles
 6. Hooks read/write through the context; the engine exists even before `<Canvas>` mounts
 7. Multiple `<CanvasProvider>` instances can coexist on the same page (each has independent context)
 

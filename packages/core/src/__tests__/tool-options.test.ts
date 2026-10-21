@@ -3,7 +3,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
-import { STROKE_WIDTH, TEXT_FONT_SIZE } from "../constants"
+import {
+  STROKE_WIDTH,
+  TEXT_FONT_FAMILY,
+  TEXT_FONT_SIZE,
+  TEXT_LINE_HEIGHT,
+} from "../constants"
 import {
   createPath,
   createRectangle,
@@ -116,6 +121,12 @@ describe("tool options", () => {
     })
     expect(canvas.getToolOptions("rectangle").cornerRadius).toBe(0)
     expect(canvas.getToolOptions("text").fontSize).toBe(TEXT_FONT_SIZE)
+    expect(canvas.getToolOptions("text")).toMatchObject({
+      autoSize: true,
+      fontFamily: TEXT_FONT_FAMILY,
+      lineHeight: TEXT_LINE_HEIGHT,
+      textAlign: "left",
+    })
     expect(canvas.getToolOptions("rectangle").fillColor).toBeTruthy()
   })
 
@@ -247,7 +258,39 @@ describe("tool options", () => {
     const updated = canvas.getElements().get("text") as TextElement
     expect(updated.fontSize).toBe(40)
     expect(updated.width).toBe(120)
-    expect(updated.height).toBe(48)
+    expect(updated.height).toBe(40 * TEXT_LINE_HEIGHT)
+  })
+
+  it("restyles text font family, alignment and line height", () => {
+    const text = createText({
+      fontSize: 20,
+      height: 25,
+      id: "text",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      text: "Hello",
+      visible: true,
+      width: 60,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.addElement(text)
+    canvas.selectAll()
+
+    canvas.setToolOptions("text", {
+      fontFamily: "monospace",
+      lineHeight: 2,
+      textAlign: "center",
+    })
+
+    const updated = canvas.getElements().get("text") as TextElement
+    expect(updated.fontFamily).toBe("monospace")
+    expect(updated.lineHeight).toBe(2)
+    expect(updated.textAlign).toBe("center")
+    expect(updated.height).toBe(40)
   })
 
   it("applies smoothing to selected paths", () => {
@@ -425,6 +468,14 @@ describe("tool options", () => {
     const svg = container.querySelector("svg")!
     svg.dispatchEvent(
       new PointerEvent("pointerdown", {
+        bubbles: true,
+        clientX: 400,
+        clientY: 300,
+        pointerId: 1,
+      }),
+    )
+    svg.dispatchEvent(
+      new PointerEvent("pointerup", {
         bubbles: true,
         clientX: 400,
         clientY: 300,

@@ -33,6 +33,18 @@ import type {
 } from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import {
+  approximateTextMeasurer,
+  measureTextElement,
+  type TextLayout,
+  type TextLayoutOptions,
+  type TextMeasurer,
+} from "../text"
+import {
+  findBoundText,
+  isBoundTextContainer,
+  syncTextBindings,
+} from "../text-bindings"
+import {
   CONFIGURABLE_TOOLS,
   getElementTypeForTool,
   isConfigurableTool,
@@ -147,6 +159,14 @@ export interface EngineInternal {
   getViewportConfig: () => ViewportConfig
   setPointerPoint: (point: Point) => void
   /**
+   * Get the text measurer currently used to size text elements.
+   */
+  getTextMeasurer: () => TextMeasurer
+  /**
+   * Measure text with the current measurer.
+   */
+  measureText: (text: string, options: TextLayoutOptions) => TextLayout
+  /**
    * Set the viewport state and emit `viewportChange`.
    * @param viewport New viewport.
    */
@@ -189,6 +209,10 @@ export class CanvasEngine {
   private snappingConfig: SnappingConfig
   private isSnapMode: boolean
   private keyboardScope: KeyboardScope
+  // Text layout measurer. The DOM adapter installs a canvas-backed one on
+  // mount; the headless default approximates metrics without touching the DOM.
+  private textMeasurer: TextMeasurer
+  private textMeasurerSource: "adapter" | "custom" | "default"
   private snapGuides: SnapGuide[] = []
   private strokeColor: string = STROKE_COLOR
   private toolOptions = new Map<
@@ -226,6 +250,8 @@ export class CanvasEngine {
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.isSnapMode = options.isSnapMode ?? false
     this.keyboardScope = options.keyboard ?? "canvas"
+    this.textMeasurer = options.measureText ?? approximateTextMeasurer
+    this.textMeasurerSource = options.measureText ? "custom" : "default"
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
 
@@ -263,7 +289,8 @@ export class CanvasEngine {
         const copy = cloneElementDeep(element)
         this.elements.set(copy.id, copy)
       }
-      syncArrowBindings(this.elements)
+      this.remeasureTextElements(false)
+      this.syncBindings()
     }
 
     // Seed the baseline checkpoint so the first edit can be undone back to the
@@ -287,13 +314,14 @@ export class CanvasEngine {
           : getDefaultToolOptions()
       },
       getViewport: () => this.viewport,
+      measureText: (text, options) => this.textMeasurer(text, options),
       pushHistory: () => {
         this.commitHistory()
       },
       setActiveTool: (tool) => this.setActiveTool(tool),
       setElements: (elements) => {
         this.elements = elements
-        syncArrowBindings(this.elements)
+        this.syncBindings()
         this.emit("change", { elements: this.elements })
       },
       setSelectedIds: (ids) => {
@@ -316,6 +344,29 @@ export class CanvasEngine {
       return
     }
     this.history = pushHistory(this.history, this.elements, this.selectedIds)
+  }
+
+  // Recompute derived bindings after elements move: arrow endpoints follow
+  // their targets, then bound text follows its container (and may grow it).
+  // A grown container can move arrow endpoints again, so arrows sync twice.
+  // Removes labels whose container disappeared and drops them from selection.
+  private syncBindings(): boolean {
+    let changed = syncArrowBindings(this.elements)
+    const textChanged = syncTextBindings(this.elements, this.textMeasurer)
+    if (textChanged) {
+      changed = true
+      syncArrowBindings(this.elements)
+      if (this.selectedIds.size > 0) {
+        const next = new Set(
+          [...this.selectedIds].filter((id) => this.elements.has(id)),
+        )
+        if (next.size !== this.selectedIds.size) {
+          this.selectedIds = next
+          this.emit("selectionChange", { selectedIds: this.selectedIds })
+        }
+      }
+    }
+    return changed
   }
 
   // Fold the net change between `before` and the current elements into every
@@ -496,7 +547,7 @@ export class CanvasEngine {
       for (const element of elements) {
         this.elements.set(element.id, element)
       }
-      syncArrowBindings(this.elements)
+      this.syncBindings()
 
       this.selectedIds = new Set(elements.map((elem) => elem.id))
       if (this.activeTool.type !== "select") {
@@ -540,7 +591,7 @@ export class CanvasEngine {
       for (const element of inputs) {
         this.elements.set(element.id, element)
       }
-      syncArrowBindings(this.elements)
+      this.syncBindings()
     }
 
     if (options.history === false) {
@@ -570,7 +621,8 @@ export class CanvasEngine {
         next.set(element.id, element)
       }
       this.elements = next
-      syncArrowBindings(this.elements)
+      this.remeasureTextElements(false)
+      this.syncBindings()
       this.selectedIds = new Set()
     }
 
@@ -632,7 +684,7 @@ export class CanvasEngine {
         elements instanceof Map
           ? new Map(elements)
           : new Map(elements.map((element) => [element.id, element]))
-      syncArrowBindings(this.elements)
+      this.syncBindings()
       this.selectedIds = new Set(
         [...this.selectedIds].filter((id) => this.elements.has(id)),
       )
@@ -803,6 +855,110 @@ export class CanvasEngine {
   }
 
   /**
+   * Get the text measurer used to size and wrap text elements.
+   *
+   * @returns The active measurer.
+   */
+  getTextMeasurer(): TextMeasurer {
+    return this.textMeasurer
+  }
+
+  /**
+   * Measure text with the engine's current measurer. Useful for adapters that
+   * need the exact box a text element will have before creating it.
+   *
+   * @param text Source text.
+   * @param options Font metrics and wrapping options.
+   * @returns Box size and wrapped lines.
+   */
+  measureText(text: string, options: TextLayoutOptions): TextLayout {
+    return this.textMeasurer(text, options)
+  }
+
+  /**
+   * Replace the text measurer and re-measure every text element. Pass `null`
+   * to restore the built-in approximation.
+   *
+   * @param measurer New measurer, or `null` for the default.
+   * @example
+   * ```ts
+   * canvas.setTextMeasurer((text, options) => measureTextLayout(text, options))
+   * ```
+   */
+  setTextMeasurer(measurer: TextMeasurer | null): void {
+    this.textMeasurer = measurer ?? approximateTextMeasurer
+    this.textMeasurerSource = measurer ? "custom" : "default"
+    this.remeasureTextElements()
+  }
+
+  /**
+   * Re-measure every text element with the active measurer. Call this after
+   * custom web fonts finish loading so text boxes track the new metrics.
+   */
+  refreshTextMetrics(): void {
+    this.remeasureTextElements()
+  }
+
+  /**
+   * Whether the engine is still using its built-in measurer.
+   * @internal
+   */
+  usesDefaultTextMeasurer(): boolean {
+    return this.textMeasurerSource === "default"
+  }
+
+  /**
+   * Install the DOM adapter's measurer on mount.
+   * @internal
+   */
+  setAdapterTextMeasurer(measurer: TextMeasurer): void {
+    this.textMeasurer = measurer
+    this.textMeasurerSource = "adapter"
+    this.remeasureTextElements()
+  }
+
+  /**
+   * Restore the built-in measurer when the DOM adapter is torn down.
+   * @internal
+   */
+  resetTextMeasurer(): void {
+    if (this.textMeasurerSource !== "adapter") {
+      return
+    }
+    this.textMeasurer = approximateTextMeasurer
+    this.textMeasurerSource = "default"
+    this.remeasureTextElements()
+  }
+
+  // Recompute every text element's box with the active measurer. Silent during
+  // construction/load so callers can emit a single change event.
+  private remeasureTextElements(emit = true): boolean {
+    let changed = false
+    for (const [id, element] of this.elements) {
+      if (element.type !== "text") {
+        continue
+      }
+      const layout = measureTextElement(element, this.textMeasurer)
+      if (layout.width === element.width && layout.height === element.height) {
+        continue
+      }
+      this.elements.set(id, {
+        ...element,
+        height: layout.height,
+        width: layout.width,
+      })
+      changed = true
+    }
+
+    if (changed && emit) {
+      this.syncBindings()
+      this.emit("change", { elements: this.elements })
+      this.emit("selectionChange", { selectedIds: this.selectedIds })
+    }
+    return changed
+  }
+
+  /**
    * Merge partial style options for a tool. Future elements created with the
    * tool use the new values, and matching elements in the current selection
    * are restyled immediately.
@@ -834,7 +990,7 @@ export class CanvasEngine {
       merged as ToolOptionsMap[T],
     )
     if (changed) {
-      syncArrowBindings(this.elements)
+      this.syncBindings()
       this.emit("change", { elements: this.elements })
       // Style changes can alter bounds (e.g. a text font size), so refresh
       // consumers that cache selection geometry.
@@ -857,13 +1013,33 @@ export class CanvasEngine {
     }
 
     const elementType = getElementTypeForTool(tool)
+    const targets = new Set<ElementId>(this.selectedIds)
+    // A labeled shape is selected instead of its hidden label, but text style
+    // changes should still reach the label attached to it.
+    if (tool === "text") {
+      for (const id of this.selectedIds) {
+        const element = this.elements.get(id)
+        if (!isBoundTextContainer(element)) {
+          continue
+        }
+        const label = findBoundText(this.elements, id)
+        if (label) {
+          targets.add(label.id)
+        }
+      }
+    }
+
     let changed = false
-    for (const id of this.selectedIds) {
+    for (const id of targets) {
       const element = this.elements.get(id)
       if (!element || element.type !== elementType) {
         continue
       }
-      const next = applyToolOptionsToElement(element, options)
+      const next = applyToolOptionsToElement(
+        element,
+        options,
+        this.textMeasurer,
+      )
       if (next !== element) {
         this.elements.set(id, next)
         changed = true
@@ -1073,6 +1249,7 @@ export class CanvasEngine {
     }
     this.elements = result.elements
     this.selectedIds = result.selectedIds
+    this.syncBindings()
     this.commitHistory()
     this.emit("change", { elements: this.elements })
     this.emit("selectionChange", { selectedIds: this.selectedIds })
@@ -1131,7 +1308,7 @@ export class CanvasEngine {
     for (const element of pasted) {
       this.elements.set(element.id, element)
     }
-    syncArrowBindings(this.elements)
+    this.syncBindings()
     this.selectedIds = new Set(pasted.map((element) => element.id))
     // Push after mutating so the top of the undo stack mirrors the pasted
     // state (same convention as the tools).

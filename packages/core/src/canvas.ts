@@ -6,6 +6,8 @@ import {
   type MountedDom,
 } from "./dom/adapter"
 import { renderAll } from "./dom/render"
+import { reconcileElements } from "./dom/render/elements"
+import { createCanvasTextMeasurer } from "./dom/text-measure"
 import { toImage } from "./dom/to-image"
 import { CanvasEngine } from "./engine/engine"
 import {
@@ -125,8 +127,28 @@ export class AdrawCanvas extends CanvasEngine {
     if (this.mounted) {
       return
     }
+    if (this.usesDefaultTextMeasurer()) {
+      this.setAdapterTextMeasurer(
+        createCanvasTextMeasurer(container.ownerDocument),
+      )
+    }
     this.mounted = mountDom(this, container)
+    // Initial content lives in the engine before the adapter exists; build its
+    // nodes before the full render so a mounted canvas with `initialElements`
+    // or `initialDocument` is not blank until the first change.
+    reconcileElements(this.mounted.state, this)
     renderAll(this.mounted.state, this)
+
+    // Web fonts can change text metrics after the first paint. Re-measure once
+    // they are ready so boxes and wrapping match the glyphs.
+    const fonts = container.ownerDocument.fonts
+    if (fonts) {
+      void fonts.ready.then(() => {
+        if (this.mounted) {
+          this.refreshTextMetrics()
+        }
+      })
+    }
   }
 
   /**
@@ -144,6 +166,7 @@ export class AdrawCanvas extends CanvasEngine {
   destroy(): void {
     this.mounted?.destroy()
     this.mounted = null
+    this.resetTextMeasurer()
   }
 
   /**

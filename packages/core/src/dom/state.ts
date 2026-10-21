@@ -65,6 +65,17 @@ export interface DomState {
   textEditElementId: ElementId | null
   // Snapshot of the element being edited, restored on cancel.
   textEditOriginalElement: TextElement | null
+  // Pending text-tool press: a click creates a label/free text, while a
+  // horizontal drag turns it into a fixed-width text. Null when no press is
+  // pending or the editor is already open.
+  textGesture: {
+    pointerId: number
+    start: Point
+    startScreen: Point
+    containerId: ElementId | null
+    dragging: boolean
+    event: PointerEvent
+  } | null
   // Touch gesture state
   pinchStartDistance: number | null
   pinchStartCenter: Point | null
@@ -96,6 +107,7 @@ export function createDomState(): DomState {
     textEditOriginalElement: null,
     textEditPoint: null,
     textEditor: null,
+    textGesture: null,
     transformOverlay: null,
   }
 }
