@@ -140,21 +140,20 @@ test.describe("selection", () => {
     const box = (await svg.boundingBox())!
     const viewport = page.viewportSize()!
 
-    // Release the pointer past the container's right edge — and, when the
-    // container reaches the viewport edge, at the very edge of the window.
+    // Leave the container through its top edge (into the toolbar) while also
+    // moving to the right edge of the window. Pointer capture must keep
+    // move/up events flowing to the canvas, so the delta applies in full
+    // instead of being clipped at the container's edge.
     const from = { x: center.x, y: center.y }
     const to = {
       x: Math.min(box.width + 40, viewport.width - box.x - 1),
-      y: center.y,
+      y: -Math.min(30, box.y - 1),
     }
     const [before] = await elementPositions(page)
     await drag(page, svg, from, to)
 
-    // The drag delta must apply in full — pointer capture keeps move/up
-    // events flowing outside the container, so the shape is not clipped at
-    // its edge.
     const [after] = await elementPositions(page)
     expect(after.x).toBeCloseTo(before.x + (to.x - from.x), 1)
-    expect(after.y).toBeCloseTo(before.y, 1)
+    expect(after.y).toBeCloseTo(before.y + (to.y - from.y), 1)
   })
 })

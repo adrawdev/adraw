@@ -44,6 +44,17 @@ export function setupEventListeners(
   const svgElement = state.svgElement
   const keyboardScope = engine.getKeyboardScope()
 
+  // Firefox can start a native drag-and-drop from an SVG child (e.g. a shape
+  // being dragged with the select tool). That fires `pointercancel` and kills
+  // the gesture mid-move, so native dragging is never allowed on the canvas.
+  const preventNativeDrag = (event: DragEvent): void => {
+    event.preventDefault()
+  }
+  svgElement.addEventListener("dragstart", preventNativeDrag)
+  const removeNativeDragGuard = (): void => {
+    svgElement.removeEventListener("dragstart", preventNativeDrag)
+  }
+
   setupTouchListeners(state, engine)
 
   if (keyboardScope === "canvas") {
@@ -179,13 +190,19 @@ export function setupEventListeners(
   if (keyboardScope === "document") {
     const doc = svgElement.ownerDocument
     doc.addEventListener("keydown", handleKeyDown)
-    return () => doc.removeEventListener("keydown", handleKeyDown)
+    return () => {
+      removeNativeDragGuard()
+      doc.removeEventListener("keydown", handleKeyDown)
+    }
   }
 
   if (keyboardScope === "canvas") {
     svgElement.addEventListener("keydown", handleKeyDown)
-    return () => svgElement.removeEventListener("keydown", handleKeyDown)
+    return () => {
+      removeNativeDragGuard()
+      svgElement.removeEventListener("keydown", handleKeyDown)
+    }
   }
 
-  return () => {}
+  return removeNativeDragGuard
 }
