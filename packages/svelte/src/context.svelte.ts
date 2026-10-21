@@ -1,5 +1,5 @@
 import {
-  type AdrawCanvas,
+  AdrawCanvas,
   type CanvasElement,
   type CanvasOptions,
   type ElementId,
@@ -11,7 +11,8 @@ import {
 import { getContext, setContext } from "svelte"
 
 /**
- * Svelte-specific canvas options; currently an alias of {@link CanvasOptions}.
+ * Svelte-specific canvas options. Currently an alias of {@link CanvasOptions};
+ * initial content is configured through `initialElements` / `initialDocument`.
  */
 export interface CanvasSvelteOptions extends CanvasOptions {}
 
@@ -31,9 +32,15 @@ export interface CanvasState {
  * Svelte context value holding the canvas state.
  */
 export interface CanvasContextValue {
-  instance: { current: AdrawCanvas | null }
+  instance: { current: AdrawCanvas }
   options?: CanvasSvelteOptions
   state: CanvasState
+  /** `true` after `<Canvas>` mounts the engine. */
+  readonly isReady: boolean
+  /** @internal Called by `<Canvas>` after mounting the engine. */
+  notifyReady: () => void
+  /** @internal Called by `<Canvas>` when its DOM adapter unmounts. */
+  markUnmounted: () => void
 }
 
 const CANVAS_CONTEXT_KEY = Symbol("adraw-canvas")
@@ -41,23 +48,73 @@ const CANVAS_CONTEXT_KEY = Symbol("adraw-canvas")
 /**
  * Create and provide a canvas context.
  *
+ * The engine is created headlessly here, so descendants can use it during
+ * setup without waiting for `<Canvas>` to mount.
+ *
  * @param getOptions Reactive accessor for options.
+ * @param getOnReady Optional accessor for the ready callback.
  * @returns The provided context value.
  */
 export function createCanvasContext(
   getOptions?: () => CanvasSvelteOptions | undefined,
+  getOnReady?: () => ((engine: AdrawCanvas) => void) | undefined,
 ): CanvasContextValue {
+  const options = getOptions?.()
+  const engine = new AdrawCanvas(options ?? {})
+  // Core defaults this to false; the Svelte adapter documents `true`.
+  engine.setHideOverlayWhileTransforming(
+    options?.hideOverlayWhileTransforming ?? true,
+  )
+  let isReady = $state(false)
+  let readyNotified = false
+
   const state = $state<CanvasState>({
-    activeTool: "select",
-    elements: new Map(),
-    hideWhileTransforming: getOptions?.()?.hideOverlayWhileTransforming ?? true,
-    selectedIds: new Set(),
-    toolOptions: resolveAllToolOptions(getOptions?.()?.tools),
-    viewport: { x: 0, y: 0, zoom: 1 },
+    activeTool: engine.getActiveTool(),
+    elements: new Map(engine.getElements()),
+    hideWhileTransforming: engine.getHideOverlayWhileTransforming(),
+    selectedIds: new Set(engine.getSelectedIds()),
+    toolOptions: resolveAllToolOptions(options?.tools),
+    viewport: engine.getViewport(),
+  })
+
+  engine.on("change", ({ elements }) => {
+    state.elements = new Map(elements)
+  })
+
+  engine.on("viewportChange", ({ viewport }) => {
+    state.viewport = viewport
+  })
+
+  engine.on("toolChange", ({ tool }) => {
+    state.activeTool = tool
+  })
+
+  engine.on("selectionChange", ({ selectedIds }) => {
+    state.selectedIds = new Set(selectedIds)
+  })
+
+  engine.on("toolOptionsChange", ({ tool, options: nextOptions }) => {
+    state.toolOptions = {
+      ...state.toolOptions,
+      [tool]: nextOptions,
+    } as ToolOptionsState
   })
 
   const value: CanvasContextValue = {
-    instance: { current: null },
+    instance: { current: engine },
+    get isReady() {
+      return isReady
+    },
+    markUnmounted: () => {
+      isReady = false
+    },
+    notifyReady: () => {
+      isReady = true
+      if (!readyNotified) {
+        readyNotified = true
+        getOnReady?.()?.(engine)
+      }
+    },
     get options() {
       return getOptions?.()
     },

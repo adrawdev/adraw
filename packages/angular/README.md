@@ -91,14 +91,20 @@ Returns the providers that register a component-scoped `CanvasService`. Add it t
 
 ```ts
 provideCanvas({
+  initialElements: savedElements,
   snapping: { threshold: 8 },
   tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+  onReady: (engine) => engine.setActiveTool("draw"),
 })
 ```
 
-| Argument  | Type                   | Description                                 |
-| --------- | ---------------------- | ------------------------------------------- |
-| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool style config |
+| Argument  | Type                   | Description                                                    |
+| --------- | ---------------------- | -------------------------------------------------------------- |
+| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool styles, initial document, ready |
+
+`CanvasAngularOptions` extends the core options with `initialElements` /
+`initialDocument` (`initialDocument` wins) and `onReady(engine)`, called once
+after `<adraw-canvas>` mounts the engine.
 
 ### `Canvas` (`<adraw-canvas>`)
 
@@ -110,7 +116,7 @@ Standalone component that mounts the drawing surface into its own host element (
 
 ### `CanvasService`
 
-The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `toolOptions`, the imperative methods used by the hooks (including `getToolOptions` / `setToolOptions`), and `instance` (the raw `AdrawCanvas`).
+The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It creates the engine headlessly in its constructor, exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `isReady`, `toolOptions`, the imperative methods used by the hooks (including `getToolOptions` / `setToolOptions`), and `instance` (the raw `AdrawCanvas`).
 
 ## Hooks
 
@@ -119,6 +125,16 @@ All hooks must be called in an injection context and resolve the nearest provide
 ### `useCanvas()`
 
 Returns the `CanvasService` for the nearest `provideCanvas()`. `CanvasService.instance` is the raw `AdrawCanvas`, which carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a signal:
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas — available before <adraw-canvas> renders
+// isReady(): boolean — true after the engine is mounted
+```
 
 ### `useTool()`
 

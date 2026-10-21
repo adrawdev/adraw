@@ -29,6 +29,19 @@ export type SetToolOptions = <T extends ConfigurableToolType>(
  * React context value synced with an adraw canvas instance.
  */
 export interface CanvasContextValue {
+  /** Underlying engine. Available as soon as the provider renders. */
+  engine: AdrawCanvas
+  /**
+   * `true` once `<Canvas>` has mounted the engine and the provider has
+   * subscribed to its events.
+   */
+  isReady: boolean
+  /** @internal Called by `<Canvas>` when its DOM adapter mounts or unmounts. */
+  setIsMounted: React.Dispatch<React.SetStateAction<boolean>>
+  /**
+   * Ref to the underlying engine, kept for backwards compatibility.
+   * Prefer {@link useCanvasEngine}, which is populated synchronously.
+   */
   vanillaRef: React.RefObject<AdrawCanvas | null>
   elements: Map<ElementId, CanvasElement>
   setElements: React.Dispatch<React.SetStateAction<Map<string, CanvasElement>>>
@@ -73,19 +86,63 @@ export function useCanvas() {
 }
 
 /**
+ * State returned by {@link useCanvasEngine}.
+ */
+export interface CanvasEngineState {
+  /** Engine instance owned by the nearest `CanvasProvider`. */
+  engine: AdrawCanvas
+  /**
+   * `true` once `<Canvas>` has mounted the engine and the provider has
+   * subscribed to its events. Wait for this before DOM-dependent work such as
+   * `toImage()`.
+   */
+  isReady: boolean
+}
+
+/**
+ * Access the underlying engine without relying on effect ordering or a ref
+ * being populated.
+ *
+ * The engine exists as soon as `CanvasProvider` renders, so effects, event
+ * handlers and render-time callbacks can use it immediately. Use `isReady`
+ * (which toggles a re-render) before doing DOM-dependent work.
+ *
+ * @returns `{ engine, isReady }`.
+ * @example
+ * ```tsx
+ * function ExportButton() {
+ *   const { engine, isReady } = useCanvasEngine()
+ *
+ *   return (
+ *     <button
+ *       disabled={!isReady}
+ *       onClick={() => engine.toImage().then(download)}
+ *     >
+ *       Export
+ *     </button>
+ *   )
+ * }
+ * ```
+ */
+export function useCanvasEngine(): CanvasEngineState {
+  const { engine, isReady } = useCanvas()
+  return { engine, isReady }
+}
+
+/**
  * Access the active tool and a setter.
  *
  * @returns `{ tool, setTool }`.
  */
 export function useTool() {
-  const { vanillaRef, activeTool, setActiveTool } = useCanvas()
+  const { engine, activeTool, setActiveTool } = useCanvas()
 
   const setTool = useCallback(
     (tool: ToolType) => {
-      vanillaRef?.current?.setActiveTool(tool)
+      engine.setActiveTool(tool)
       setActiveTool(tool)
     },
-    [vanillaRef, setActiveTool],
+    [engine, setActiveTool],
   )
 
   return { setTool, tool: activeTool }
@@ -95,32 +152,32 @@ export function useTool() {
  * Access viewport state and zoom/pan helpers.
  */
 export function useViewport() {
-  const { vanillaRef, viewport } = useCanvas()
+  const { engine, viewport } = useCanvas()
 
   const setViewport = useCallback(
     (newViewport: ViewportState) => {
-      vanillaRef?.current?.setViewport(newViewport)
+      engine.setViewport(newViewport)
     },
-    [vanillaRef],
+    [engine],
   )
 
   const zoomIn = useCallback(() => {
-    vanillaRef?.current?.zoomIn()
-  }, [vanillaRef])
+    engine.zoomIn()
+  }, [engine])
 
   const zoomOut = useCallback(() => {
-    vanillaRef?.current?.zoomOut()
-  }, [vanillaRef])
+    engine.zoomOut()
+  }, [engine])
 
   const resetZoom = useCallback(() => {
-    vanillaRef?.current?.resetZoom()
-  }, [vanillaRef])
+    engine.resetZoom()
+  }, [engine])
 
   const zoomToFit = useCallback(
     (options?: ZoomToFitOptions) => {
-      vanillaRef?.current?.zoomToFit(options)
+      engine.zoomToFit(options)
     },
-    [vanillaRef],
+    [engine],
   )
 
   return {
@@ -137,27 +194,15 @@ export function useViewport() {
  * Access undo/redo operations and availability.
  */
 export function useHistory() {
-  const { vanillaRef } = useCanvas()
+  const { engine } = useCanvas()
 
-  const undo = useCallback(
-    () => vanillaRef?.current?.undo() ?? false,
-    [vanillaRef],
-  )
+  const undo = useCallback(() => engine.undo(), [engine])
 
-  const redo = useCallback(
-    () => vanillaRef?.current?.redo() ?? false,
-    [vanillaRef],
-  )
+  const redo = useCallback(() => engine.redo(), [engine])
 
-  const canUndo = useCallback(
-    () => vanillaRef?.current?.canUndo() ?? false,
-    [vanillaRef],
-  )
+  const canUndo = useCallback(() => engine.canUndo(), [engine])
 
-  const canRedo = useCallback(
-    () => vanillaRef?.current?.canRedo() ?? false,
-    [vanillaRef],
-  )
+  const canRedo = useCallback(() => engine.canRedo(), [engine])
 
   return { canRedo, canUndo, redo, undo }
 }
@@ -166,19 +211,19 @@ export function useHistory() {
  * Access selection state and selection operations.
  */
 export function useSelection() {
-  const { vanillaRef, selectedIds, elements } = useCanvas()
+  const { engine, selectedIds, elements } = useCanvas()
 
   const selectAll = useCallback(() => {
-    vanillaRef?.current?.selectAll()
-  }, [vanillaRef])
+    engine.selectAll()
+  }, [engine])
 
   const clearSelection = useCallback(() => {
-    vanillaRef?.current?.clearSelection()
-  }, [vanillaRef])
+    engine.clearSelection()
+  }, [engine])
 
   const deleteSelected = useCallback(() => {
-    vanillaRef?.current?.deleteSelected()
-  }, [vanillaRef])
+    engine.deleteSelected()
+  }, [engine])
 
   return {
     clearSelection,
@@ -242,9 +287,7 @@ export function useStyle<T extends ConfigurableToolType>(
   tool: T,
 ): StyleResult<T>
 export function useStyle(): InferredStyleResult
-export function useStyle(
-  tool?: ConfigurableToolType,
-): StyleResult<ConfigurableToolType> | InferredStyleResult {
+export function useStyle(tool?: ConfigurableToolType): unknown {
   const { activeTool, elements, selectedIds, toolOptions, setToolOptions } =
     useCanvas()
 
@@ -268,15 +311,15 @@ export function useStyle(
  * Access and control the transform-overlay visibility.
  */
 export function useTransformOverlay() {
-  const { vanillaRef, hideWhileTransforming, setHideWhileTransforming } =
+  const { engine, hideWhileTransforming, setHideWhileTransforming } =
     useCanvas()
 
   const setHide = useCallback(
     (hide: boolean) => {
-      vanillaRef?.current?.setHideOverlayWhileTransforming(hide)
+      engine.setHideOverlayWhileTransforming(hide)
       setHideWhileTransforming(hide)
     },
-    [vanillaRef, setHideWhileTransforming],
+    [engine, setHideWhileTransforming],
   )
 
   return { hideWhileTransforming, setHideWhileTransforming: setHide }

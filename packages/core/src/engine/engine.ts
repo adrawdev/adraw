@@ -252,8 +252,22 @@ export class CanvasEngine {
     this.activeTool = this.tools.get("select")!
     this.activeTool.onActivate(this.createToolContext())
 
+    // Load initial content before seeding the history baseline so the first
+    // undo cannot remove the document the engine was created with.
+    const initial = options.initialDocument
+      ? (options.initialDocument.elements ?? [])
+      : options.initialElements
+    if (initial?.length) {
+      this.elements = new Map<ElementId, CanvasElement>()
+      for (const element of initial) {
+        const copy = cloneElementDeep(element)
+        this.elements.set(copy.id, copy)
+      }
+      syncArrowBindings(this.elements)
+    }
+
     // Seed the baseline checkpoint so the first edit can be undone back to the
-    // empty canvas. The top of the undo stack always mirrors the current
+    // initial canvas. The top of the undo stack always mirrors the current
     // committed state.
     this.commitHistory()
   }

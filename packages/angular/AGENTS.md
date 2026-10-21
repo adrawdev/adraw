@@ -24,8 +24,9 @@ From `src/public-api.ts`:
 - `CanvasService` — injectable service wrapping `AdrawCanvas`
 - `provideCanvas()` — provider function for `CanvasService`
 - `CANVAS_OPTIONS` — `InjectionToken` for `CanvasAngularOptions`
-- `CanvasAngularOptions` — interface extending `CanvasOptions`
+- `CanvasAngularOptions` — interface extending `CanvasOptions` with `onReady`
 - `useCanvas()` — returns `CanvasService` (via `inject`)
+- `useCanvasEngine()` — returns `{ engine, isReady: Signal<boolean> }`
 - `useTool()` — returns `{ tool: Signal<ToolType>, setTool: (t) => void }`
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }` (viewport is a signal)
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }` (canUndo/canRedo are signals)
@@ -60,8 +61,8 @@ All hooks return signals for reactive values — read by calling them.
 
 ## How it works
 
-1. `provideCanvas()` creates the `CanvasService` singleton at the component injector level
-2. `Canvas` component mounts `AdrawCanvas` in `ngOnInit`, subscribes to the core events (including `toolOptionsChange`), mirrors into Angular signals
+1. `provideCanvas()` creates the `CanvasService` singleton at the component injector level; its constructor creates the headless `AdrawCanvas` and subscribes to core events
+2. `Canvas` mounts the provider-owned engine in `afterNextRender`, sets `isReady`, and calls `onReady` once; it calls `unmount()` on destroy
 3. Hooks call `inject(CanvasService)` and return the signal + method surface
 4. `CanvasService` is scoped to the providing injector — multiple independent canvases possible via different component injectors
 

@@ -66,15 +66,17 @@ To render multiple independent canvases, use multiple `CanvasProvider`/`Canvas` 
 ```tsx
 <CanvasProvider
   options={{
+    initialElements: savedElements,
     snapping: { threshold: 8 },
     tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   }}
+  onReady={(engine) => engine.setActiveTool("draw")}
 >
   {/* ... */}
 </CanvasProvider>
 ```
 
-Creates and owns an `AdrawCanvas` instance, scoped to its children via SolidJS context. `options` accepts `CanvasOptions` from `@adraw/core` plus `initialViewport`.
+Creates and owns an `AdrawCanvas` instance, scoped to its children via SolidJS context. The engine is created **headless** during provider setup, so descendants can use it before `<Canvas>` mounts. `options` accepts `CanvasOptions` from `@adraw/core`, including `initialElements` / `initialDocument` (`initialDocument` wins). Options are read at that point; changing the prop later does not recreate the engine, preserving in-progress content. `onReady(engine)` fires once after `<Canvas>` mounts.
 
 ### `Canvas`
 
@@ -86,7 +88,17 @@ Renders the container element and mounts the `AdrawCanvas` from the nearest `Can
 
 ### `useCanvas()`
 
-Returns the raw context value (`vanillaRef`, reactive accessors, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the raw context value (`canvasRef`, reactive accessors, `isReady`, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one. `canvasRef.current` is the engine and is available immediately; it carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a reactive accessor:
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas
+// isReady(): boolean — true after <Canvas> mounts
+```
 
 ### `useTool()`
 

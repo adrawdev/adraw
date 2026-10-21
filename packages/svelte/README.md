@@ -54,17 +54,26 @@ Sets up an isolated canvas context (via Svelte's context API) for its children. 
 ```svelte
 <CanvasProvider
   options={{
+    initialElements: savedElements,
     snapping: { threshold: 8 },
     tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   }}
+  onReady={(engine) => engine.setActiveTool("draw")}
 >
   {@render children()}
 </CanvasProvider>
 ```
 
-| Prop      | Type                  | Description                                 |
-| --------- | --------------------- | ------------------------------------------- |
-| `options` | `CanvasSvelteOptions` | Snapping / viewport / per-tool style config |
+| Prop      | Type                            | Description                                                |
+| --------- | ------------------------------- | ---------------------------------------------------------- |
+| `options` | `CanvasSvelteOptions`           | Snapping / viewport / per-tool styles and initial document |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine             |
+
+`options` accepts `initialElements` / `initialDocument` from `@adraw/core`
+(`initialDocument` wins). The provider creates the engine headlessly, so
+components can use it during setup before `<Canvas>` mounts. Options are read
+when the provider is created; changing the prop later does not recreate the
+engine, preserving in-progress content.
 
 ### `<Canvas>`
 
@@ -85,7 +94,17 @@ All composables must be called inside `<CanvasProvider>` (in the top level of a 
 
 ### `useCanvas()`
 
-Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`) and `instance` — a `{ current: AdrawCanvas | null }` ref to the underlying instance. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`), `isReady`, and `instance` — a `{ current: AdrawCanvas }` ref that is populated as soon as the provider is created. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a reactive getter:
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas
+// isReady: boolean getter — true after <Canvas> mounts
+```
 
 ### `useTool()`
 

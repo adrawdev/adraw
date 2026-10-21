@@ -2,7 +2,7 @@ import type { ToolType } from "@adraw/core"
 import {
   Canvas,
   CanvasProvider,
-  useCanvas,
+  useCanvasEngine,
   useHistory,
   useStyle,
   useTool,
@@ -10,7 +10,7 @@ import {
 } from "@adraw/react"
 
 function Toolbar() {
-  const { vanillaRef } = useCanvas()
+  const { engine } = useCanvasEngine()
   const { tool, setTool } = useTool()
   const { zoomIn, zoomOut, zoomToFit, resetZoom } = useViewport()
   const { undo, redo, canUndo, canRedo } = useHistory()
@@ -64,7 +64,7 @@ function Toolbar() {
         type="button"
         style={styles.button}
         title="Copy (Ctrl+C)"
-        onClick={() => vanillaRef.current?.copy()}
+        onClick={() => engine.copy()}
       >
         Copy
       </button>
@@ -72,7 +72,7 @@ function Toolbar() {
         type="button"
         style={styles.button}
         title="Cut (Ctrl+X)"
-        onClick={() => vanillaRef.current?.cut()}
+        onClick={() => engine.cut()}
       >
         Cut
       </button>
@@ -80,7 +80,7 @@ function Toolbar() {
         type="button"
         style={styles.button}
         title="Paste (Ctrl+V)"
-        onClick={() => vanillaRef.current?.paste()}
+        onClick={() => engine.paste()}
       >
         Paste
       </button>

@@ -55,17 +55,25 @@ Creates the underlying canvas instance and makes it available to `Canvas` and al
 ```vue
 <CanvasProvider
   :options="{
+    initialElements: savedElements,
     snapping: { threshold: 8 },
     tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   }"
+  :on-ready="(engine) => engine.setActiveTool('draw')"
 >
   ...
 </CanvasProvider>
 ```
 
-| Prop      | Type               | Description                                 |
-| --------- | ------------------ | ------------------------------------------- |
-| `options` | `CanvasVueOptions` | Snapping / viewport / per-tool style config |
+| Prop      | Type                            | Description                                                |
+| --------- | ------------------------------- | ---------------------------------------------------------- |
+| `options` | `CanvasVueOptions`              | Snapping / viewport / per-tool styles and initial document |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine             |
+
+`options` accepts `initialElements` / `initialDocument` (`initialDocument`
+wins). The provider creates the engine headlessly before the first render and
+captures the options; changing the prop later does not recreate the engine, so
+in-progress content is preserved.
 
 ### `Canvas`
 
@@ -84,7 +92,17 @@ Mounts the drawing surface inside a `div` that fills its parent. Must be rendere
 
 ### `useCanvas()`
 
-Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the canvas context (`{ core, isReady, state, vanilla, … }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` is available before mount and carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a reactive getter:
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas — available before <Canvas> mounts
+// isReady: boolean getter — true after mount
+```
 
 ### `useTool()`
 

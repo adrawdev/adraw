@@ -1,4 +1,5 @@
 import {
+  type AdrawCanvas,
   inferConfigurableTool,
   type ConfigurableToolType,
   type ResolvedToolOptions,
@@ -29,6 +30,33 @@ export type SetToolOptions = <T extends ConfigurableToolType>(
 /** Resolve the component-scoped `CanvasService`. */
 export function useCanvas(): CanvasService {
   return inject(CanvasService)
+}
+
+/**
+ * State returned by {@link useCanvasEngine}.
+ */
+export interface CanvasEngineState {
+  /** Engine owned by the nearest `provideCanvas()` service. */
+  engine: AdrawCanvas
+  /** `true` after `<adraw-canvas>` has mounted the engine. */
+  isReady: Signal<boolean>
+}
+
+/**
+ * Access the engine and its mounted-state signal.
+ *
+ * The service creates the engine headlessly in its constructor, so this is
+ * safe before `<adraw-canvas>` has rendered. Read `isReady()` before
+ * DOM-dependent work such as `toImage()`.
+ *
+ * @returns `{ engine, isReady }`.
+ */
+export function useCanvasEngine(): CanvasEngineState {
+  const canvas = inject(CanvasService)
+  return {
+    engine: canvas.instance,
+    isReady: canvas.isReady,
+  }
 }
 
 /** Access the active tool signal and setter. */

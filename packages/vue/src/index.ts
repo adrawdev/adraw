@@ -50,18 +50,28 @@ export interface CanvasState {
 
 /**
  * Create a Vue canvas instance and reactive state.
- * @param options Canvas options.
+ * @param options Canvas options, including `initialElements` / `initialDocument`.
+ * @param onReady Called once after `<Canvas>` mounts the engine.
  */
-export function createCanvas(options?: CanvasVueOptions) {
+export function createCanvas(
+  options?: CanvasVueOptions,
+  onReady?: (engine: AdrawCanvas) => void,
+) {
   const core = new AdrawCanvas(options)
+  // Core defaults this to false; the Vue adapter documents `true`.
+  core.setHideOverlayWhileTransforming(
+    options?.hideOverlayWhileTransforming ?? true,
+  )
   const vanilla = ref<AdrawCanvas | null>(null)
+  const isReady = ref(false)
+  let readyNotified = false
 
   const state = reactive<CanvasState>({
     activeTool: core.getActiveTool(),
-    elements: core.getElements(),
+    elements: new Map(core.getElements()),
     hideWhileTransforming: core.getHideOverlayWhileTransforming(),
     historyVersion: 0,
-    selectedIds: core.getSelectedIds(),
+    selectedIds: new Set(core.getSelectedIds()),
     toolOptions: resolveAllToolOptions(options?.tools),
     viewport: core.getViewport(),
   })
@@ -92,6 +102,17 @@ export function createCanvas(options?: CanvasVueOptions) {
 
   return {
     core,
+    isReady,
+    markUnmounted: () => {
+      isReady.value = false
+    },
+    notifyReady: () => {
+      isReady.value = true
+      if (!readyNotified) {
+        readyNotified = true
+        onReady?.(core)
+      }
+    },
     state,
     vanilla,
   }
@@ -110,13 +131,19 @@ const canvasInjectionKey: InjectionKey<CanvasContext> = Symbol("adraw-canvas")
  */
 export const CanvasProvider = {
   props: {
+    onReady: Function,
     options: Object,
   },
   setup(
-    props: { options?: CanvasVueOptions },
+    props: {
+      onReady?: (engine: AdrawCanvas) => void
+      options?: CanvasVueOptions
+    },
     { slots }: { slots: { default?: () => VNode[] } },
   ): () => VNode[] | undefined {
-    const canvas = createCanvas(props.options)
+    const canvas = createCanvas(props.options, (engine) =>
+      props.onReady?.(engine),
+    )
     provide(canvasInjectionKey, canvas)
 
     onUnmounted(() => {
@@ -140,6 +167,35 @@ export function useCanvas(): CanvasContext {
     throw new Error("useCanvas must be used within a CanvasProvider")
   }
   return context
+}
+
+/**
+ * State returned by {@link useCanvasEngine}.
+ */
+export interface CanvasEngineState {
+  /** Engine owned by the nearest `CanvasProvider`. */
+  engine: AdrawCanvas
+  /** `true` after `<Canvas>` has mounted the engine. */
+  readonly isReady: boolean
+}
+
+/**
+ * Access the engine and a reactive readiness flag.
+ *
+ * The engine exists as soon as the provider is created, so composables and
+ * effects do not need to wait for a template ref. `isReady` becomes `true`
+ * after `<Canvas>` mounts it and flips back on unmount.
+ *
+ * @returns `{ engine, isReady }` where `isReady` is a reactive getter.
+ */
+export function useCanvasEngine(): CanvasEngineState {
+  const canvas = useCanvas()
+  return {
+    engine: canvas.core,
+    get isReady() {
+      return canvas.isReady.value
+    },
+  }
 }
 
 /** Access the active tool and a setter. */
@@ -252,9 +308,7 @@ export function useStyle<T extends ConfigurableToolType>(
   tool: T,
 ): StyleResult<T>
 export function useStyle(): InferredStyleResult
-export function useStyle(
-  tool?: ConfigurableToolType,
-): StyleResult<ConfigurableToolType> | InferredStyleResult {
+export function useStyle(tool?: ConfigurableToolType): unknown {
   const canvas = useCanvas()
 
   const resolvedTool = () =>
@@ -333,6 +387,13 @@ export const Canvas = {
 
       canvas.core.mount(containerRef.value)
       canvas.vanilla.value = canvas.core
+      canvas.notifyReady()
+    })
+
+    onUnmounted(() => {
+      canvas.markUnmounted()
+      canvas.vanilla.value?.destroy()
+      canvas.vanilla.value = null
     })
 
     return () =>

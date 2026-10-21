@@ -12,6 +12,19 @@ function pointerEvent(): PointerEvent {
   } as unknown as PointerEvent
 }
 
+describe("defaults", () => {
+  it("does not hide the transform overlay while transforming by default", () => {
+    const canvas = new AdrawCanvas()
+
+    expect(canvas.getHideOverlayWhileTransforming()).toBe(false)
+    expect(
+      new AdrawCanvas({
+        hideOverlayWhileTransforming: true,
+      }).getHideOverlayWhileTransforming(),
+    ).toBe(true)
+  })
+})
+
 describe("insertMedia", () => {
   it("returns an empty array for an empty input array", () => {
     const canvas = new AdrawCanvas()

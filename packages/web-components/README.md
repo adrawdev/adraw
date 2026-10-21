@@ -52,15 +52,21 @@ canvas.addEventListener("adraw:toolchange", (e) => {
 
 Mounts the drawing surface. Owns one core `AdrawCanvas`, created on connect and destroyed on disconnect. Fills its parent (`width: 100%; height: 100%`).
 
-| Member        | Type                            | Description                                          |
-| ------------- | ------------------------------- | ---------------------------------------------------- |
-| `options`     | `CanvasWebComponentsOptions`    | Snapping / viewport config; set before it connects   |
-| `canvas`      | `AdrawCanvas \| null`           | Underlying core instance (`null` while disconnected) |
-| `elements`    | `Map<ElementId, CanvasElement>` | Latest mirrored elements                             |
-| `viewport`    | `ViewportState`                 | Latest mirrored viewport                             |
-| `activeTool`  | `ToolType`                      | Latest mirrored active tool                          |
-| `selectedIds` | `Set<ElementId>`                | Latest mirrored selection                            |
-| `toolOptions` | `ToolOptionsState`              | Latest resolved per-tool styles                      |
+| Member        | Type                              | Description                                                |
+| ------------- | --------------------------------- | ---------------------------------------------------------- |
+| `options`     | `CanvasWebComponentsOptions`      | Snapping / viewport / initial document; set before connect |
+| `canvas`      | `AdrawCanvas \| null`             | Underlying core instance (`null` while disconnected)       |
+| `isReady`     | `boolean`                         | `true` while connected and mounted                         |
+| `onReady`     | `((canvas) => void) \| undefined` | Optional callback invoked once after mount                 |
+| `elements`    | `Map<ElementId, CanvasElement>`   | Latest mirrored elements                                   |
+| `viewport`    | `ViewportState`                   | Latest mirrored viewport                                   |
+| `activeTool`  | `ToolType`                        | Latest mirrored active tool                                |
+| `selectedIds` | `Set<ElementId>`                  | Latest mirrored selection                                  |
+| `toolOptions` | `ToolOptionsState`                | Latest resolved per-tool styles                            |
+
+`options` accepts `initialElements` / `initialDocument` from `@adraw/core`
+(`initialDocument` wins). They are loaded before the first render and become the
+history baseline.
 
 Configure it before the element connects (e.g. right after `createElement`):
 
@@ -81,6 +87,11 @@ The element re-dispatches core state changes as `CustomEvent`s:
 | `adraw:toolchange`        | `{ tool: ToolType }`                  |
 | `adraw:selectionchange`   | `{ selectedIds: Set<ElementId> }`     |
 | `adraw:tooloptionschange` | `{ tool, options }` (resolved styles) |
+| `adraw:ready`             | `{ canvas: AdrawCanvas }`             |
+
+`adraw:ready` fires once on connect, after the engine is mounted. Use
+`element.isReady` for synchronous checks or `element.onReady = (canvas) => …`
+for a direct callback.
 
 ### `getToolOptions(tool)` / `setToolOptions(tool, partial)`
 

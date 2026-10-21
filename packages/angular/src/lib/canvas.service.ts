@@ -40,9 +40,12 @@ export class CanvasService {
   private readonly _activeTool = signal<ToolType>("select")
   private readonly _selectedIds = signal<Set<ElementId>>(new Set())
   private readonly _hideWhileTransforming = signal(true)
+  private readonly _isReady = signal(false)
   private readonly _toolOptions = signal<ToolOptionsState>(
     resolveAllToolOptions(),
   )
+  private readonly onReady?: (engine: AdrawCanvas) => void
+  private readyNotified = false
 
   // Read-only views of the mirrored core state. Consumers read them by calling
   // the signal (including in templates); state only ever changes via the core.
@@ -51,6 +54,7 @@ export class CanvasService {
   readonly activeTool = this._activeTool.asReadonly()
   readonly selectedIds = this._selectedIds.asReadonly()
   readonly hideWhileTransforming = this._hideWhileTransforming.asReadonly()
+  readonly isReady = this._isReady.asReadonly()
   readonly toolOptions = this._toolOptions.asReadonly()
 
   // Bumped on every "change" event (draw, erase, undo, redo, delete) so the
@@ -70,7 +74,13 @@ export class CanvasService {
 
   constructor() {
     const options = inject(CANVAS_OPTIONS, { optional: true })
-    this.core = new AdrawCanvas(options ?? {})
+    const { onReady, ...coreOptions } = options ?? {}
+    this.onReady = onReady
+    this.core = new AdrawCanvas(coreOptions)
+    // Core defaults this to false; the Angular adapter documents `true`.
+    this.core.setHideOverlayWhileTransforming(
+      options?.hideOverlayWhileTransforming ?? true,
+    )
 
     this._elements.set(new Map(this.core.getElements()))
     this._viewport.set(this.core.getViewport())
@@ -101,6 +111,7 @@ export class CanvasService {
 
     inject(DestroyRef).onDestroy(() => {
       this.core.destroy()
+      this._isReady.set(false)
     })
   }
 
@@ -116,6 +127,21 @@ export class CanvasService {
   mount(container: HTMLElement): void {
     this.core.mount(container)
     this.core.render()
+    this._isReady.set(true)
+
+    if (!this.readyNotified) {
+      this.readyNotified = true
+      this.onReady?.(this.core)
+    }
+  }
+
+  /**
+   * Tear down the DOM adapter while keeping the engine (and its document)
+   * available for a later remount.
+   */
+  unmount(): void {
+    this.core.destroy()
+    this._isReady.set(false)
   }
 
   /**

@@ -90,14 +90,20 @@ Returns the providers that register a component-scoped `CanvasService`.
 
 ```ts
 provideCanvas({
+  initialElements: savedElements,
   snapping: { threshold: 8 },
   tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
+  onReady: (engine) => engine.setActiveTool("draw"),
 })
 ```
 
-| Argument  | Type                   | Description                                 |
-| --------- | ---------------------- | ------------------------------------------- |
-| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool style config |
+| Argument  | Type                   | Description                                             |
+| --------- | ---------------------- | ------------------------------------------------------- |
+| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool styles, initial document |
+
+`CanvasAngularOptions` extends the core options with `initialElements` /
+`initialDocument` (`initialDocument` wins) and `onReady(engine)`, called once
+after `<adraw-canvas>` mounts.
 
 ### `Canvas` (`<adraw-canvas>`)
 
@@ -109,13 +115,27 @@ Standalone component that mounts the drawing surface into its own host element (
 
 ### `CanvasService`
 
-The injectable that wraps the underlying `AdrawCanvas`. It exposes read-only signals (`elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`), imperative methods, and `instance` (the raw `AdrawCanvas`).
+The injectable that wraps the underlying `AdrawCanvas`. It creates the engine
+headlessly in its constructor and exposes read-only signals (`elements`,
+`viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`,
+`hideWhileTransforming`, `isReady`), imperative methods, and `instance` (the raw
+`AdrawCanvas`).
 
 ## Hooks
 
 ### `useCanvas()`
 
 Returns the `CanvasService` for the nearest `provideCanvas()`. `CanvasService.instance` is the raw `AdrawCanvas`, which carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a signal:
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas — available before <adraw-canvas> renders
+// isReady(): boolean — true after mount
+```
 
 ### `useTool()`
 

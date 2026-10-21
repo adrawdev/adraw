@@ -395,3 +395,73 @@ describe("setElements", () => {
     expect(canvas.canUndo()).toBe(true)
   })
 })
+
+describe("initial document", () => {
+  it("loads initialElements into the history baseline", () => {
+    const canvas = new AdrawCanvas({
+      initialElements: [makeRectangle("a"), makeRectangle("b", 20, 20)],
+    })
+
+    expect(canvas.getElements().size).toBe(2)
+    expect(canvas.getSelectedIds().size).toBe(0)
+    expect(canvas.canUndo()).toBe(false)
+
+    canvas.addElement(makeRectangle("c", 40, 40))
+    expect(canvas.undo()).toBe(true)
+    expect([...canvas.getElements().keys()]).toEqual(["a", "b"])
+  })
+
+  it("prefers initialDocument over initialElements", () => {
+    const canvas = new AdrawCanvas({
+      initialDocument: {
+        elements: [makeRectangle("document")],
+        version: 1,
+      },
+      initialElements: [makeRectangle("elements")],
+    })
+
+    expect([...canvas.getElements().keys()]).toEqual(["document"])
+  })
+
+  it("clones initial elements so callers cannot mutate engine state", () => {
+    const document = {
+      elements: [makeRectangle("rect-1")],
+      version: 1,
+    }
+    const canvas = new AdrawCanvas({ initialDocument: document })
+
+    document.elements[0].x = 999
+
+    expect(canvas.getElements().get("rect-1")?.x).toBe(0)
+  })
+
+  it("resolves arrow bindings against initial elements", () => {
+    const target = makeRectangle("target", 0, 0, 20, 20)
+    const arrow = createArrow({
+      endArrowhead: true,
+      endBinding: { elementId: "target" },
+      endX: 50,
+      endY: 10,
+      height: 1,
+      id: "arrow-1",
+      locked: false,
+      rotation: 0,
+      startArrowhead: false,
+      startBinding: null,
+      startX: 0,
+      startY: 0,
+      strokeColor: "#000",
+      strokeWidth: 1,
+      visible: true,
+      width: 50,
+      x: 0,
+      y: 0,
+      zIndex: 2,
+    }) as ArrowElement
+
+    const canvas = new AdrawCanvas({ initialElements: [target, arrow] })
+
+    const resolved = canvas.getElements().get("arrow-1") as ArrowElement
+    expect(resolved.endBinding?.elementId).toBe("target")
+  })
+})

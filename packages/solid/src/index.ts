@@ -1,6 +1,13 @@
-export { Canvas, CanvasProvider } from "./components"
+export {
+  Canvas,
+  CanvasProvider,
+  type CanvasProps,
+  type CanvasProviderProps,
+  type CanvasSolidOptions,
+} from "./components"
 export {
   useCanvas,
+  useCanvasEngine,
   useHistory,
   useSelection,
   useStyle,
@@ -8,6 +15,7 @@ export {
   useToolOptions,
   useTransformOverlay,
   useViewport,
+  type CanvasEngineState,
   type InferredStyleResult,
   type SetToolOptions,
   type StyleResult,

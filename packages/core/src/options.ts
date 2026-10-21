@@ -1,6 +1,12 @@
 import type { SnappingConfig } from "./snapping"
 import type { ToolOptionsChangeEvent, ToolOptionsConfig } from "./tool-options"
-import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
+import type {
+  CanvasDocument,
+  CanvasElement,
+  ElementId,
+  ToolType,
+  ViewportState,
+} from "./types"
 import type { ViewportConfig } from "./viewport"
 
 /**
@@ -47,6 +53,17 @@ export interface CanvasOptions {
   /** Starting viewport; defaults to origin/zoom 1. */
   initialViewport?: ViewportState
   /**
+   * Elements loaded when the engine is constructed. They become part of the
+   * initial history baseline, so the first undo does not remove them.
+   * Ignored when `initialDocument` is provided.
+   */
+  initialElements?: CanvasElement[]
+  /**
+   * Serialized document loaded when the engine is constructed. Takes
+   * precedence over `initialElements` and becomes the history baseline.
+   */
+  initialDocument?: CanvasDocument
+  /**
    * Zoom/pan behavior. Defaults: `minZoom` 0.1, `maxZoom` 10,
    * `zoomSensitivity` 0.001, `fitPadding` 32 and `constrainToContent` false.
    *
@@ -68,7 +85,7 @@ export interface CanvasOptions {
    * elements in the current selection.
    */
   tools?: ToolOptionsConfig
-  /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `true`. */
+  /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `false` in the core; the framework adapters default to `true`. */
   hideOverlayWhileTransforming?: boolean
 }
 

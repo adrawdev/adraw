@@ -83,11 +83,12 @@ Per-tool styles are configured with `CanvasOptions.tools` or `engine.setToolOpti
 
 ### Framework bindings
 
-Each adapter creates an `AdrawCanvas` imperatively, mounts it, subscribes to the core events, and mirrors state into its framework's reactivity system (React also mirrors `toolOptionsChange`).
+Each adapter creates an `AdrawCanvas` imperatively (headless in the provider/service where possible), mounts it through its canvas component/element, subscribes to the core events, and mirrors state into its framework's reactivity system (React also mirrors `toolOptionsChange`). Providers accept `onReady(engine)`; Web Components use `isReady` + `adraw:ready`.
 
 | Hook                    | Returns                                                                |
 | ----------------------- | ---------------------------------------------------------------------- |
 | `useCanvas()`           | Context / canvas instance handle                                       |
+| `useCanvasEngine()`     | `{ engine, isReady }` (React/Vue/Solid/Svelte/Angular)                 |
 | `useTool()`             | `{ tool, setTool }`                                                    |
 | `useViewport()`         | `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`     |
 | `useHistory()`          | `{ undo, redo, canUndo, canRedo }`                                     |

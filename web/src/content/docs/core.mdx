@@ -26,6 +26,24 @@ const canvas = new AdrawCanvas({ container: document.getElementById("app")! })
 
 Pass `container` to mount immediately, or omit it and call `canvas.mount(el)` later.
 
+## Initial content
+
+Load a saved document or a small element array at construction time:
+
+```ts
+const canvas = new AdrawCanvas({
+  container,
+  initialElements: [rectangle],
+  // …or restore a serialized document. This takes precedence over
+  // initialElements.
+  initialDocument: savedDocument,
+})
+```
+
+Initial content is cloned, has its arrow bindings resolved, and becomes the
+history baseline — the first undo returns to this state instead of an empty
+canvas. Adapters expose the same options through their provider/service.
+
 ## Tools
 
 | Tool        | Description                               |

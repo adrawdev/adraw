@@ -21,14 +21,18 @@ export type SetToolOptions = <T extends ConfigurableToolType>(
   options: ToolOptionsMap[T],
 ) => void
 
-/** Ref holding the mounted canvas instance. */
+/** Ref holding the provider-owned canvas instance. */
 export interface CanvasRef {
-  current: AdrawCanvas | null
+  current: AdrawCanvas
 }
 
 /** Solid context value synced with an adraw canvas. */
 export interface CanvasContextValue {
   canvasRef: CanvasRef
+  /** `true` after `<Canvas>` mounts the engine. */
+  isReady: Accessor<boolean>
+  /** @internal Called by `<Canvas>` when its DOM adapter mounts or unmounts. */
+  setIsMounted: Setter<boolean>
   elements: Accessor<Map<ElementId, CanvasElement>>
   setElements: Setter<Map<ElementId, CanvasElement>>
   viewport: Accessor<ViewportState>
@@ -67,6 +71,30 @@ export function useCanvas() {
 }
 
 /**
+ * State returned by {@link useCanvasEngine}.
+ */
+export interface CanvasEngineState {
+  /** Engine owned by the nearest `CanvasProvider`. */
+  engine: AdrawCanvas
+  /** Reactive `true` after `<Canvas>` mounts the engine. */
+  isReady: Accessor<boolean>
+}
+
+/**
+ * Access the engine and a reactive readiness accessor.
+ *
+ * The engine exists as soon as the provider renders, so effects and event
+ * handlers do not depend on a ref being populated. Read `isReady()` before
+ * DOM-dependent work such as `toImage()`.
+ *
+ * @returns `{ engine, isReady }`.
+ */
+export function useCanvasEngine(): CanvasEngineState {
+  const { canvasRef, isReady } = useCanvas()
+  return { engine: canvasRef.current, isReady }
+}
+
+/**
  * Access the active tool and a setter.
  * @returns `{ tool, setTool }`.
  */
@@ -75,7 +103,7 @@ export function useTool() {
 
   return {
     setTool: (tool: ToolType) => {
-      canvasRef.current?.setActiveTool(tool)
+      canvasRef.current.setActiveTool(tool)
     },
     get tool() {
       return activeTool()
@@ -88,17 +116,17 @@ export function useViewport() {
   const { canvasRef, viewport } = useCanvas()
 
   return {
-    resetZoom: () => canvasRef.current?.resetZoom(),
+    resetZoom: () => canvasRef.current.resetZoom(),
     setViewport: (newViewport: ViewportState) => {
-      canvasRef.current?.setViewport(newViewport)
+      canvasRef.current.setViewport(newViewport)
     },
     get viewport() {
       return viewport()
     },
-    zoomIn: () => canvasRef.current?.zoomIn(),
-    zoomOut: () => canvasRef.current?.zoomOut(),
+    zoomIn: () => canvasRef.current.zoomIn(),
+    zoomOut: () => canvasRef.current.zoomOut(),
     zoomToFit: (options?: ZoomToFitOptions) =>
-      canvasRef.current?.zoomToFit(options),
+      canvasRef.current.zoomToFit(options),
   }
 }
 
@@ -109,8 +137,8 @@ export function useHistory() {
   return {
     canRedo: () => canRedo(),
     canUndo: () => canUndo(),
-    redo: () => canvasRef.current?.redo() ?? false,
-    undo: () => canvasRef.current?.undo() ?? false,
+    redo: () => canvasRef.current.redo() ?? false,
+    undo: () => canvasRef.current.undo() ?? false,
   }
 }
 
@@ -161,9 +189,7 @@ export function useStyle<T extends ConfigurableToolType>(
   tool: T,
 ): StyleResult<T>
 export function useStyle(): InferredStyleResult
-export function useStyle(
-  tool?: ConfigurableToolType,
-): StyleResult<ConfigurableToolType> | InferredStyleResult {
+export function useStyle(tool?: ConfigurableToolType): unknown {
   const { activeTool, elements, selectedIds, toolOptions, updateToolOptions } =
     useCanvas()
 
@@ -197,7 +223,7 @@ export function useTransformOverlay() {
       return hideWhileTransforming()
     },
     setHideWhileTransforming: (hide: boolean) => {
-      canvasRef.current?.setHideOverlayWhileTransforming(hide)
+      canvasRef.current.setHideOverlayWhileTransforming(hide)
       setHideWhileTransforming(hide)
     },
   }
@@ -208,12 +234,12 @@ export function useSelection() {
   const { canvasRef, selectedIds, elements } = useCanvas()
 
   return {
-    clearSelection: () => canvasRef.current?.clearSelection(),
-    deleteSelected: () => canvasRef.current?.deleteSelected(),
+    clearSelection: () => canvasRef.current.clearSelection(),
+    deleteSelected: () => canvasRef.current.deleteSelected(),
     get elements() {
       return elements()
     },
-    selectAll: () => canvasRef.current?.selectAll(),
+    selectAll: () => canvasRef.current.selectAll(),
     get selectedIds() {
       return selectedIds()
     },

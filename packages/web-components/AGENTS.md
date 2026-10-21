@@ -48,11 +48,12 @@ From `src/index.ts`:
 
 ## How it works
 
-1. `connectedCallback`: creates an internal `<div>` container, instantiates `AdrawCanvas` and mounts it
-2. Subscribes to the core events, copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`, `toolOptions`
-3. Re-dispatches core events as `adraw:*` CustomEvents: `adraw:change`, `adraw:viewportchange`, `adraw:toolchange`, `adraw:selectionchange`, `adraw:tooloptionschange`
-4. `disconnectedCallback`: calls `destroy()` on the canvas, removes the container
-5. Exposes `.canvas` getter returning the `AdrawCanvas` instance (or `null` when disconnected)
+1. `connectedCallback`: creates an internal `<div>` container, instantiates `AdrawCanvas` (applying `initialElements` / `initialDocument`) and mounts it
+2. Seeds mirrored fields from the engine, subscribes to core events, and copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`, `toolOptions`
+3. Sets `isReady = true`, calls `onReady`, and dispatches `adraw:ready`
+4. Re-dispatches core events as `adraw:*` CustomEvents: `adraw:change`, `adraw:viewportchange`, `adraw:toolchange`, `adraw:selectionchange`, `adraw:tooloptionschange`
+5. `disconnectedCallback`: sets `isReady = false`, calls `destroy()` on the canvas, removes the container
+6. Exposes `.canvas` getter returning the `AdrawCanvas` instance (or `null` when disconnected)
 
 ## Event map
 
@@ -63,6 +64,7 @@ From `src/index.ts`:
 | `adraw:toolchange`        | `{ tool: ToolType }`                          |
 | `adraw:selectionchange`   | `{ selectedIds: Set<ElementId> }`             |
 | `adraw:tooloptionschange` | `{ tool, options }` (resolved styles)         |
+| `adraw:ready`             | `{ canvas: AdrawCanvas }`                     |
 
 ## Public fields
 
@@ -70,6 +72,8 @@ From `src/index.ts`:
 | ------------- | ------------------------------- | ------------------------------ |
 | `options?`    | `CanvasWebComponentsOptions`    | Config applied on next connect |
 | `canvas`      | `AdrawCanvas \| null`           | Core instance getter           |
+| `isReady`     | `boolean`                       | Connected + mounted            |
+| `onReady?`    | `(canvas) => void`              | Callback after mount           |
 | `elements`    | `Map<ElementId, CanvasElement>` | Mirrored elements              |
 | `viewport`    | `ViewportState`                 | Mirrored viewport              |
 | `activeTool`  | `ToolType`                      | Mirrored active tool           |

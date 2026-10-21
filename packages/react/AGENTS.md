@@ -8,9 +8,10 @@ React bindings for adraw. Provides context-based hooks and a `Canvas` component 
 
 All exported from `src/index.ts` (re-exports from `src/components.tsx`):
 
-- `CanvasProvider` — context provider; pass `options?: CanvasReactOptions`
-- `Canvas` — renders the mount `<div>`, creates/destroys `AdrawCanvas` on mount/unmount; must be inside `CanvasProvider`
-- `useCanvas()` — returns the `CanvasContextValue` (refs, state, setters)
+- `CanvasProvider` — context provider; creates/owns the headless engine from `options?: CanvasReactOptions` and accepts `onReady?: (engine) => void`
+- `Canvas` — renders the mount `<div>` and mounts/unmounts the provider-owned engine; must be inside `CanvasProvider`
+- `useCanvas()` — returns the `CanvasContextValue` (engine, state, setters)
+- `useCanvasEngine()` — returns `{ engine, isReady }`; `engine` is non-null from the first render and `isReady` flips after mount/subscriptions
 - `useTool()` — returns `{ tool: ToolType, setTool: (t: ToolType) => void }`
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
@@ -18,7 +19,7 @@ All exported from `src/index.ts` (re-exports from `src/components.tsx`):
 - `useToolOptions()` — returns `{ toolOptions, setToolOptions }` (resolved per-tool styles)
 - `useStyle(tool?)` — returns `{ tool, style, setStyle }` for one tool, inferring from the selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
-- `CanvasReactOptions` — type extending `CanvasOptions`
+- `CanvasReactOptions` — type extending `CanvasOptions` (which includes `initialElements` / `initialDocument`)
 
 ## Usage
 
@@ -48,10 +49,13 @@ function Toolbar() {
 
 ## How it works
 
-1. `CanvasProvider` creates context with state signals (`useState`) and a `useRef` for the canvas instance
-2. `Canvas` creates `new AdrawCanvas({ container, ...options })` in `useEffect`, subscribes to the core events (including `toolOptionsChange`), copies payloads into React state
-3. Hooks read/write through the context — all methods no-op when canvas isn't mounted (ref is null)
-4. Multiple `<CanvasProvider>` instances can coexist on the same page (each has independent context)
+1. `CanvasProvider` creates a headless `new AdrawCanvas(options)` in a `useState` initializer (core applies `initialElements` / `initialDocument`) and seeds React state from the engine
+2. `<Canvas>` only calls `engine.mount(container)` / `engine.destroy()` in an effect and toggles the provider's mounted flag
+3. The provider subscribes to core events (including `toolOptionsChange`) in an effect, copies payloads into React state, and flips `isReady` after mount/subscriptions
+4. `onReady(engine)` fires once per engine instance after those subscriptions exist
+5. `setOptions` applies `tools` and `hideOverlayWhileTransforming` live; constructor-only options (`keyboard`, `snapping`, `viewport` config, `isSnapMode`, clipboard hooks) recreate the engine while preserving document, viewport and resolved tool styles
+6. Hooks read/write through the context; the engine exists even before `<Canvas>` mounts
+7. Multiple `<CanvasProvider>` instances can coexist on the same page (each has independent context)
 
 ## Build
 
@@ -64,7 +68,7 @@ pnpm dev:react      # watch mode
 
 - `"use client"` directive at the top of `components.tsx` for SSR
 - Follow React patterns — `useCallback`, `useMemo` as appropriate
-- Canvas instance stored in `useRef`, not state
+- Canvas instance stored in `useState` (so engine replacement re-renders) plus a `vanillaRef` compatibility mirror
 - Copy event payloads: `new Map(newElements)`, `new Set(newSelectedIds)`
 - Same hook shape as all other adapters (shared surface)
 

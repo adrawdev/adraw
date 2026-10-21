@@ -3,6 +3,7 @@ export { CanvasService, provideCanvas } from "./lib/canvas.service"
 export { CANVAS_OPTIONS, type CanvasAngularOptions } from "./lib/canvas.tokens"
 export {
   useCanvas,
+  useCanvasEngine,
   useHistory,
   useSelection,
   useStyle,
@@ -10,6 +11,7 @@ export {
   useToolOptions,
   useTransformOverlay,
   useViewport,
+  type CanvasEngineState,
   type InferredStyleResult,
   type SetToolOptions,
   type StyleResult,

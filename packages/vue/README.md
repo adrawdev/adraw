@@ -88,9 +88,16 @@ Creates the underlying canvas instance and makes it available to `Canvas` and al
 </CanvasProvider>
 ```
 
-| Prop      | Type               | Description                                 |
-| --------- | ------------------ | ------------------------------------------- |
-| `options` | `CanvasVueOptions` | Snapping / viewport / per-tool style config |
+| Prop      | Type                            | Description                                                |
+| --------- | ------------------------------- | ---------------------------------------------------------- |
+| `options` | `CanvasVueOptions`              | Snapping / viewport / per-tool styles and initial document |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine             |
+
+`options` accepts `initialElements` and `initialDocument` from
+`@adraw/core`; the latter takes precedence. Initial content is applied when the
+provider creates the engine, before the first render. Options are captured at
+that point; changing the prop later does not recreate the engine, so in-progress
+content is preserved.
 
 ### `Canvas`
 
@@ -109,19 +116,32 @@ Mounts the drawing surface inside a `div` that fills its parent. Must be rendere
 
 All composables must be called inside a `CanvasProvider` — they throw if no provider is found in the ancestor tree.
 
-### `createCanvas(options?)`
+### `createCanvas(options?, onReady?)`
 
-Low-level factory used internally by `CanvasProvider`. Returns `{ core, state, vanilla }`.
+Low-level factory used internally by `CanvasProvider`. Returns `{ core, isReady, markUnmounted, notifyReady, state, vanilla }`.
 
-- `core` — the `AdrawCanvas` instance
+- `core` — the `AdrawCanvas` instance, created **headless** immediately
 - `state` — a Vue `reactive` object with `elements`, `viewport`, `activeTool`, and `selectedIds`
-- `vanilla` — a `ref` to the `AdrawCanvas` instance (set after `core.mount()`)
+- `vanilla` — a `ref` to the mounted `AdrawCanvas` instance (set after `core.mount()`)
+- `isReady` — a ref that flips after `notifyReady()` / `markUnmounted()`
 
 Call this directly only if you want to manage mounting/destruction yourself instead of using `CanvasProvider`/`Canvas`.
 
 ### `useCanvas()`
 
-Returns the canvas context (`{ core, state, vanilla }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the canvas context (`{ core, isReady, state, vanilla, … }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` is available before the canvas is mounted and carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+
+### `useCanvasEngine()`
+
+Returns `{ engine, isReady }`, where `isReady` is a reactive getter. The engine
+exists as soon as the provider is created, so composables and effects do not
+need to wait for a template ref.
+
+```ts
+const { engine, isReady } = useCanvasEngine()
+// engine: AdrawCanvas
+// isReady: boolean getter — true after <Canvas> mounts
+```
 
 ### `useTool()`
 

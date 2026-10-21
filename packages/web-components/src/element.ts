@@ -4,6 +4,7 @@ import {
   type CanvasEventMap,
   type CanvasOptions,
   type ConfigurableToolType,
+  CONFIGURABLE_TOOLS,
   type ElementId,
   resolveAllToolOptions,
   type ResolvedToolOptions,
@@ -28,6 +29,7 @@ export interface AdrawCanvasEventMap {
   "adraw:toolchange": CustomEvent<{ tool: ToolType }>
   "adraw:selectionchange": CustomEvent<{ selectedIds: Set<ElementId> }>
   "adraw:tooloptionschange": CustomEvent<ToolOptionsChangeEvent>
+  "adraw:ready": CustomEvent<{ canvas: AdrawCanvas }>
 }
 
 /**
@@ -50,6 +52,10 @@ export class AdrawCanvasElement extends HTMLElement {
   activeTool: ToolType = "select"
   selectedIds = new Set<ElementId>()
   toolOptions: ToolOptionsState = resolveAllToolOptions()
+  /** `true` while the element is connected and its engine is mounted. */
+  isReady = false
+  /** Optional callback invoked once after the engine mounts. */
+  onReady?: (canvas: AdrawCanvas) => void
 
   /** The underlying core instance, or `null` while the element is disconnected. */
   get canvas(): AdrawCanvas | null {
@@ -115,13 +121,21 @@ export class AdrawCanvasElement extends HTMLElement {
     this.container = container
     this.appendChild(container)
 
-    this.toolOptions = resolveAllToolOptions(this.options?.tools)
-
     const instance = new AdrawCanvas({
       ...this.options,
       container,
     })
     this.instance = instance
+    instance.setHideOverlayWhileTransforming(
+      this.options?.hideOverlayWhileTransforming ?? true,
+    )
+    this.elements = new Map(instance.getElements())
+    this.viewport = instance.getViewport()
+    this.activeTool = instance.getActiveTool()
+    this.selectedIds = new Set(instance.getSelectedIds())
+    this.toolOptions = Object.fromEntries(
+      CONFIGURABLE_TOOLS.map((tool) => [tool, instance.getToolOptions(tool)]),
+    ) as ToolOptionsState
 
     instance.on<"change">(
       "change",
@@ -182,9 +196,16 @@ export class AdrawCanvasElement extends HTMLElement {
     )
 
     instance.render()
+
+    this.isReady = true
+    this.onReady?.(instance)
+    this.dispatchEvent(
+      new CustomEvent("adraw:ready", { detail: { canvas: instance } }),
+    )
   }
 
   disconnectedCallback(): void {
+    this.isReady = false
     this.instance?.destroy()
     this.instance = null
     this.container?.remove()

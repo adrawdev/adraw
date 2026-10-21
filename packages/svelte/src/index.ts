@@ -4,6 +4,7 @@ export type {
 } from "./context.svelte.ts"
 export {
   useCanvas,
+  useCanvasEngine,
   useHistory,
   useSelection,
   useStyle,
@@ -11,6 +12,7 @@ export {
   useToolOptions,
   useTransformOverlay,
   useViewport,
+  type CanvasEngineState,
   type InferredStyleResult,
   type SetToolOptions,
   type StyleResult,

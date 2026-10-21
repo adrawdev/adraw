@@ -8,9 +8,10 @@ Svelte 5 bindings for adraw. Uses Svelte 5 runes (`$state`, `$effect`, snippets)
 
 From `src/index.ts`:
 
-- `Canvas` — Svelte component (`src/Canvas.svelte`); renders mount container, creates/destroys canvas
-- `CanvasProvider` — Svelte component (`src/CanvasProvider.svelte`); wraps children with context using Svelte 5 snippets
-- `useCanvas()` — from `src/context.svelte.ts`; returns `CanvasContextValue`
+- `Canvas` — Svelte component (`src/Canvas.svelte`); renders mount container, mounts/destroys the provider-owned engine
+- `CanvasProvider` — Svelte component (`src/CanvasProvider.svelte`); wraps children with context using Svelte 5 snippets, accepts `onReady`
+- `useCanvas()` — from `src/context.svelte.ts`; returns `CanvasContextValue` (includes `isReady`)
+- `useCanvasEngine()` — returns `{ engine, isReady }` with a reactive `isReady` getter
 - `useTool()` — `{ tool, setTool }`
 - `useViewport()` — `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — `{ undo, redo, canUndo, canRedo }`
@@ -42,10 +43,11 @@ From `src/index.ts`:
 
 ## How it works
 
-1. `CanvasProvider` creates canvas context and provides it via Svelte 5's `setContext`/`getContext`
-2. `Canvas` mounts the `AdrawCanvas` in a `$effect` block, subscribes to the core events (including `toolOptionsChange`)
-3. `useCanvas()` returns the context set by the nearest ancestor `CanvasProvider` and throws outside one
-4. One canvas per `CanvasProvider` subtree
+1. `CanvasProvider` creates the headless engine and context synchronously, then provides it via Svelte 5's `setContext`/`getContext`
+2. The context subscribes to core events (including `toolOptionsChange`) and copies payloads into `$state`
+3. `Canvas` mounts/unmounts the provider-owned engine in a `$effect` block and calls `notifyReady` / `markUnmounted`
+4. `useCanvas()` returns the context set by the nearest ancestor `CanvasProvider` and throws outside one
+5. One canvas per `CanvasProvider` subtree
 
 ## Build
 
@@ -65,4 +67,4 @@ pnpm dev:svelte      # watch mode
 - `useCanvas()` reads the `CanvasProvider` context from `context.svelte.ts`
 - Hooks return objects with getters (arrow functions for reactive reads) and methods
 - Exported types: `CanvasContextValue`, `CanvasSvelteOptions`
-- All methods no-op safely when canvas instance is `null`
+- The engine exists from provider creation; use `isReady` before DOM-dependent work

@@ -1,4 +1,10 @@
-import { afterNextRender, Component, ElementRef, inject } from "@angular/core"
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+} from "@angular/core"
 
 import { CanvasService } from "./canvas.service"
 
@@ -23,6 +29,10 @@ export class Canvas {
   constructor() {
     afterNextRender(() => {
       this.canvas.mount(this.host.nativeElement)
+    })
+
+    inject(DestroyRef).onDestroy(() => {
+      this.canvas.unmount()
     })
   }
 }

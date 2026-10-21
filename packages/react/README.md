@@ -57,11 +57,12 @@ export default function App() {
 
 ### `<CanvasProvider>`
 
-Context provider that initialises shared canvas state. All hooks and `<Canvas>` must be rendered inside it.
+Context provider that creates and owns the canvas engine. All hooks and `<Canvas>` must be rendered inside it.
 
 ```tsx
 <CanvasProvider
   options={{
+    initialElements: savedElements,
     snapping: { threshold: 8 },
     tools: {
       draw: { strokeWidth: 4, smoothing: 0.7 },
@@ -69,14 +70,41 @@ Context provider that initialises shared canvas state. All hooks and `<Canvas>` 
       text: { fontSize: 24 },
     },
   }}
+  onReady={(engine) => engine.setActiveTool("draw")}
 >
   {children}
 </CanvasProvider>
 ```
 
-| Prop      | Type                 | Description                                 |
-| --------- | -------------------- | ------------------------------------------- |
-| `options` | `CanvasReactOptions` | Snapping / viewport / per-tool style config |
+| Prop      | Type                            | Description                                                   |
+| --------- | ------------------------------- | ------------------------------------------------------------- |
+| `options` | `CanvasReactOptions`            | Snapping / viewport / per-tool styles and initial document    |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once per engine after `<Canvas>` mounts and subscribes |
+
+The core options include initial content:
+
+| Option            | Type              | Description                                                                 |
+| ----------------- | ----------------- | --------------------------------------------------------------------------- |
+| `initialElements` | `CanvasElement[]` | Elements loaded before the first render. Ignored after the provider mounts. |
+| `initialDocument` | `CanvasDocument`  | Serialized document to restore. Takes precedence over `initialElements`.    |
+
+The engine is created **headless** during the first provider render and only
+mounted into the DOM by `<Canvas>`. It is therefore available to descendants
+immediately, without depending on effect order. In React StrictMode the effect
+cycle still runs twice, but the engine instance and its document survive and
+`onReady` fires once.
+
+#### `setOptions`
+
+`setOptions` applies live changes without recreating the engine:
+
+- `tools` and `hideOverlayWhileTransforming` update the current engine.
+- `keyboard`, `snapping`, `viewport` config, `isSnapMode` and clipboard hooks are
+  constructor-only. Changing them recreates the engine while preserving the
+  document, viewport and current per-tool styles (undo history and selection are
+  reset).
+- Replacing `options` with a new object that has equal values is a no-op, so
+  inline options objects no longer wipe the canvas.
 
 ### `<Canvas>`
 
@@ -97,7 +125,26 @@ All hooks must be called inside `<CanvasProvider>`.
 
 ### `useCanvas()`
 
-Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and a ref to the underlying `AdrawCanvas` instance (`vanillaRef`). The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and the underlying `AdrawCanvas` instance (`engine`). `vanillaRef` is still available for backwards compatibility, but new code should use `useCanvasEngine()`.
+
+### `useCanvasEngine()`
+
+Returns the engine and a reactive readiness flag:
+
+```tsx
+const { engine, isReady } = useCanvasEngine()
+
+useEffect(() => {
+  if (!isReady) return
+  // DOM-dependent setup, e.g. engine.toImage()
+}, [engine, isReady])
+```
+
+`engine` is non-null from the first render, so effects do not depend on the
+child/parent effect order. `isReady` becomes `true` after `<Canvas>` has mounted
+the engine and the provider has subscribed to its events; the state change
+triggers a re-render. Use the engine directly for core-only APIs such as the
+clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 
