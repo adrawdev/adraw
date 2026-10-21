@@ -38,6 +38,7 @@ src/
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements, computeZoomToFitViewport
+    z-order.ts       bringToFront / sendToBack / setZIndex math
     shortcuts.ts     handleShortcutKey (pure keyboard-shortcut function)
     internal.ts      text-editing + overlay hooks over EngineInternal
     pointer.ts       screen→canvas dispatch, wheel zoom/pan (headless pointer paths)
@@ -81,6 +82,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `resetZoom()`                                           | Reset zoom to 1, center to 0,0                       |
 | `zoomToFit()`                                           | Fit all elements in viewport                         |
 | `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                 |
+| `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)       |
+| `setZIndex(id, z)`                                      | Set one element's exact stacking index               |
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                |
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text         |
 | `undo()` / `redo()`                                     | History navigation                                   |

@@ -150,6 +150,29 @@ canvas.deleteSelected() // remove selected elements
 canvas.getSelectedIds() // Set<ElementId>
 ```
 
+## Z-order
+
+Elements render in ascending `zIndex` — higher values sit on top. Newly drawn
+elements and inserted media stack above everything by default.
+
+```ts
+canvas.bringToFront([id]) // above everything, preserving relative order
+canvas.sendToBack([id]) // below everything
+canvas.setZIndex(id, 10) // exact value
+```
+
+Group elements carry their children, and all three methods accept
+`{ history: false }`. To place a base image underneath existing annotations,
+restack it after insertion:
+
+```ts
+const [image] = canvas.insertMedia(baseImage)
+canvas.sendToBack(image.id)
+```
+
+`insertMedia` also accepts an explicit base index with `{ zIndex }`; existing
+elements keep their indexes, so it does not reflow the stack on its own.
+
 ## Clipboard
 
 ```ts

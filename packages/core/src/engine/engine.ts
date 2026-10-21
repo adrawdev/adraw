@@ -62,6 +62,11 @@ import {
   computeZoomToFitViewport,
 } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
+import {
+  bringElementsToFront,
+  sendElementsToBack,
+  setElementZIndex,
+} from "./z-order"
 
 const DOCUMENT_VERSION = 1
 
@@ -76,6 +81,12 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
     "then" in value &&
     typeof value.then === "function"
   )
+}
+
+function normalizeIds(
+  ids: ElementId | Iterable<ElementId>,
+): Iterable<ElementId> {
+  return typeof ids === "string" ? [ids] : ids
 }
 
 /**
@@ -344,24 +355,30 @@ export class CanvasEngine {
 
   /**
    * Insert one or more media (image) elements, sizing them to fit the viewport.
+   * By default the batch is stacked above every existing element.
    * @param descriptors Media input(s).
-   * @param options `{ history }` to skip the checkpoint.
+   * @param options `{ history }` to skip the checkpoint; `zIndex` to override
+   * the base stacking index. Existing elements keep their indexes, so use a
+   * value below them or call {@link sendToBack} to stack underneath.
    * @returns The created media elements.
    */
   insertMedia(
     descriptors: MediaInput | MediaInput[],
-    options: { history?: boolean } = {},
+    options: { history?: boolean; zIndex?: number } = {},
   ): MediaElement[] {
     const inputs = Array.isArray(descriptors) ? descriptors : [descriptors]
     if (inputs.length === 0) {
       return []
+    }
+    if (options.zIndex !== undefined && !Number.isFinite(options.zIndex)) {
+      throw new RangeError("insertMedia: zIndex must be a finite number")
     }
 
     const elements = createMediaElements(
       inputs,
       this.viewport,
       this.canvasSize,
-      getNextZIndex(this.elements.values()),
+      options.zIndex ?? getNextZIndex(this.elements.values()),
     )
 
     const insert = () => {
@@ -519,6 +536,86 @@ export class CanvasEngine {
 
     this.emit("change", { elements: this.elements })
     this.emit("selectionChange", { selectedIds: this.selectedIds })
+  }
+
+  /**
+   * Move one or more elements above every other element, preserving their
+   * relative order. Group elements carry their children. Emits `change` and
+   * pushes a history checkpoint unless `{ history: false }` is passed.
+   * @param ids Element id or iterable of ids.
+   * @param options `{ history }` to skip the checkpoint.
+   */
+  bringToFront(
+    ids: ElementId | Iterable<ElementId>,
+    options: { history?: boolean } = {},
+  ): void {
+    this.applyZOrder(
+      (elements) => bringElementsToFront(elements, normalizeIds(ids)),
+      options,
+    )
+  }
+
+  /**
+   * Move one or more elements below every other element, preserving their
+   * relative order. Group elements carry their children. Emits `change` and
+   * pushes a history checkpoint unless `{ history: false }` is passed.
+   * @param ids Element id or iterable of ids.
+   * @param options `{ history }` to skip the checkpoint.
+   */
+  sendToBack(
+    ids: ElementId | Iterable<ElementId>,
+    options: { history?: boolean } = {},
+  ): void {
+    this.applyZOrder(
+      (elements) => sendElementsToBack(elements, normalizeIds(ids)),
+      options,
+    )
+  }
+
+  /**
+   * Set one element's z-index to an exact value. Emits `change` and pushes a
+   * history checkpoint unless `{ history: false }` is passed.
+   * @param id Element id.
+   * @param zIndex New stacking index.
+   * @param options `{ history }` to skip the checkpoint.
+   */
+  setZIndex(
+    id: ElementId,
+    zIndex: number,
+    options: { history?: boolean } = {},
+  ): void {
+    this.applyZOrder(
+      (elements) => setElementZIndex(elements, id, zIndex),
+      options,
+    )
+  }
+
+  // Apply a z-order operation: swap in the new element map, record one
+  // checkpoint unless skipped, and emit `change`. A null result means the
+  // stack is already in the requested order, so nothing is recorded.
+  private applyZOrder(
+    operation: (
+      elements: Map<ElementId, CanvasElement>,
+    ) => Map<ElementId, CanvasElement> | null,
+    options: { history?: boolean },
+  ): void {
+    const next = operation(this.elements)
+    if (!next) {
+      return
+    }
+
+    const apply = () => {
+      this.elements = next
+    }
+
+    if (options.history === false) {
+      this.withoutHistory(apply)
+    } else {
+      apply()
+      this.commitHistory()
+    }
+
+    this.emit("change", { elements: this.elements })
   }
 
   /**

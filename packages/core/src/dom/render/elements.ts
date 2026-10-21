@@ -144,8 +144,44 @@ export function reconcileElements(state: DomState, engine: CanvasEngine): void {
     }
   }
 
-  for (const [, element] of elements) {
-    syncElementNode(state, engine, element)
+  const orderedNodes: SVGGElement[] = []
+  for (const element of [...elements.values()].toSorted(
+    (a, b) => a.zIndex - b.zIndex,
+  )) {
+    const node = syncElementNode(state, engine, element)
+    if (node) {
+      orderedNodes.push(node)
+    }
+  }
+
+  reorderElementNodes(state.elementsGroup, orderedNodes)
+}
+
+// Put element nodes in ascending z-index order, leaving the in-progress
+// temporary node on top. Only writes to the DOM when the order differs.
+function reorderElementNodes(group: SVGGElement, ordered: SVGGElement[]): void {
+  const children = group.children
+  let needsReorder = false
+  for (let i = 0; i < ordered.length; i++) {
+    if (children[i] !== ordered[i]) {
+      needsReorder = true
+      break
+    }
+  }
+  if (!needsReorder) {
+    return
+  }
+
+  for (let i = 0; i < ordered.length; i++) {
+    const node = ordered[i]
+    const current = children[i]
+    if (current !== node) {
+      if (current) {
+        current.before(node)
+      } else {
+        group.appendChild(node)
+      }
+    }
   }
 }
 

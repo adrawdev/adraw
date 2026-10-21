@@ -320,4 +320,44 @@ describe("element node reconciliation", () => {
     emitChange(canvas)
     expect(committed[0].querySelector("text")?.textContent).toBe("Changed")
   })
+
+  it("orders element nodes by zIndex regardless of insertion order", () => {
+    const { canvas, container } = mount()
+    const top = { ...makeRect(10, 10), id: "top", zIndex: 5 }
+    const bottom = { ...makeRect(20, 20), id: "bottom", zIndex: 1 }
+
+    canvas.getElements().set(top.id, top)
+    canvas.getElements().set(bottom.id, bottom)
+    emitChange(canvas)
+
+    const group = container.querySelector(".adraw-elements-group")!
+    expect([...group.children].map((child) => child.id)).toEqual([
+      "bottom",
+      "top",
+    ])
+  })
+
+  it("restacks existing nodes without recreating them", () => {
+    const { canvas, container } = mount()
+    const a = { ...makeRect(10, 10), id: "a", zIndex: 0 }
+    const b = { ...makeRect(20, 20), id: "b", zIndex: 1 }
+    canvas.addElement([a, b])
+
+    const group = container.querySelector(".adraw-elements-group")!
+    const ids = () => [...group.children].map((child) => child.id)
+    const nodeA = nodeFor(container, a.id)
+    const nodeB = nodeFor(container, b.id)
+
+    expect(ids()).toEqual(["a", "b"])
+
+    canvas.bringToFront(a.id)
+    expect(ids()).toEqual(["b", "a"])
+    expect(nodeFor(container, a.id)).toBe(nodeA)
+    expect(nodeFor(container, b.id)).toBe(nodeB)
+
+    canvas.sendToBack(a.id)
+    expect(ids()).toEqual(["a", "b"])
+    expect(nodeFor(container, a.id)).toBe(nodeA)
+    expect(nodeFor(container, b.id)).toBe(nodeB)
+  })
 })
