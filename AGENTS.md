@@ -81,6 +81,12 @@ Linter is **oxlint** (config: `.oxlintrc.json`) with plugins for import, typescr
 
 Repository-specific unit-test, Playwright, WebKit, and test-environment instructions are in `.agents/skills/adraw-testing/SKILL.md`. Use that skill when running or troubleshooting tests.
 
+## Code conventions
+
+### Public API documentation
+
+Every publicly exported function, class, type, interface, and constant must have a JSDoc comment describing what it is and how to use it. This applies to all packages under `packages/*`, not only `@adraw/core`. Use `@param` / `@returns` when behavior is not obvious from the signature, and add `@example` blocks for non-trivial adapter APIs. Internal (non-exported) helpers are not required to have JSDoc.
+
 ## Architecture
 
 ### Core design (`packages/core`)
