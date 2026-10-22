@@ -38,7 +38,7 @@ src/
   tool-options.ts    per-tool style types, defaults, resolution helpers
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
-    tool-options.ts  applyToolOptionsToElement: style write-back for selected elements
+    tool-options.ts  applyToolOptionsToElement/getElementStyle: style write-back and read-back
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements
@@ -102,7 +102,9 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                    |
 | `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                     |
 | `getToolOptions(tool)`                                  | Resolved style options for a drawing tool                 |
+| `getStyle()`                                            | Selection style, active tool style, or global defaults    |
 | `setToolOptions(tool, partial)`                         | Merge tool styles; restyles matching selected elements    |
+| `setStyle(partial)`                                     | Merge styles into every tool; restyles selected elements  |
 | `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                              |
 | `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                                 |
 
@@ -137,7 +139,7 @@ Passed to constructor as `CanvasOptions`:
 
 ### Tool styles
 
-`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text/note), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text/note), `ToolOptionsConfig`, `StyleOptions`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, `setToolOptions(tool, partial)` restyles matching elements in the selection, and `setStyle(partial)` merges the same options into every tool (ignoring fields a tool does not support) and restyles the matching selection. `getStyle()` reads the selected elements' common style, falling back to the active tool's options and then the global style. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
 
 ### Text layout
 

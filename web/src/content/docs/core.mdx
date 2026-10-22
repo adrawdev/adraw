@@ -71,7 +71,10 @@ square/circle, or `Alt` to size it outward from the center point.
 
 Configure per-tool styles at construction, or change them at runtime with
 `setToolOptions`. Changes also restyle matching elements in the current
-selection.
+selection. Use `setStyle` to merge the same styles into every tool at once;
+fields a tool does not support are ignored for that tool. `getStyle` reads the
+effective style for the current context: the selected elements first, then the
+active tool, then the global style.
 
 ```ts
 const canvas = new AdrawCanvas({
@@ -104,6 +107,12 @@ canvas.setToolOptions("text", { fontSize: 32, textAlign: "left" })
 
 canvas.getToolOptions("rectangle")
 // { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
+
+canvas.setStyle({ opacity: 0.5, strokeColor: "#f00", strokeWidth: 3 })
+
+// Selected elements win, then the active tool, then global defaults.
+canvas.selectAll()
+canvas.getStyle()
 ```
 
 Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow`, `text`
@@ -112,8 +121,11 @@ and `note`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
 `opacity < 1` for translucent highlights). The tool-specific ones are
 `smoothing` (draw), `cornerRadius` (rectangle), and `fontSize`, `fontFamily`,
 `textAlign`, `lineHeight` and `autoSize` (text). Notes add `padding`, `width`
-and `height` sizing options. `setStrokeColor` remains a shortcut for the global
-stroke color and clears per-tool color overrides.
+and `height` sizing options. `setStyle` merges a partial style across every
+tool, applying each field only to the tools that support it; `getStyle` returns
+the style of the selection (or its common fields), the active tool, or the
+global style. `setStrokeColor` remains a shortcut for the global stroke color
+and clears per-tool color overrides.
 
 Subscribe to `toolOptionsChange` to keep a custom toolbar in sync:
 

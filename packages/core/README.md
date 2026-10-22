@@ -70,15 +70,27 @@ canvas.setToolOptions("text", { fontSize: 32 })
 
 canvas.getToolOptions("rectangle")
 // { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
+
+// Merge the same styles into every tool. Fields a tool does not support are
+// ignored for that tool.
+canvas.setStyle({ opacity: 0.5, strokeColor: "#f00", strokeWidth: 3 })
+
+// Effective style: selected elements first, then the active tool, then globals.
+canvas.selectAll()
+canvas.getStyle() // style of the selected elements (common fields only)
+canvas.clearSelection()
+canvas.getStyle() // active tool options, or global defaults
 ```
 
-Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow` and
-`text`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
-`fillColor` applies to `rectangle` and `ellipse` (combine it with `opacity <
-1` for translucent highlights). The tool-specific ones are `smoothing`
-(draw), `cornerRadius` (rectangle) and `fontSize` (text). `setStrokeColor`
-remains a shortcut for changing the global stroke color and clears per-tool
-color overrides.
+Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow`,
+`text` and `note`. Shared options are `strokeColor`, `strokeWidth` and
+`opacity`; `fillColor` applies to `rectangle`, `ellipse` and `note` (combine it
+with `opacity < 1` for translucent highlights). The tool-specific ones are
+`smoothing` (draw), `cornerRadius` (rectangle and note) and `fontSize`,
+`fontFamily`, `textAlign`, `lineHeight` and `autoSize` (text). `setStyle`
+merges shared styles into every tool at once, while `getStyle` resolves the
+style for the current selection or tool. `setStrokeColor` remains a shortcut
+for changing the global stroke color and clears per-tool color overrides.
 
 Subscribe to `toolOptionsChange` to mirror style state in custom UI:
 

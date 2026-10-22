@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import {
+  STROKE_COLOR,
   STROKE_WIDTH,
   TEXT_FONT_FAMILY,
   TEXT_FONT_SIZE,
@@ -15,7 +16,7 @@ import {
   createText,
   DEFAULT_PATH_SMOOTHING,
 } from "../elements"
-import { inferConfigurableTool } from "../tool-options"
+import { CONFIGURABLE_TOOLS, inferConfigurableTool } from "../tool-options"
 import type {
   CanvasElement,
   ElementId,
@@ -336,6 +337,352 @@ describe("tool options", () => {
       options: { fontSize: 30 },
       tool: "text",
     })
+  })
+
+  it("merges setStyle into every configurable tool", () => {
+    const canvas = new AdrawCanvas()
+
+    canvas.setStyle({
+      fillColor: "#ffd43b",
+      opacity: 0.35,
+      strokeColor: "#123456",
+      strokeWidth: 5,
+    })
+
+    for (const tool of CONFIGURABLE_TOOLS) {
+      expect(canvas.getToolOptions(tool)).toMatchObject({
+        fillColor: "#ffd43b",
+        opacity: 0.35,
+        strokeColor: "#123456",
+        strokeWidth: 5,
+      })
+    }
+  })
+
+  it("applies tool-specific setStyle options only to tools that support them", () => {
+    const canvas = new AdrawCanvas()
+
+    canvas.setStyle({ cornerRadius: 10, fontSize: 28, smoothing: 0.8 })
+
+    expect(canvas.getToolOptions("rectangle").cornerRadius).toBe(10)
+    expect(canvas.getToolOptions("note").cornerRadius).toBe(10)
+    expect(canvas.getToolOptions("text").fontSize).toBe(28)
+    expect(canvas.getToolOptions("note").fontSize).toBe(28)
+    expect(canvas.getToolOptions("draw").smoothing).toBe(0.8)
+    expect(canvas.getToolOptions("line")).not.toHaveProperty("cornerRadius")
+    expect(canvas.getToolOptions("ellipse")).not.toHaveProperty("fontSize")
+    expect(canvas.getToolOptions("rectangle")).not.toHaveProperty("smoothing")
+  })
+
+  it("applies setStyle to future elements of every tool", () => {
+    const canvas = new AdrawCanvas()
+    canvas.setStyle({
+      cornerRadius: 9,
+      fillColor: "#abcdef",
+      fontSize: 21,
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+
+    canvas.setActiveTool("rectangle")
+    drag(canvas, { x: 10, y: 10 }, { x: 110, y: 110 })
+    expect(findElement(canvas, "rectangle")).toMatchObject({
+      cornerRadius: 9,
+      fillColor: "#abcdef",
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+
+    canvas.setActiveTool("ellipse")
+    drag(canvas, { x: 20, y: 20 }, { x: 120, y: 80 })
+    expect(findElement(canvas, "ellipse")).toMatchObject({
+      fillColor: "#abcdef",
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+
+    canvas.setActiveTool("line")
+    drag(canvas, { x: 30, y: 30 }, { x: 130, y: 90 })
+    expect(findElement(canvas, "line")).toMatchObject({
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+
+    canvas.setActiveTool("arrow")
+    drag(canvas, { x: 40, y: 40 }, { x: 140, y: 100 })
+    expect(findElement(canvas, "arrow")).toMatchObject({
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+
+    canvas.setActiveTool("draw")
+    drag(canvas, { x: 50, y: 50 }, { x: 150, y: 110 })
+    const path = findElement(canvas, "path")
+    expect(path).toMatchObject({
+      opacity: 0.5,
+      strokeColor: "#123456",
+      strokeWidth: 6,
+    })
+    expect("fillColor" in path).toBe(false)
+
+    canvas.setActiveTool("note")
+    canvas.handlePointerDown(0, 0, pointerEvent())
+    canvas.handlePointerUp(0, 0, pointerEvent())
+    expect(findElement(canvas, "note")).toMatchObject({
+      cornerRadius: 9,
+      fillColor: "#abcdef",
+      fontSize: 21,
+      opacity: 0.5,
+      strokeColor: "#123456",
+    })
+  })
+
+  it("restyles matching elements in the current selection", () => {
+    const rectangle = createRectangle({
+      cornerRadius: 0,
+      height: 50,
+      id: "rect",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      strokeWidth: 2,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const path = createPath({
+      height: 40,
+      id: "path",
+      locked: false,
+      points: [],
+      rotation: 0,
+      strokeColor: "#000",
+      strokeWidth: 2,
+      visible: true,
+      width: 80,
+      x: 0,
+      y: 60,
+      zIndex: 0,
+    })
+    const text = createText({
+      fontSize: 20,
+      height: 25,
+      id: "text",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      text: "Hello",
+      visible: true,
+      width: 60,
+      x: 0,
+      y: 120,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.addElement([rectangle, path, text])
+    canvas.selectAll()
+
+    canvas.setStyle({
+      fillColor: "#abcdef",
+      fontSize: 36,
+      opacity: 0.4,
+      strokeColor: "#f00",
+      strokeWidth: 4,
+    })
+
+    expect(canvas.getElements().get("rect")).toMatchObject({
+      fillColor: "#abcdef",
+      opacity: 0.4,
+      strokeColor: "#f00",
+      strokeWidth: 4,
+    })
+    expect(canvas.getElements().get("path")).toMatchObject({
+      opacity: 0.4,
+      strokeColor: "#f00",
+      strokeWidth: 4,
+    })
+    expect("fillColor" in canvas.getElements().get("path")!).toBe(false)
+    expect(canvas.getElements().get("text")).toMatchObject({
+      fontSize: 36,
+      opacity: 0.4,
+      strokeColor: "#f00",
+    })
+  })
+
+  it("emits toolOptionsChange for every tool from setStyle", () => {
+    const canvas = new AdrawCanvas()
+    const tools: string[] = []
+    canvas.on("toolOptionsChange", ({ tool }) => {
+      tools.push(tool)
+    })
+
+    canvas.setStyle({ strokeWidth: 4 })
+
+    expect(tools).toEqual([...CONFIGURABLE_TOOLS])
+  })
+
+  it("gets the style of the selected elements", () => {
+    const rectangle = createRectangle({
+      cornerRadius: 6,
+      fillColor: "#abcdef",
+      height: 50,
+      id: "rect",
+      locked: false,
+      opacity: 0.4,
+      rotation: 0,
+      strokeColor: "#f00",
+      strokeWidth: 4,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.addElement(rectangle)
+    canvas.selectAll()
+
+    expect(canvas.getStyle()).toMatchObject({
+      cornerRadius: 6,
+      fillColor: "#abcdef",
+      opacity: 0.4,
+      strokeColor: "#f00",
+      strokeWidth: 4,
+    })
+  })
+
+  it("includes text style options for selected text", () => {
+    const text = createText({
+      autoSize: false,
+      fontFamily: "monospace",
+      fontSize: 30,
+      height: 40,
+      id: "text",
+      lineHeight: 1.5,
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      text: "Hello",
+      textAlign: "center",
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.addElement(text)
+    canvas.selectAll()
+
+    expect(canvas.getStyle()).toMatchObject({
+      autoSize: false,
+      fontFamily: "monospace",
+      fontSize: 30,
+      lineHeight: 1.5,
+      textAlign: "center",
+    })
+  })
+
+  it("returns only the common style of a mixed selection", () => {
+    const first = createRectangle({
+      cornerRadius: 0,
+      height: 50,
+      id: "first",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#f00",
+      strokeWidth: 2,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const second = createRectangle({
+      cornerRadius: 0,
+      height: 50,
+      id: "second",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#f00",
+      strokeWidth: 6,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 60,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.addElement([first, second])
+    canvas.selectAll()
+
+    const style = canvas.getStyle()
+    expect(style.strokeColor).toBe("#f00")
+    expect(style.strokeWidth).toBeUndefined()
+  })
+
+  it("prefers the selected element style over the active tool style", () => {
+    const rectangle = createRectangle({
+      cornerRadius: 0,
+      height: 50,
+      id: "rect",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      strokeWidth: 9,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const canvas = new AdrawCanvas()
+    canvas.setToolOptions("rectangle", { strokeWidth: 2 })
+    canvas.addElement(rectangle)
+    canvas.selectAll()
+
+    expect(canvas.getStyle().strokeWidth).toBe(9)
+  })
+
+  it("falls back to the active tool style when nothing is selected", () => {
+    const canvas = new AdrawCanvas()
+    canvas.setToolOptions("rectangle", {
+      cornerRadius: 12,
+      fillColor: "#d0bfff",
+      strokeWidth: 7,
+    })
+    canvas.setActiveTool("rectangle")
+
+    expect(canvas.getStyle()).toMatchObject({
+      cornerRadius: 12,
+      fillColor: "#d0bfff",
+      opacity: 1,
+      strokeWidth: 7,
+    })
+  })
+
+  it("falls back to global options when no element or tool style applies", () => {
+    const canvas = new AdrawCanvas()
+    canvas.setActiveTool("select")
+
+    expect(canvas.getStyle()).toMatchObject({
+      opacity: 1,
+      strokeColor: STROKE_COLOR,
+      strokeWidth: STROKE_WIDTH,
+    })
+
+    canvas.setStyle({ opacity: 0.5, strokeWidth: 8 })
+    expect(canvas.getStyle()).toMatchObject({ opacity: 0.5, strokeWidth: 8 })
+
+    canvas.setStrokeColor("#0f0")
+    expect(canvas.getStyle().strokeColor).toBe("#0f0")
   })
 
   it("updates rendered stroke width and corner radius", () => {

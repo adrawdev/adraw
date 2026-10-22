@@ -79,7 +79,7 @@ Engine events are the adapter contract:
 
 Always copy payloads before storing (`new Map(...)`, `new Set(...)`).
 
-Per-tool styles are configured with `CanvasOptions.tools` or `engine.setToolOptions(tool, partial)`; `getToolOptions(tool)` returns resolved defaults and matching selected elements are restyled. All framework adapters expose `useToolOptions()` / `useStyle(tool?)` for headless toolbars (Web Components exposes `toolOptions`, `getToolOptions` and `setToolOptions`).
+Per-tool styles are configured with `CanvasOptions.tools` or `engine.setToolOptions(tool, partial)`; `getToolOptions(tool)` returns resolved defaults and matching selected elements are restyled. `engine.setStyle(partial)` merges the same style into every tool, applying each field only where the tool supports it. `engine.getStyle()` returns the selected elements' common style, then the active tool's options, then the global style. All framework adapters expose `useToolOptions()` / `useStyle(tool?)` for headless toolbars (Web Components exposes `toolOptions`, `getToolOptions` and `setToolOptions`).
 
 ### Framework bindings
 

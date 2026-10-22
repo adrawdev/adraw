@@ -47,11 +47,13 @@ import {
 } from "../text-bindings"
 import {
   CONFIGURABLE_TOOLS,
+  DEFAULT_TOOL_OPTIONS,
   getElementTypeForTool,
   isConfigurableTool,
   resolveToolOptions,
   type ConfigurableToolType,
   type ResolvedToolOptions,
+  type StyleOptions,
   type ToolOptionsChangeEvent,
   type ToolOptionsMap,
 } from "../tool-options"
@@ -102,7 +104,7 @@ import {
 import { createMediaElements } from "./media"
 import { deleteSelectedElements, selectAllIds } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
-import { applyToolOptionsToElement } from "./tool-options"
+import { applyToolOptionsToElement, getElementStyle } from "./tool-options"
 import {
   bringElementsToFront,
   sendElementsToBack,
@@ -128,6 +130,25 @@ function normalizeIds(
   ids: ElementId | Iterable<ElementId>,
 ): Iterable<ElementId> {
   return typeof ids === "string" ? [ids] : ids
+}
+
+// Reduce several styles to the fields they all share with the same value.
+function getCommonStyle(styles: StyleOptions[]): StyleOptions {
+  const first = styles[0]
+  if (!first) {
+    return {}
+  }
+
+  const common: Record<string, unknown> = { ...first }
+  for (const style of styles.slice(1)) {
+    const record = style as Record<string, unknown>
+    for (const key of Object.keys(common)) {
+      if (record[key] !== common[key]) {
+        delete common[key]
+      }
+    }
+  }
+  return common as StyleOptions
 }
 
 /**
@@ -217,6 +238,9 @@ export class CanvasEngine {
   private textMeasurerSource: "adapter" | "custom" | "default"
   private snapGuides: SnapGuide[] = []
   private strokeColor: string = STROKE_COLOR
+  // Last style merged across every tool by `setStyle`; used as the fallback
+  // when neither the selection nor the active tool has style options.
+  private globalStyle: StyleOptions = {}
   private toolOptions = new Map<
     ConfigurableToolType,
     ToolOptionsMap[ConfigurableToolType]
@@ -1014,6 +1038,126 @@ export class CanvasEngine {
     } as ToolOptionsChangeEvent)
   }
 
+  /**
+   * Get the effective style options for the current context. The selected
+   * elements win, then the active tool's options, then the global style. When
+   * several elements are selected, only the fields they agree on are returned.
+   *
+   * @returns Style options for the selection, active tool or global style.
+   * @example
+   * ```ts
+   * canvas.selectAll()
+   * canvas.getStyle() // style of the selected elements
+   *
+   * canvas.clearSelection()
+   * canvas.getStyle() // active tool options, or global defaults
+   * ```
+   */
+  getStyle(): StyleOptions {
+    const selected = this.getSelectionStyle()
+    if (selected) {
+      return selected
+    }
+
+    const tool = this.getActiveTool()
+    if (isConfigurableTool(tool)) {
+      return this.getToolOptions(tool)
+    }
+
+    return this.getGlobalStyle()
+  }
+
+  /**
+   * Merge partial style options for every tool. Future elements created with
+   * any tool use the new values, and matching elements in the current selection
+   * are restyled immediately. Options that a tool does not support are ignored
+   * for that tool, so shared values such as `strokeWidth` reach every drawing
+   * tool while `smoothing`, `cornerRadius` or the text options only reach the
+   * tools that use them.
+   *
+   * @param options Partial style options to merge over every tool's current
+   * values.
+   * @example
+   * ```ts
+   * canvas.setStyle({ opacity: 0.5, strokeColor: "#f00", strokeWidth: 3 })
+   * canvas.setStyle({ fillColor: "#ffd43b", cornerRadius: 8 })
+   * canvas.setStyle({ fontSize: 28, smoothing: 0.8 })
+   * ```
+   */
+  setStyle(options: StyleOptions): void {
+    const entries = Object.entries(options).filter(
+      ([, value]) => value !== undefined,
+    )
+    this.globalStyle = {
+      ...this.globalStyle,
+      ...(Object.fromEntries(entries) as StyleOptions),
+    }
+
+    for (const tool of CONFIGURABLE_TOOLS) {
+      const supported = DEFAULT_TOOL_OPTIONS[tool] as Record<string, unknown>
+      const previous = this.toolOptions.get(tool) as
+        | Record<string, unknown>
+        | undefined
+      const merged: Record<string, unknown> = { ...previous }
+      for (const [key, value] of entries) {
+        if (key in supported) {
+          merged[key] = value
+        }
+      }
+      this.toolOptions.set(tool, merged as ToolOptionsMap[ConfigurableToolType])
+    }
+
+    let changed = false
+    for (const tool of CONFIGURABLE_TOOLS) {
+      const merged = this.toolOptions.get(tool)
+      if (merged && this.applyToolOptionsToSelection(tool, merged)) {
+        changed = true
+      }
+    }
+
+    if (changed) {
+      this.syncBindings()
+      this.emit("change", { elements: this.elements })
+      // Style changes can alter bounds (e.g. a text font size), so refresh
+      // consumers that cache selection geometry.
+      this.emit("selectionChange", { selectedIds: this.selectedIds })
+    }
+
+    for (const tool of CONFIGURABLE_TOOLS) {
+      this.emit("toolOptionsChange", {
+        options: this.getToolOptions(tool),
+        tool,
+      } as ToolOptionsChangeEvent)
+    }
+  }
+
+  // Style of the current selection, reduced to fields every selected element
+  // agrees on. Returns null when nothing usable is selected.
+  private getSelectionStyle(): StyleOptions | null {
+    if (this.selectedIds.size === 0) {
+      return null
+    }
+
+    const styles: StyleOptions[] = []
+    for (const id of this.selectedIds) {
+      const element = this.elements.get(id)
+      if (element) {
+        styles.push(getElementStyle(element))
+      }
+    }
+    return styles.length > 0 ? getCommonStyle(styles) : null
+  }
+
+  // Global style: built-in defaults overlaid with `setStyle` values and the
+  // engine's global stroke color.
+  private getGlobalStyle(): StyleOptions {
+    return {
+      ...getDefaultToolOptions(),
+      ...this.globalStyle,
+      strokeColor: this.globalStyle.strokeColor ?? this.strokeColor,
+    }
+  }
+
   // Restyle selected elements that the given tool owns, ignoring other types.
   private applyToolOptionsToSelection<T extends ConfigurableToolType>(
     tool: T,
@@ -1067,6 +1211,7 @@ export class CanvasEngine {
    */
   setStrokeColor(color: string): void {
     this.strokeColor = color
+    this.globalStyle = { ...this.globalStyle, strokeColor: color }
 
     for (const tool of CONFIGURABLE_TOOLS) {
       const overrides = this.toolOptions.get(tool)

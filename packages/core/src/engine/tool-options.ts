@@ -4,6 +4,7 @@ import {
   measureTextElement,
   type TextMeasurer,
 } from "../text"
+import { DEFAULT_TOOL_OPTIONS, type StyleOptions } from "../tool-options"
 import type { ToolOptions } from "../tools/base"
 import type { CanvasElement, TextAlign } from "../types"
 
@@ -112,4 +113,68 @@ export function applyToolOptionsToElement(
   }
 
   return next
+}
+
+/**
+ * Read the effective style options from one element. Optional fields fall back
+ * to the same defaults used when the element is created, and fields the element
+ * type does not support are omitted.
+ *
+ * @param element Element to inspect.
+ * @returns Style options supported by the element.
+ */
+export function getElementStyle(element: CanvasElement): StyleOptions {
+  const style: StyleOptions = { opacity: element.opacity ?? 1 }
+
+  if ("strokeColor" in element) {
+    style.strokeColor = element.strokeColor
+  }
+  if ("strokeWidth" in element) {
+    style.strokeWidth = element.strokeWidth
+  }
+
+  switch (element.type) {
+    case "ellipse": {
+      style.fillColor =
+        element.fillColor ?? DEFAULT_TOOL_OPTIONS.ellipse.fillColor
+      break
+    }
+    case "note": {
+      style.cornerRadius = element.cornerRadius
+      style.fillColor = element.fillColor
+      style.fontFamily =
+        element.fontFamily ?? DEFAULT_TOOL_OPTIONS.note.fontFamily
+      style.fontSize = element.fontSize
+      style.lineHeight =
+        element.lineHeight ?? DEFAULT_TOOL_OPTIONS.note.lineHeight
+      style.padding = element.padding
+      style.textAlign = element.textAlign ?? DEFAULT_TOOL_OPTIONS.note.textAlign
+      break
+    }
+    case "path": {
+      style.smoothing = element.smoothing ?? DEFAULT_TOOL_OPTIONS.draw.smoothing
+      break
+    }
+    case "rectangle": {
+      style.cornerRadius = element.cornerRadius
+      style.fillColor =
+        element.fillColor ?? DEFAULT_TOOL_OPTIONS.rectangle.fillColor
+      break
+    }
+    case "text": {
+      style.autoSize = element.autoSize ?? DEFAULT_TOOL_OPTIONS.text.autoSize
+      style.fontFamily =
+        element.fontFamily ?? DEFAULT_TOOL_OPTIONS.text.fontFamily
+      style.fontSize = element.fontSize
+      style.lineHeight =
+        element.lineHeight ?? DEFAULT_TOOL_OPTIONS.text.lineHeight
+      style.textAlign = element.textAlign ?? DEFAULT_TOOL_OPTIONS.text.textAlign
+      break
+    }
+    default: {
+      break
+    }
+  }
+
+  return style
 }

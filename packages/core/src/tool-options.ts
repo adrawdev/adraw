@@ -50,6 +50,20 @@ export type ResolvedToolOptions<T extends ConfigurableToolType> = Required<
   ToolOptionsMap[T]
 >
 
+/**
+ * Partial style options spanning every configurable tool, accepted by
+ * `canvas.setStyle()`. Fields a tool does not support are ignored for that
+ * tool, so shared values such as `strokeWidth` apply everywhere while
+ * tool-specific ones such as `smoothing` only reach the matching tools.
+ */
+export type StyleOptions = Partial<
+  ToolOptions &
+    DrawToolOptions &
+    NoteToolOptions &
+    RectangleToolOptions &
+    TextToolOptions
+>
+
 /** Partial per-tool style overrides accepted by {@link CanvasOptions.tools}. */
 export type ToolOptionsConfig = {
   [T in ConfigurableToolType]?: ToolOptionsMap[T]
