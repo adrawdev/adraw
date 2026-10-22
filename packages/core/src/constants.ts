@@ -63,7 +63,7 @@ export const NOTE_FOLD_SIZE = 28
 /**
  * Default note background color.
  */
-export const NOTE_FILL_COLOR = "var(--adraw-note, light-dark(#fde68a, #4b3000))"
+export const NOTE_FILL_COLOR = "var(--adraw-note, light-dark(#fce19c, #4b3000))"
 
 /**
  * CSS drop-shadow applied to sticky notes. Kept in note-local units so it
