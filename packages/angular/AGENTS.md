@@ -31,8 +31,6 @@ From `src/public-api.ts`:
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }` (viewport is a signal)
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }` (canUndo/canRedo are signals)
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (signals)
-- `useToolOptions()` — returns `{ toolOptions: Signal<ToolOptionsState>, setToolOptions }`
-- `useStyle(tool?)` — returns `{ tool, style, setStyle }` signals; infers from selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }` (signal)
 
 ## Usage

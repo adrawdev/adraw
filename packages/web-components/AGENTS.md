@@ -8,7 +8,7 @@ Framework-agnostic custom element for adraw. No framework runtime, no reactive s
 
 Web Components deliberately skips the shared `useCanvas/useTool/useViewport/useHistory/useSelection/useTransformOverlay` hook surface. Other adapters bridge core state into a reactivity system; Web Components has none, so hooks would be redundant wrappers.
 
-Drive the canvas through `element.canvas` (the `AdrawCanvas` instance) and read state from the element's mirrored fields directly. Tool styles have shorthands: `element.getToolOptions(tool)` and `element.setToolOptions(tool, partial)` (the latter also works before connect).
+Drive the canvas through `element.canvas` (the `AdrawCanvas` instance) and read state from the element's mirrored fields directly. Styles are global: call `element.canvas?.setStyle(partial)` and `element.canvas?.getStyle()`.
 
 ## Exports
 
@@ -49,7 +49,7 @@ From `src/index.ts`:
 ## How it works
 
 1. `connectedCallback`: creates an internal `<div>` container, instantiates `AdrawCanvas` (applying `initialElements` / `initialDocument`) and mounts it
-2. Seeds mirrored fields from the engine, subscribes to core events, and copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`, `toolOptions`
+2. Seeds mirrored fields from the engine, subscribes to core events, and copies payloads to public fields: `elements`, `viewport`, `activeTool`, `selectedIds`
 3. Sets `isReady = true`, calls `onReady`, and dispatches `adraw:ready`
 4. Re-dispatches core events as `adraw:*` CustomEvents: `adraw:change`, `adraw:viewportchange`, `adraw:toolchange`, `adraw:selectionchange`, `adraw:tooloptionschange`
 5. `disconnectedCallback`: sets `isReady = false`, calls `destroy()` on the canvas, removes the container
@@ -78,7 +78,6 @@ From `src/index.ts`:
 | `viewport`    | `ViewportState`                 | Mirrored viewport              |
 | `activeTool`  | `ToolType`                      | Mirrored active tool           |
 | `selectedIds` | `Set<ElementId>`                | Mirrored selection             |
-| `toolOptions` | `ToolOptionsState`              | Resolved per-tool styles       |
 
 ## Build
 

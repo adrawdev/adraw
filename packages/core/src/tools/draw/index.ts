@@ -3,7 +3,7 @@ import type { PathElement, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
   type ToolState,
@@ -12,7 +12,7 @@ import { createPathElement, type DrawToolOptions } from "./geometry"
 
 export function createDrawTool(options: DrawToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = { ...getDefaultToolOptions(), ...options }
+  const defaults = { ...getDefaultToolOptions(), ...options }
   let currentPoints: Point[] = []
   let temporaryElement: PathElement | null = null
 
@@ -46,7 +46,7 @@ export function createDrawTool(options: DrawToolOptions = {}): Tool {
 
       const element = createPathElement(
         currentPoints,
-        getToolOptionsForContext(toolOptions, context),
+        getStyleForContext(defaults, context),
       )
 
       if (element) {
@@ -64,7 +64,7 @@ export function createDrawTool(options: DrawToolOptions = {}): Tool {
 
       const element = createPathElement(
         currentPoints,
-        getToolOptionsForContext(toolOptions, context),
+        getStyleForContext(defaults, context),
         {
           zIndex: getNextZIndex(context.getElements().values()),
         },

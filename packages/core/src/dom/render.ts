@@ -3,6 +3,9 @@ import {
   NOTE_FILL_COLOR,
   STROKE_COLOR,
   STROKE_WIDTH,
+  TEXT_FONT_FAMILY,
+  TEXT_FONT_SIZE,
+  TEXT_LINE_HEIGHT,
 } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import { getNoteContentWidth, getNoteTextTop, measureNoteText } from "../note"
@@ -315,19 +318,14 @@ export function positionTextEditor(
     : engine.getTemporaryElement()
   const element = editing?.type === "text" ? editing : null
   const note = editing?.type === "note" ? editing : null
-  const options = engine.getToolOptions("text")
-  const noteOptions = engine.getToolOptions("note")
 
-  const fontOptions = note ? noteOptions : options
-  const fontSize = note?.fontSize ?? element?.fontSize ?? fontOptions.fontSize
-  const fontFamily =
-    note?.fontFamily ?? element?.fontFamily ?? fontOptions.fontFamily
-  const lineHeight =
-    note?.lineHeight ?? element?.lineHeight ?? fontOptions.lineHeight
-  const autoSize = note ? false : (element?.autoSize ?? options.autoSize)
+  const fontSize = note?.fontSize ?? element?.fontSize ?? TEXT_FONT_SIZE
+  const fontFamily = note?.fontFamily ?? element?.fontFamily ?? TEXT_FONT_FAMILY
+  const lineHeight = note?.lineHeight ?? element?.lineHeight ?? TEXT_LINE_HEIGHT
+  const autoSize = note ? false : (element?.autoSize ?? true)
   const textAlign = note
-    ? (note.textAlign ?? noteOptions.textAlign)
-    : (element?.textAlign ?? options.textAlign)
+    ? (note.textAlign ?? "center")
+    : (element?.textAlign ?? "left")
   const rotation = editing?.rotation ?? 0
 
   let x = element?.x ?? state.textEditPoint?.x ?? 0

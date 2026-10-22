@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
 
-import {
-  AdrawCanvas,
-  type CanvasElement,
-  type ElementId,
-  resolveToolOptions,
-} from "@adraw/core"
+import { AdrawCanvas, type CanvasElement, type ElementId } from "@adraw/core"
 import { act, StrictMode, useEffect, type ReactElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -175,53 +170,12 @@ describe("React canvas lifecycle", () => {
     const engine = store.current!.engine
 
     await act(async () => {
-      store.current!.setOptions({ tools: { rectangle: { strokeWidth: 9 } } })
+      store.current!.setOptions({ hideOverlayWhileTransforming: false })
     })
 
     expect(store.current!.engine).toBe(engine)
     expect(store.current!.engine.getElements().has("keep")).toBe(true)
-    expect(store.current!.engine.getToolOptions("rectangle").strokeWidth).toBe(
-      9,
-    )
-  })
-
-  it("resets removed tool overrides without touching the rest of the style", async () => {
-    const store: { current: Context | null } = { current: null }
-
-    function Probe() {
-      useContextProbe(store)
-      return null
-    }
-
-    await render(
-      <CanvasProvider>
-        <Probe />
-        <Canvas />
-      </CanvasProvider>,
-    )
-
-    await act(async () => {
-      store.current!.setOptions({
-        tools: { rectangle: { strokeColor: "#ff0000", strokeWidth: 9 } },
-      })
-    })
-
-    expect(store.current!.engine.getToolOptions("rectangle").strokeColor).toBe(
-      "#ff0000",
-    )
-
-    await act(async () => {
-      store.current!.setOptions({
-        tools: { rectangle: { strokeWidth: 9 } },
-      })
-    })
-
-    expect(store.current!.engine.getToolOptions("rectangle").strokeColor).toBe(
-      resolveToolOptions("rectangle").strokeColor,
-    )
-    expect(store.current!.engine.getToolOptions("rectangle").strokeWidth).toBe(
-      9,
-    )
+    expect(store.current!.engine.getHideOverlayWhileTransforming()).toBe(false)
   })
 
   it("does not recreate the engine when options change identity only", async () => {
@@ -288,73 +242,6 @@ describe("React canvas lifecycle", () => {
     expect(after.getViewport()).toEqual({ x: 5, y: 6, zoom: 1.5 })
     expect(onReady).toHaveBeenCalledTimes(2)
     expect(onReady.mock.calls[1][0]).toBe(after)
-  })
-
-  it("preserves runtime tool styles when recreating the engine", async () => {
-    const store: { current: Context | null } = { current: null }
-
-    function Probe() {
-      useContextProbe(store)
-      return null
-    }
-
-    await render(
-      <CanvasProvider options={{ initialElements: [makeRect("keep")] }}>
-        <Probe />
-        <Canvas />
-      </CanvasProvider>,
-    )
-
-    await act(async () => {
-      store.current!.engine.setToolOptions("draw", { strokeWidth: 12 })
-    })
-
-    await act(async () => {
-      store.current!.setOptions((previous) => ({
-        ...previous,
-        keyboard: "document",
-      }))
-    })
-
-    expect(store.current!.engine.getToolOptions("draw").strokeWidth).toBe(12)
-    expect(store.current!.engine.getElements().has("keep")).toBe(true)
-  })
-
-  it("resets removed overrides when recreating the engine", async () => {
-    const store: { current: Context | null } = { current: null }
-
-    function Probe() {
-      useContextProbe(store)
-      return null
-    }
-
-    await render(
-      <CanvasProvider>
-        <Probe />
-        <Canvas />
-      </CanvasProvider>,
-    )
-
-    await act(async () => {
-      store.current!.setOptions({
-        tools: { rectangle: { strokeColor: "#ff0000", strokeWidth: 9 } },
-      })
-    })
-
-    await act(async () => {
-      store.current!.setOptions((previous) => ({
-        ...previous,
-        keyboard: "document",
-        tools: { rectangle: { strokeWidth: 9 } },
-      }))
-    })
-
-    expect(store.current!.engine.getToolOptions("rectangle").strokeColor).toBe(
-      resolveToolOptions("rectangle").strokeColor,
-    )
-    expect(store.current!.engine.getToolOptions("rectangle").strokeWidth).toBe(
-      9,
-    )
   })
 
   it("does not duplicate onReady or initial content in StrictMode", async () => {

@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import type { ToolType } from "@adraw/core"
-import {
-  useCanvas,
-  useHistory,
-  useStyle,
-  useTool,
-  useViewport,
-} from "@adraw/vue"
+import { useCanvas, useHistory, useTool, useViewport } from "@adraw/vue"
+import { ref } from "vue"
 
 defineProps<{ label: string }>()
 
@@ -14,7 +9,13 @@ const canvasApi = useCanvas()
 const toolApi = useTool()
 const viewportApi = useViewport()
 const historyApi = useHistory()
-const styleApi = useStyle()
+const strokeWidth = ref(2)
+
+function setStrokeWidth(event: Event): void {
+  const value = Number((event.target as HTMLInputElement).value)
+  strokeWidth.value = value
+  canvasApi.core.setStyle({ strokeWidth: value })
+}
 
 const tools: { id: ToolType; label: string; shortcut: string }[] = [
   { id: "select", label: "Select", shortcut: "V" },
@@ -42,20 +43,16 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
       {{ tool.label }}
     </button>
     <div class="separator" />
-    <label v-if="styleApi.style" class="control">
+    <label class="control">
       Stroke
       <input
         type="range"
         min="1"
         max="16"
-        :value="styleApi.style.strokeWidth"
-        @input="
-          styleApi.setStyle({
-            strokeWidth: Number(($event.target as HTMLInputElement).value),
-          })
-        "
+        :value="strokeWidth"
+        @input="setStrokeWidth"
       />
-      {{ styleApi.style.strokeWidth }}
+      {{ strokeWidth }}
     </label>
     <div class="separator" />
     <button :disabled="!historyApi.canUndo()" @click="historyApi.undo()">

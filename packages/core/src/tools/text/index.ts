@@ -8,6 +8,7 @@ import { createText, getNextZIndex } from "../../elements"
 import { approximateTextMeasurer, type TextMeasurer } from "../../text"
 import type {
   BoundingBox,
+  CanvasElementStyle,
   Point,
   TextAlign,
   TextElement,
@@ -16,14 +17,13 @@ import type {
 import {
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 
-export interface TextToolOptions extends ToolOptions {
+export interface TextToolOptions extends CanvasElementStyle {
   fontSize?: number
   /** Font family stack. Defaults to the built-in system font stack. */
   fontFamily?: string
@@ -48,7 +48,7 @@ export interface TextTool extends Tool {
 
 export function createTextTool(options: TextToolOptions = {}): TextTool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = {
+  const defaults = {
     ...getDefaultToolOptions(),
     autoSize: true,
     fontFamily: TEXT_FONT_FAMILY,
@@ -59,7 +59,7 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
   }
   let pendingText = ""
   let temporaryElement: TextElement | null = null
-  let gestureOptions = toolOptions
+  let gestureOptions = defaults
   let gestureMeasurer: TextMeasurer = approximateTextMeasurer
   // A fixed-width drag commits an empty element so the editor can open on it.
   let commitEmpty = false
@@ -107,7 +107,7 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
     onPointerDown(context: ToolContext, point: Point, _event: PointerEvent) {
       state.startPoint = point
       state.currentPoint = point
-      gestureOptions = getToolOptionsForContext(toolOptions, context)
+      gestureOptions = getStyleForContext(defaults, context)
       gestureMeasurer = context.measureText ?? approximateTextMeasurer
 
       const fontSize = gestureOptions.fontSize ?? TEXT_FONT_SIZE

@@ -62,28 +62,27 @@ Every publicly exported function, class, type, interface, and constant must have
 
 `AdrawCanvas` (`src/canvas.ts`) extends the headless `CanvasEngine`. `new AdrawCanvas({ container })` mounts immediately; `new AdrawCanvas()` stays headless until `mount(container)`; `destroy()` removes the DOM adapter.
 
-- `src/engine/` — DOM-free state, tools, history, snapping, clipboard, per-tool styles, and the narrow `EngineInternal` interface exposed for adapter-facing helpers.
+- `src/engine/` — DOM-free state, tools, history, snapping, clipboard, global styles, and the narrow `EngineInternal` interface exposed for adapter-facing helpers.
 - `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
 - `src/bindings.ts` — arrow-to-shape binding/synchronization math.
 
 Engine events are the adapter contract:
 
-| Event               | Payload                                       |
-| ------------------- | --------------------------------------------- |
-| `change`            | `{ elements: Map<ElementId, CanvasElement> }` |
-| `viewportChange`    | `{ viewport: ViewportState }`                 |
-| `toolChange`        | `{ tool: ToolType }`                          |
-| `selectionChange`   | `{ selectedIds: Set<ElementId> }`             |
-| `toolOptionsChange` | `{ tool, options }` (resolved tool styles)    |
+| Event             | Payload                                       |
+| ----------------- | --------------------------------------------- |
+| `change`          | `{ elements: Map<ElementId, CanvasElement> }` |
+| `viewportChange`  | `{ viewport: ViewportState }`                 |
+| `toolChange`      | `{ tool: ToolType }`                          |
+| `selectionChange` | `{ selectedIds: Set<ElementId> }`             |
 
 Always copy payloads before storing (`new Map(...)`, `new Set(...)`).
 
-Per-tool styles are configured with `CanvasOptions.tools` or `engine.setToolOptions(tool, partial)`; `getToolOptions(tool)` returns resolved defaults and matching selected elements are restyled. `engine.setStyle(partial)` merges the same style into every tool, applying each field only where the tool supports it. `engine.getStyle()` returns the selected elements' common style, then the active tool's options, then the global style. All framework adapters expose `useToolOptions()` / `useStyle(tool?)` for headless toolbars (Web Components exposes `toolOptions`, `getToolOptions` and `setToolOptions`).
+Styles are global: `engine.setStyle(partial)` merges the same style into every tool, applying each field only where the tool supports it, and restyles matching selected elements. `engine.getStyle()` returns the selected elements' common style, then the global style. (The style hooks were removed; toolbars call `setStyle`/`getStyle` through the engine.)
 
 ### Framework bindings
 
-Each adapter creates an `AdrawCanvas` imperatively (headless in the provider/service where possible), mounts it through its canvas component/element, subscribes to the core events, and mirrors state into its framework's reactivity system (React also mirrors `toolOptionsChange`). Providers accept `onReady(engine)`; Web Components use `isReady` + `adraw:ready`.
+Each adapter creates an `AdrawCanvas` imperatively (headless in the provider/service where possible), mounts it through its canvas component/element, subscribes to the core events, and mirrors state into its framework's reactivity system. Providers accept `onReady(engine)`; Web Components use `isReady` + `adraw:ready`.
 
 | Hook                    | Returns                                                                |
 | ----------------------- | ---------------------------------------------------------------------- |
@@ -93,8 +92,6 @@ Each adapter creates an `AdrawCanvas` imperatively (headless in the provider/ser
 | `useViewport()`         | `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`     |
 | `useHistory()`          | `{ undo, redo, canUndo, canRedo }`                                     |
 | `useSelection()`        | `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` |
-| `useToolOptions()`      | `{ toolOptions, setToolOptions }` (all adapters)                       |
-| `useStyle(tool?)`       | `{ tool, style, setStyle }` (React/Solid/Vue/Svelte/Angular)           |
 | `useTransformOverlay()` | `{ hideWhileTransforming, setHideWhileTransforming }`                  |
 
 Operations no-op when the canvas is not mounted. Patterns differ:

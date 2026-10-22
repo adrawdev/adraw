@@ -1,25 +1,29 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createRectangle, getNextZIndex } from "../../elements"
-import type { Point, RectangleElement, ToolType } from "../../types"
+import type {
+  CanvasElementStyle,
+  Point,
+  RectangleElement,
+  ToolType,
+} from "../../types"
 import {
   calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 import { snapToolPoint } from "../snap"
 
-export interface RectangleToolOptions extends ToolOptions {
+export interface RectangleToolOptions extends CanvasElementStyle {
   cornerRadius?: number
 }
 
 export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = { ...getDefaultToolOptions(), ...options }
+  const defaults = { ...getDefaultToolOptions(), ...options }
   let temporaryElement: RectangleElement | null = null
 
   return {
@@ -56,7 +60,7 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
         fromCenter: event.altKey,
       })
 
-      const currentOptions = getToolOptionsForContext(toolOptions, context)
+      const currentOptions = getStyleForContext(defaults, context)
       temporaryElement = createRectangle({
         cornerRadius: currentOptions.cornerRadius ?? 0,
         fillColor: currentOptions.fillColor ?? FILL_COLOR,
@@ -88,7 +92,7 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
       )
 
       if (bounds.width > 5 && bounds.height > 5) {
-        const currentOptions = getToolOptionsForContext(toolOptions, context)
+        const currentOptions = getStyleForContext(defaults, context)
         const element = createRectangle({
           cornerRadius: currentOptions.cornerRadius ?? 0,
           fillColor: currentOptions.fillColor ?? FILL_COLOR,

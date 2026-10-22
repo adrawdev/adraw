@@ -4,10 +4,9 @@ import {
   DEFAULT_PATH_SMOOTHING,
   type ElementFactory,
 } from "../../elements"
-import type { PathElement, Point } from "../../types"
-import type { ToolOptions } from "../base"
+import type { CanvasElementStyle, PathElement, Point } from "../../types"
 
-export interface DrawToolOptions extends ToolOptions {
+export interface DrawToolOptions extends CanvasElementStyle {
   smoothing?: number
 }
 

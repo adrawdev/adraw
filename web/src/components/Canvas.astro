@@ -280,7 +280,7 @@ const { class: className, ...props } = Astro.props;
         }
         case "change-color": {
           const {color} = btn.dataset
-          canvas.setStrokeColor(color!)
+          canvas.setStyle({ strokeColor: color! })
           break
         }
         case "export": {

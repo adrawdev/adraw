@@ -2,13 +2,7 @@ import {
   AdrawCanvas,
   type CanvasElement,
   type CanvasOptions,
-  type ConfigurableToolType,
   type ElementId,
-  inferConfigurableTool,
-  resolveAllToolOptions,
-  type ResolvedToolOptions,
-  type ToolOptionsMap,
-  type ToolOptionsState,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
@@ -41,7 +35,6 @@ export interface CanvasState {
   activeTool: ToolType
   selectedIds: Set<ElementId>
   hideWhileTransforming: boolean
-  toolOptions: ToolOptionsState
   // Bumped on every "change" event (draw, erase, undo, redo, delete). Read by
   // useHistory() so canUndo/canRedo register a reactive dependency even
   // though AdrawCanvas's own history stack isn't itself reactive.
@@ -72,7 +65,6 @@ export function createCanvas(
     hideWhileTransforming: core.getHideOverlayWhileTransforming(),
     historyVersion: 0,
     selectedIds: new Set(core.getSelectedIds()),
-    toolOptions: resolveAllToolOptions(options?.tools),
     viewport: core.getViewport(),
   })
 
@@ -91,13 +83,6 @@ export function createCanvas(
 
   core.on("selectionChange", ({ selectedIds: newSelectedIds }) => {
     state.selectedIds = new Set(newSelectedIds)
-  })
-
-  core.on("toolOptionsChange", ({ tool, options: nextOptions }) => {
-    state.toolOptions = {
-      ...state.toolOptions,
-      [tool]: nextOptions,
-    } as ToolOptionsState
   })
 
   return {
@@ -245,94 +230,6 @@ export function useHistory() {
     },
     redo: () => canvas.core.redo(),
     undo: () => canvas.core.undo(),
-  }
-}
-
-/** Merge partial style options into a tool's current options. */
-export type SetToolOptions = <T extends ConfigurableToolType>(
-  tool: T,
-  options: ToolOptionsMap[T],
-) => void
-
-/**
- * Access resolved style options for every configurable tool and a setter.
- *
- * @returns `{ toolOptions, setToolOptions }` with reactive getters.
- */
-export function useToolOptions() {
-  const canvas = useCanvas()
-
-  function setToolOptions<T extends ConfigurableToolType>(
-    tool: T,
-    options: ToolOptionsMap[T],
-  ): void {
-    canvas.core.setToolOptions(tool, options)
-  }
-
-  return {
-    setToolOptions,
-    get toolOptions() {
-      return canvas.state.toolOptions
-    },
-  }
-}
-
-/** Result of {@link useStyle} when a tool is passed explicitly. */
-export interface StyleResult<T extends ConfigurableToolType> {
-  /** Tool whose style is exposed. */
-  get tool(): T
-  /** Resolved style options for the tool. */
-  get style(): ResolvedToolOptions<T>
-  /** Merge partial style options into the tool. */
-  setStyle: (options: ToolOptionsMap[T]) => void
-}
-
-/** Result of {@link useStyle} when the tool is inferred. */
-export interface InferredStyleResult {
-  /** Inferred tool, or `null` when no tool applies (e.g. hand/select). */
-  get tool(): ConfigurableToolType | null
-  /** Resolved style options, or `null` when no tool applies. */
-  get style(): ResolvedToolOptions<ConfigurableToolType> | null
-  /** Merge partial style options into the inferred tool. No-op when null. */
-  setStyle: (options: ToolOptionsMap[ConfigurableToolType]) => void
-}
-
-/**
- * Access the style of one drawing tool. Pass a tool explicitly for a fixed
- * style panel, or omit it to follow the current selection / active tool.
- *
- * @param tool Optional configurable tool.
- * @returns `{ tool, style, setStyle }` with reactive getters.
- */
-export function useStyle<T extends ConfigurableToolType>(
-  tool: T,
-): StyleResult<T>
-export function useStyle(): InferredStyleResult
-export function useStyle(tool?: ConfigurableToolType): unknown {
-  const canvas = useCanvas()
-
-  const resolvedTool = () =>
-    tool ??
-    inferConfigurableTool(
-      canvas.state.activeTool,
-      canvas.state.elements,
-      canvas.state.selectedIds,
-    )
-
-  return {
-    setStyle: (options: ToolOptionsMap[ConfigurableToolType]) => {
-      const current = resolvedTool()
-      if (current) {
-        canvas.core.setToolOptions(current, options)
-      }
-    },
-    get style() {
-      const current = resolvedTool()
-      return current ? canvas.state.toolOptions[current] : null
-    },
-    get tool() {
-      return resolvedTool()
-    },
   }
 }
 

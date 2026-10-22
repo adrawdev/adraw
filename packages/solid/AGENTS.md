@@ -16,8 +16,6 @@ All from `src/index.ts` (re-exports `src/components.tsx`):
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
-- `useToolOptions()` — returns `{ toolOptions, setToolOptions }` (reactive getter + generic setter)
-- `useStyle(tool?)` — returns `{ tool, style, setStyle }` reactive getters; infers from selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasSolidOptions` — type extending `CanvasOptions`
 
@@ -50,7 +48,7 @@ function Toolbar() {
 ## How it works
 
 1. `CanvasProvider` creates the headless `AdrawCanvas` synchronously, seeds signals from it, and provides context
-2. The provider subscribes to core events (including `toolOptionsChange`) and copies payloads into signals
+2. The provider subscribes to core events and copies payloads into signals
 3. `Canvas` only mounts/unmounts the provider-owned engine and toggles `isMounted`; `onReady` fires once after mount
 4. History sync uses `queueMicrotask` to read undo/redo state after the current handler finishes
 5. Multiple `<CanvasProvider>` instances can coexist

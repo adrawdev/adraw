@@ -3,7 +3,6 @@ import type { ToolType } from "@adraw/core"
 import {
   useCanvas,
   useHistory,
-  useStyle,
   useTool,
   useViewport,
 } from "@adraw/svelte"
@@ -12,7 +11,7 @@ const canvas = useCanvas()
 const tool = useTool()
 const viewport = useViewport()
 const history = useHistory()
-const styles = useStyle()
+let strokeWidth = $state(2)
 
 const tools: { id: ToolType; label: string; shortcut: string }[] = [
   { id: "select", label: "Select", shortcut: "V" },
@@ -39,22 +38,20 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
     </button>
   {/each}
   <div class="separator"></div>
-  {#if styles.style}
-    <label class="control">
-      Stroke
-      <input
-        type="range"
-        min="1"
-        max="16"
-        value={styles.style.strokeWidth}
-        oninput={(event) =>
-          styles.setStyle({
-            strokeWidth: Number(event.currentTarget.value),
-          })}
-      />
-      {styles.style.strokeWidth}
-    </label>
-  {/if}
+  <label class="control">
+    Stroke
+    <input
+      type="range"
+      min="1"
+      max="16"
+      value={strokeWidth}
+      oninput={(event) => {
+        strokeWidth = Number(event.currentTarget.value)
+        canvas.instance.current?.setStyle({ strokeWidth })
+      }}
+    />
+    {strokeWidth}
+  </label>
   <div class="separator"></div>
   <button type="button" onclick={history.undo} disabled={!history.canUndo()}>
     Undo

@@ -1,23 +1,27 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createEllipse, getNextZIndex } from "../../elements"
-import type { EllipseElement, Point, ToolType } from "../../types"
+import type {
+  CanvasElementStyle,
+  EllipseElement,
+  Point,
+  ToolType,
+} from "../../types"
 import {
   calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 import { snapToolPoint } from "../snap"
 
-export type EllipseToolOptions = ToolOptions
+export type EllipseToolOptions = CanvasElementStyle
 
 export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = { ...getDefaultToolOptions(), ...options }
+  const defaults = { ...getDefaultToolOptions(), ...options }
   let temporaryElement: EllipseElement | null = null
 
   return {
@@ -54,7 +58,7 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
         fromCenter: event.altKey,
       })
 
-      const currentOptions = getToolOptionsForContext(toolOptions, context)
+      const currentOptions = getStyleForContext(defaults, context)
       temporaryElement = createEllipse({
         fillColor: currentOptions.fillColor ?? FILL_COLOR,
         height: bounds.height,
@@ -85,7 +89,7 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
       )
 
       if (bounds.width > 5 && bounds.height > 5) {
-        const currentOptions = getToolOptionsForContext(toolOptions, context)
+        const currentOptions = getStyleForContext(defaults, context)
         const element = createEllipse({
           fillColor: currentOptions.fillColor ?? FILL_COLOR,
           height: bounds.height,

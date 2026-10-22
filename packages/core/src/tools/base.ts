@@ -1,5 +1,6 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
 import type { SnappingConfig } from "../snapping"
+import type { StyleOptions } from "../style"
 import type { TextMeasurer } from "../text"
 import type {
   BoundingBox,
@@ -24,14 +25,12 @@ export interface ToolContext {
   getViewport: () => ViewportState
   setViewport: (viewport: ViewportState) => void
   getCanvasSize: () => { width: number; height: number }
-  getStrokeColor: () => string
   /**
-   * Resolved style options for the active tool. Engines provide this so
-   * `setToolOptions` changes apply to future gestures without recreating the
-   * tool; standalone tool factories may omit it and fall back to their factory
-   * options.
+   * Global style overrides set with `setStyle`. Engines provide this so style
+   * changes apply to future gestures without recreating the tool; standalone
+   * tool factories may omit it and fall back to their factory options.
    */
-  getToolOptions?: () => ToolOptions
+  getStyle?: () => StyleOptions
   /**
    * Text measurer configured on the engine. Text-like tools use it to size
    * their elements; standalone tool factories may omit it and fall back to the
@@ -99,16 +98,9 @@ export function createBaseToolState(): ToolState {
 }
 
 /**
- * Optional visual style overrides for a tool. Shared with
- * {@link CanvasElementStyle}; `fillColor` affects rectangles, ellipses and
- * notes, while `opacity` affects every element type.
+ * Default style options derived from the global constants.
  */
-export type ToolOptions = CanvasElementStyle
-
-/**
- * Default tool options derived from the global constants.
- */
-export function getDefaultToolOptions(): ToolOptions {
+export function getDefaultToolOptions(): CanvasElementStyle {
   return {
     fillColor: FILL_COLOR,
     opacity: 1,
@@ -118,25 +110,19 @@ export function getDefaultToolOptions(): ToolOptions {
 }
 
 /**
- * Merge a tool's factory options with the live options supplied by the engine.
- * Engines provide `getToolOptions()`; standalone tools fall back to their
- * factory defaults and the context's global stroke color.
+ * Merge a tool's factory options with the live global style supplied by the
+ * engine. Engines provide `getStyle()`; standalone tools fall back to their
+ * factory defaults.
  *
  * @param defaults Options captured when the tool was created.
  * @param context Current tool context.
  * @returns The effective options for the gesture about to start.
  */
-export function getToolOptionsForContext<T extends ToolOptions>(
+export function getStyleForContext<T extends CanvasElementStyle>(
   defaults: T,
   context: ToolContext,
 ): T {
-  const live = context.getToolOptions?.()
-  return {
-    ...defaults,
-    ...live,
-    strokeColor:
-      live?.strokeColor ?? context.getStrokeColor() ?? defaults.strokeColor,
-  } as T
+  return { ...defaults, ...context.getStyle?.() } as T
 }
 
 /**

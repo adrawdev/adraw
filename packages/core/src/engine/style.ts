@@ -1,15 +1,16 @@
+import { FILL_COLOR, TEXT_FONT_FAMILY, TEXT_LINE_HEIGHT } from "../constants"
+import { DEFAULT_PATH_SMOOTHING } from "../elements"
 import { measureNoteText } from "../note"
+import type { StyleOptions } from "../style"
 import {
   approximateTextMeasurer,
   measureTextElement,
   type TextMeasurer,
 } from "../text"
-import { DEFAULT_TOOL_OPTIONS, type StyleOptions } from "../tool-options"
-import type { ToolOptions } from "../tools/base"
-import type { CanvasElement, TextAlign } from "../types"
+import type { CanvasElement, CanvasElementStyle, TextAlign } from "../types"
 
 // Every style field a tool option can write back to an existing element.
-type ApplicableToolOptions = ToolOptions & {
+type ApplicableStyle = CanvasElementStyle & {
   autoSize?: boolean
   cornerRadius?: number
   fontFamily?: string
@@ -21,19 +22,18 @@ type ApplicableToolOptions = ToolOptions & {
 }
 
 /**
- * Apply the style fields a tool owns to one element. Fields the element does
- * not support are ignored: `fillColor` touches rectangles, ellipses and notes,
- * `cornerRadius` touches rectangles and notes, and the text options touch text
- * and notes.
+ * Apply the style fields an element supports. Fields it does not support are
+ * ignored: `fillColor` touches rectangles, ellipses and notes, `cornerRadius`
+ * touches rectangles and notes, and the text options touch text and notes.
  *
  * @param element Element to restyle.
- * @param options Tool style options.
+ * @param options Style options to apply.
  * @param measurer Text measurer used to recompute a text element's box.
  * @returns The same element when nothing changed, otherwise a new element.
  */
-export function applyToolOptionsToElement(
+export function applyStyleToElement(
   element: CanvasElement,
-  options: ApplicableToolOptions,
+  options: ApplicableStyle,
   measurer: TextMeasurer = approximateTextMeasurer,
 ): CanvasElement {
   let next = element
@@ -135,40 +135,34 @@ export function getElementStyle(element: CanvasElement): StyleOptions {
 
   switch (element.type) {
     case "ellipse": {
-      style.fillColor =
-        element.fillColor ?? DEFAULT_TOOL_OPTIONS.ellipse.fillColor
+      style.fillColor = element.fillColor ?? FILL_COLOR
       break
     }
     case "note": {
       style.cornerRadius = element.cornerRadius
       style.fillColor = element.fillColor
-      style.fontFamily =
-        element.fontFamily ?? DEFAULT_TOOL_OPTIONS.note.fontFamily
+      style.fontFamily = element.fontFamily ?? TEXT_FONT_FAMILY
       style.fontSize = element.fontSize
-      style.lineHeight =
-        element.lineHeight ?? DEFAULT_TOOL_OPTIONS.note.lineHeight
+      style.lineHeight = element.lineHeight ?? TEXT_LINE_HEIGHT
       style.padding = element.padding
-      style.textAlign = element.textAlign ?? DEFAULT_TOOL_OPTIONS.note.textAlign
+      style.textAlign = element.textAlign ?? "center"
       break
     }
     case "path": {
-      style.smoothing = element.smoothing ?? DEFAULT_TOOL_OPTIONS.draw.smoothing
+      style.smoothing = element.smoothing ?? DEFAULT_PATH_SMOOTHING
       break
     }
     case "rectangle": {
       style.cornerRadius = element.cornerRadius
-      style.fillColor =
-        element.fillColor ?? DEFAULT_TOOL_OPTIONS.rectangle.fillColor
+      style.fillColor = element.fillColor ?? FILL_COLOR
       break
     }
     case "text": {
-      style.autoSize = element.autoSize ?? DEFAULT_TOOL_OPTIONS.text.autoSize
-      style.fontFamily =
-        element.fontFamily ?? DEFAULT_TOOL_OPTIONS.text.fontFamily
+      style.autoSize = element.autoSize ?? true
+      style.fontFamily = element.fontFamily ?? TEXT_FONT_FAMILY
       style.fontSize = element.fontSize
-      style.lineHeight =
-        element.lineHeight ?? DEFAULT_TOOL_OPTIONS.text.lineHeight
-      style.textAlign = element.textAlign ?? DEFAULT_TOOL_OPTIONS.text.textAlign
+      style.lineHeight = element.lineHeight ?? TEXT_LINE_HEIGHT
+      style.textAlign = element.textAlign ?? "left"
       break
     }
     default: {

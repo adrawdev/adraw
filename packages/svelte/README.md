@@ -56,7 +56,6 @@ Sets up an isolated canvas context (via Svelte's context API) for its children. 
   options={{
     initialElements: savedElements,
     snapping: { threshold: 8 },
-    tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   }}
   onReady={(engine) => engine.setActiveTool("draw")}
 >
@@ -64,10 +63,10 @@ Sets up an isolated canvas context (via Svelte's context API) for its children. 
 </CanvasProvider>
 ```
 
-| Prop      | Type                            | Description                                                |
-| --------- | ------------------------------- | ---------------------------------------------------------- |
-| `options` | `CanvasSvelteOptions`           | Snapping / viewport / per-tool styles and initial document |
-| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine             |
+| Prop      | Type                            | Description                                      |
+| --------- | ------------------------------- | ------------------------------------------------ |
+| `options` | `CanvasSvelteOptions`           | Snapping / viewport options and initial document |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine   |
 
 `options` accepts `initialElements` / `initialDocument` from `@adraw/core`
 (`initialDocument` wins). The provider creates the engine headlessly, so
@@ -145,41 +144,28 @@ selection.clearSelection()
 selection.deleteSelected()
 ```
 
-### `useToolOptions()`
+### Styles
 
-```ts
-const { toolOptions, setToolOptions } = useToolOptions()
-// toolOptions: getter — resolved styles for every configurable tool
-setToolOptions("rectangle", { cornerRadius: 12 })
-```
-
-### `useStyle(tool?)`
-
-Reactive getters for one tool. Omit `tool` to infer it from a homogeneous
-selection (or the active tool):
+Styles are global. Use the engine's `setStyle` / `getStyle` through
+`useCanvas().instance.current`:
 
 ```svelte
 <script lang="ts">
-  import { useStyle } from "@adraw/svelte"
+  import { useCanvas } from "@adraw/svelte"
 
-  const styles = useStyle()
-  // or: const styles = useStyle("rectangle")
+  const canvas = useCanvas()
+
+  canvas.instance.current?.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+  canvas.instance.current?.getStyle() // selection style, or the global style
 </script>
-
-{#if styles.style}
-  <input
-    type="range"
-    value={styles.style.strokeWidth}
-    oninput={(event) =>
-      styles.setStyle({ strokeWidth: Number(event.currentTarget.value) })}
-  />
-{/if}
 ```
 
-All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
-to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
-highlights). Tool-specific fields: `cornerRadius` (rectangle), `fontSize`
-(text), `smoothing` (draw). Changes also restyle matching selected elements.
+`setStyle` restyles matching selected elements as well as future ones. All tools
+share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies to
+`rectangle`, `ellipse` and `note`. Tool-specific fields: `cornerRadius`
+(rectangle and note), `fontSize` / `fontFamily` / `textAlign` / `lineHeight` /
+`autoSize` (text), and `smoothing` (draw). Fields an element does not support
+are ignored.
 
 ### `useTransformOverlay()`
 

@@ -1,5 +1,11 @@
 import { syncArrowBindings } from "../bindings"
-import { TEXT_CONTAINER_SNAP_THRESHOLD } from "../constants"
+import {
+  STROKE_COLOR,
+  TEXT_CONTAINER_SNAP_THRESHOLD,
+  TEXT_FONT_FAMILY,
+  TEXT_FONT_SIZE,
+  TEXT_LINE_HEIGHT,
+} from "../constants"
 import { createText, getElementAtPoint, getNextZIndex } from "../elements"
 import type { CanvasEngine } from "../engine/engine"
 import {
@@ -78,19 +84,21 @@ export function startFreeTextEditing(
   point: { x: number; y: number },
 ): boolean {
   const elements = engine.getElements()
-  const options = engine.getToolOptions("text")
+  const style = engine.getToolContext().getStyle?.() ?? {}
+  const fontSize = style.fontSize ?? TEXT_FONT_SIZE
+  const lineHeight = style.lineHeight ?? TEXT_LINE_HEIGHT
   const text = createText({
     autoSize: true,
-    fontFamily: options.fontFamily,
-    fontSize: options.fontSize,
-    height: options.fontSize * options.lineHeight,
-    lineHeight: options.lineHeight,
+    fontFamily: style.fontFamily ?? TEXT_FONT_FAMILY,
+    fontSize,
+    height: fontSize * lineHeight,
+    lineHeight,
     locked: false,
-    opacity: options.opacity ?? 1,
+    opacity: style.opacity ?? 1,
     rotation: 0,
-    strokeColor: options.strokeColor,
+    strokeColor: style.strokeColor ?? STROKE_COLOR,
     text: "",
-    textAlign: options.textAlign ?? "left",
+    textAlign: style.textAlign ?? "left",
     visible: true,
     width: 1,
     x: point.x,
@@ -132,21 +140,23 @@ export function startBoundTextEditing(
     return true
   }
 
-  const options = engine.getToolOptions("text")
+  const style = engine.getToolContext().getStyle?.() ?? {}
+  const fontSize = style.fontSize ?? TEXT_FONT_SIZE
+  const lineHeight = style.lineHeight ?? TEXT_LINE_HEIGHT
   const isArrow = live.type === "arrow"
-  const maxWidth = isArrow ? null : getBoundTextMaxWidth(live, options.fontSize)
+  const maxWidth = isArrow ? null : getBoundTextMaxWidth(live, fontSize)
   const text = createText({
     autoSize: isArrow,
     containerId: live.id,
-    fontFamily: options.fontFamily,
-    fontSize: options.fontSize,
-    height: options.fontSize * options.lineHeight,
+    fontFamily: style.fontFamily ?? TEXT_FONT_FAMILY,
+    fontSize,
+    height: fontSize * lineHeight,
     labelPosition: isArrow ? 0.5 : null,
-    lineHeight: options.lineHeight,
+    lineHeight,
     locked: false,
-    opacity: options.opacity ?? 1,
+    opacity: style.opacity ?? 1,
     rotation: 0,
-    strokeColor: options.strokeColor,
+    strokeColor: live.strokeColor ?? style.strokeColor ?? STROKE_COLOR,
     text: "",
     textAlign: "center",
     visible: true,

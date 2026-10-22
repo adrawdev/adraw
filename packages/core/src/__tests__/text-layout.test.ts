@@ -168,15 +168,11 @@ describe("engine text measurer", () => {
   })
 
   it("uses the configured font family for the default measurer", () => {
-    const canvas = new AdrawCanvas({
-      tools: { text: { fontFamily: "monospace" } },
-    })
-    const options = canvas.getToolOptions("text")
+    const canvas = new AdrawCanvas()
+    canvas.setStyle({ fontFamily: "monospace" })
+    const options = canvas.getStyle()
 
     expect(options.fontFamily).toBe("monospace")
-    expect(canvas.getToolOptions("text").textAlign).toBe("left")
-    expect(canvas.getToolOptions("text").autoSize).toBe(true)
-    expect(options.lineHeight).toBe(TEXT_LINE_HEIGHT)
     expect(options.fontFamily).not.toBe(TEXT_FONT_FAMILY)
   })
 })

@@ -9,15 +9,20 @@ import {
   TEXT_LINE_HEIGHT,
 } from "../../constants"
 import { createNote, getNextZIndex } from "../../elements"
-import type { NoteElement, Point, TextAlign, ToolType } from "../../types"
+import type {
+  CanvasElementStyle,
+  NoteElement,
+  Point,
+  TextAlign,
+  ToolType,
+} from "../../types"
 import {
   calculateShapeBounds,
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 
@@ -28,7 +33,7 @@ const NOTE_MIN_DRAG_SIZE = 40
  * Style and sizing options for the sticky-note tool. `fillColor` is the note
  * background and `strokeColor` is its text ink.
  */
-export interface NoteToolOptions extends ToolOptions {
+export interface NoteToolOptions extends CanvasElementStyle {
   /** Font size of the note text, in pixels. */
   fontSize?: number
   /** Font family stack. Defaults to the built-in system font stack. */
@@ -60,7 +65,7 @@ export interface NoteToolOptions extends ToolOptions {
  */
 export function createNoteTool(options: NoteToolOptions = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions: NoteToolOptions = {
+  const defaults: NoteToolOptions = {
     ...getDefaultToolOptions(),
     cornerRadius: NOTE_CORNER_RADIUS,
     fillColor: NOTE_FILL_COLOR,
@@ -80,7 +85,7 @@ export function createNoteTool(options: NoteToolOptions = {}): Tool {
     context: ToolContext,
     bounds: { height: number; width: number; x: number; y: number },
   ): NoteElement => {
-    const current = getToolOptionsForContext(toolOptions, context)
+    const current = getStyleForContext(defaults, context)
     return createNote({
       cornerRadius: current.cornerRadius ?? NOTE_CORNER_RADIUS,
       fillColor: current.fillColor ?? NOTE_FILL_COLOR,
@@ -162,7 +167,7 @@ export function createNoteTool(options: NoteToolOptions = {}): Tool {
       // on pointer-down.
       let note = dragging ? temporaryElement : null
       if (!note) {
-        const current = getToolOptionsForContext(toolOptions, context)
+        const current = getStyleForContext(defaults, context)
         const width = current.width ?? NOTE_SIZE
         const height = current.height ?? NOTE_SIZE
         note = buildNote(context, {

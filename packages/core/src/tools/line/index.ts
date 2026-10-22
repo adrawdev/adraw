@@ -1,20 +1,24 @@
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createLine, getNextZIndex } from "../../elements"
-import type { LineElement, Point, ToolType } from "../../types"
+import type {
+  CanvasElementStyle,
+  LineElement,
+  Point,
+  ToolType,
+} from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 import { snapToolPoint } from "../snap"
 
-export function createLineTool(options: ToolOptions = {}): Tool {
+export function createLineTool(options: CanvasElementStyle = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = { ...getDefaultToolOptions(), ...options }
+  const defaults = { ...getDefaultToolOptions(), ...options }
   let temporaryElement: LineElement | null = null
 
   return {
@@ -51,7 +55,7 @@ export function createLineTool(options: ToolOptions = {}): Tool {
       const width = Math.abs(snapped.point.x - state.startPoint.x)
       const height = Math.abs(snapped.point.y - state.startPoint.y)
 
-      const currentOptions = getToolOptionsForContext(toolOptions, context)
+      const currentOptions = getStyleForContext(defaults, context)
       temporaryElement = createLine({
         endX: snapped.point.x,
         endY: snapped.point.y,
@@ -84,7 +88,7 @@ export function createLineTool(options: ToolOptions = {}): Tool {
         const width = Math.abs(dx)
         const height = Math.abs(dy)
 
-        const currentOptions = getToolOptionsForContext(toolOptions, context)
+        const currentOptions = getStyleForContext(defaults, context)
         const element = createLine({
           endX: state.currentPoint.x,
           endY: state.currentPoint.y,

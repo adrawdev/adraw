@@ -123,15 +123,12 @@ describe("note tool", () => {
     expect(canvas.getActiveTool()).toBe("note")
   })
 
-  it("applies note tool options to new and selected notes", () => {
-    const canvas = new AdrawCanvas({
-      tools: {
-        note: {
-          fillColor: "#bbf7d0",
-          fontSize: 24,
-          textAlign: "left",
-        },
-      },
+  it("applies style to new and selected notes", () => {
+    const canvas = new AdrawCanvas()
+    canvas.setStyle({
+      fillColor: "#bbf7d0",
+      fontSize: 24,
+      textAlign: "left",
     })
     canvas.setActiveTool("note")
     canvas.handlePointerDown(0, 0, pointerEvent())
@@ -143,7 +140,7 @@ describe("note tool", () => {
     expect(note.textAlign).toBe("left")
 
     canvas.selectAll()
-    canvas.setToolOptions("note", {
+    canvas.setStyle({
       cornerRadius: 20,
       fillColor: "#fecaca",
       fontSize: 18,

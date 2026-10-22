@@ -37,7 +37,6 @@ function makeContext(elements: CanvasElement[] = [], zoom = 1) {
     getIsSnapMode: () => false,
     getSelectedIds: () => selectedIds,
     getSnappingConfig: () => ({ threshold: 5 }),
-    getStrokeColor: () => "#000",
     getViewport: () => ({ x: 0, y: 0, zoom }),
     historyCount: () => historyCount,
     pushHistory: () => {

@@ -4,7 +4,6 @@ import {
   CanvasProvider,
   useCanvas,
   useHistory,
-  useStyle,
   useTool,
   useViewport,
 } from "@adraw/solid"
@@ -27,7 +26,6 @@ function Toolbar() {
   const toolCtx = useTool()
   const { zoomIn, zoomOut, zoomToFit, resetZoom } = useViewport()
   const { undo, redo, canUndo, canRedo } = useHistory()
-  const styleApi = useStyle()
 
   return (
     <div style={styles.toolbar}>
@@ -47,23 +45,20 @@ function Toolbar() {
         )}
       </For>
       <div style={styles.separator} />
-      {styleApi.style && (
-        <label style={styles.control}>
-          Stroke
-          <input
-            type="range"
-            min="1"
-            max="16"
-            value={styleApi.style.strokeWidth}
-            onInput={(event) =>
-              styleApi.setStyle({
-                strokeWidth: Number(event.currentTarget.value),
-              })
-            }
-          />
-          {styleApi.style.strokeWidth}
-        </label>
-      )}
+      <label style={styles.control}>
+        Stroke
+        <input
+          type="range"
+          min="1"
+          max="16"
+          value="2"
+          onInput={(event) =>
+            canvasRef.current?.setStyle({
+              strokeWidth: Number(event.currentTarget.value),
+            })
+          }
+        />
+      </label>
       <div style={styles.separator} />
       <button
         type="button"

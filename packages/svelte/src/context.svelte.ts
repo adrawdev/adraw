@@ -3,8 +3,6 @@ import {
   type CanvasElement,
   type CanvasOptions,
   type ElementId,
-  resolveAllToolOptions,
-  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
@@ -25,7 +23,6 @@ export interface CanvasState {
   activeTool: ToolType
   selectedIds: Set<ElementId>
   hideWhileTransforming: boolean
-  toolOptions: ToolOptionsState
 }
 
 /**
@@ -73,7 +70,6 @@ export function createCanvasContext(
     elements: new Map(engine.getElements()),
     hideWhileTransforming: engine.getHideOverlayWhileTransforming(),
     selectedIds: new Set(engine.getSelectedIds()),
-    toolOptions: resolveAllToolOptions(options?.tools),
     viewport: engine.getViewport(),
   })
 
@@ -91,13 +87,6 @@ export function createCanvasContext(
 
   engine.on("selectionChange", ({ selectedIds }) => {
     state.selectedIds = new Set(selectedIds)
-  })
-
-  engine.on("toolOptionsChange", ({ tool, options: nextOptions }) => {
-    state.toolOptions = {
-      ...state.toolOptions,
-      [tool]: nextOptions,
-    } as ToolOptionsState
   })
 
   const value: CanvasContextValue = {

@@ -60,7 +60,7 @@ describe("text editor DOM integration", () => {
 
   it("uses an invisible overlay that matches the rendered text", () => {
     const { canvas, container, svg } = mount()
-    canvas.setStrokeColor("#ff00aa")
+    canvas.setStyle({ strokeColor: "#ff00aa" })
     canvas.setActiveTool("text")
 
     clickCanvas(svg, 300, 300)
@@ -466,7 +466,7 @@ describe("text editor DOM integration", () => {
 
   it("hides the committed text while editing it in place", () => {
     const { canvas, container, svg } = mount()
-    canvas.setStrokeColor("#ff00aa")
+    canvas.setStyle({ strokeColor: "#ff00aa" })
     canvas.setActiveTool("text")
 
     clickCanvas(svg, 300, 300)

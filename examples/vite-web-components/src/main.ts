@@ -20,11 +20,7 @@ buttons.forEach((btn) => {
 
 const strokeInput = document.querySelector<HTMLInputElement>("#stroke-width")!
 strokeInput.addEventListener("input", () => {
-  const strokeWidth = Number(strokeInput.value)
-  const strokeTools = ["draw", "rectangle", "ellipse", "line", "arrow"] as const
-  for (const tool of strokeTools) {
-    canvas.setToolOptions(tool, { strokeWidth })
-  }
+  canvas.canvas?.setStyle({ strokeWidth: Number(strokeInput.value) })
 })
 
 const actionButtons =

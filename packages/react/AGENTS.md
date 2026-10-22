@@ -16,8 +16,6 @@ All exported from `src/index.ts` (re-exports from `src/components.tsx`):
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
 - `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
-- `useToolOptions()` — returns `{ toolOptions, setToolOptions }` (resolved per-tool styles)
-- `useStyle(tool?)` — returns `{ tool, style, setStyle }` for one tool, inferring from the selection/active tool when omitted
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasReactOptions` — type extending `CanvasOptions` (which includes `initialElements` / `initialDocument`)
 
@@ -51,9 +49,9 @@ function Toolbar() {
 
 1. `CanvasProvider` creates a headless `new AdrawCanvas(options)` in a `useState` initializer (core applies `initialElements` / `initialDocument`) and seeds React state from the engine
 2. `<Canvas>` only calls `engine.mount(container)` / `engine.destroy()` in an effect and toggles the provider's mounted flag
-3. The provider subscribes to core events (including `toolOptionsChange`) in an effect, copies payloads into React state, and flips `isReady` after mount/subscriptions
+3. The provider subscribes to core events in an effect, copies payloads into React state, and flips `isReady` after mount/subscriptions
 4. `onReady(engine)` fires once per engine instance after those subscriptions exist
-5. `setOptions` applies `tools` and `hideOverlayWhileTransforming` live; constructor-only options (`keyboard`, `snapping`, `viewport` config, `isSnapMode`, `clipboard` hooks, `measureText`) recreate the engine while preserving document, viewport and resolved tool styles
+5. `setOptions` applies `hideOverlayWhileTransforming` live; constructor-only options (`keyboard`, `snapping`, `viewport` config, `isSnapMode`, `clipboard` hooks, `measureText`) recreate the engine while preserving the document and viewport
 6. Hooks read/write through the context; the engine exists even before `<Canvas>` mounts
 7. Multiple `<CanvasProvider>` instances can coexist on the same page (each has independent context)
 

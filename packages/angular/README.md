@@ -93,14 +93,13 @@ Returns the providers that register a component-scoped `CanvasService`. Add it t
 provideCanvas({
   initialElements: savedElements,
   snapping: { threshold: 8 },
-  tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   onReady: (engine) => engine.setActiveTool("draw"),
 })
 ```
 
-| Argument  | Type                   | Description                                                    |
-| --------- | ---------------------- | -------------------------------------------------------------- |
-| `options` | `CanvasAngularOptions` | Snapping / viewport / per-tool styles, initial document, ready |
+| Argument  | Type                   | Description                                          |
+| --------- | ---------------------- | ---------------------------------------------------- |
+| `options` | `CanvasAngularOptions` | Snapping / viewport options, initial document, ready |
 
 `CanvasAngularOptions` extends the core options with `initialElements` /
 `initialDocument` (`initialDocument` wins) and `onReady(engine)`, called once
@@ -116,7 +115,7 @@ Standalone component that mounts the drawing surface into its own host element (
 
 ### `CanvasService`
 
-The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It creates the engine headlessly in its constructor, exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `isReady`, `toolOptions`, the imperative methods used by the hooks (including `getToolOptions` / `setToolOptions`), and `instance` (the raw `AdrawCanvas`).
+The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It creates the engine headlessly in its constructor, exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `isReady`, the imperative methods used by the hooks, and `instance` (the raw `AdrawCanvas`).
 
 ## Hooks
 
@@ -167,31 +166,24 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
 // selectedIds, elements: Signal
 ```
 
-### `useToolOptions()`
+### Styles
+
+Styles are global. Use the engine's `setStyle` / `getStyle` through
+`CanvasService.instance`:
 
 ```ts
-const { toolOptions, setToolOptions } = useToolOptions()
-// toolOptions: Signal<ToolOptionsState>
-setToolOptions("rectangle", { cornerRadius: 12 })
+const canvas = useCanvas()
+
+canvas.instance.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+canvas.instance.getStyle() // selection style, or the global style
 ```
 
-### `useStyle(tool?)`
-
-Returns signals for one tool. Omit `tool` to infer it from a homogeneous
-selection (or the active tool):
-
-```ts
-const { tool, style, setStyle } = useStyle()
-// or: const { style, setStyle } = useStyle("rectangle")
-// tool() and style() may be null when nothing applies
-
-setStyle({ strokeWidth: 4 })
-```
-
-All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
-to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
-highlights). Tool-specific fields: `cornerRadius` (rectangle), `fontSize`
-(text), `smoothing` (draw). Changes also restyle matching selected elements.
+`setStyle` restyles matching selected elements as well as future ones. All tools
+share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies to
+`rectangle`, `ellipse` and `note`. Tool-specific fields: `cornerRadius`
+(rectangle and note), `fontSize` / `fontFamily` / `textAlign` / `lineHeight` /
+`autoSize` (text), and `smoothing` (draw). Fields an element does not support
+are ignored.
 
 ### `useTransformOverlay()`
 

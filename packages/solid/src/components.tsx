@@ -3,10 +3,7 @@ import {
   type CanvasElement,
   type CanvasEventMap,
   type CanvasOptions,
-  CONFIGURABLE_TOOLS,
   type ElementId,
-  resolveAllToolOptions,
-  type ToolOptionsState,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
@@ -19,12 +16,7 @@ import {
   type JSX,
 } from "solid-js"
 
-import {
-  CanvasContext,
-  useCanvas,
-  type CanvasContextValue,
-  type SetToolOptions,
-} from "./hooks"
+import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
 
 /**
  * Solid-specific canvas options. Currently an alias of {@link CanvasOptions};
@@ -37,15 +29,6 @@ export interface CanvasProviderProps {
   options?: CanvasSolidOptions
   /** Called once per engine after `<Canvas>` mounts it. */
   onReady?: (engine: AdrawCanvas) => void
-}
-
-/**
- * Read every resolved per-tool style option from an engine.
- */
-function readToolOptions(engine: AdrawCanvas): ToolOptionsState {
-  return Object.fromEntries(
-    CONFIGURABLE_TOOLS.map((tool) => [tool, engine.getToolOptions(tool)]),
-  ) as ToolOptionsState
 }
 
 /**
@@ -78,9 +61,6 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   const [hideWhileTransforming, setHideWhileTransforming] = createSignal(
     engine.getHideOverlayWhileTransforming(),
   )
-  const [toolOptions, setToolOptions] = createSignal<ToolOptionsState>(
-    readToolOptions(engine),
-  )
   const [isReady, setIsReady] = createSignal(false)
   const [isMounted, setIsMounted] = createSignal(false)
   let readyNotified = false
@@ -111,41 +91,18 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   }: CanvasEventMap["selectionChange"]) => {
     setSelectedIds(new Set(newSelectedIds))
   }
-  const handleToolOptionsChange = ({
-    tool,
-    options: nextOptions,
-  }: CanvasEventMap["toolOptionsChange"]) => {
-    setToolOptions(
-      (previous) => ({ ...previous, [tool]: nextOptions }) as ToolOptionsState,
-    )
-  }
 
   engine.on("change", handleChange)
   engine.on("viewportChange", handleViewportChange)
   engine.on("toolChange", handleToolChange)
   engine.on("selectionChange", handleSelectionChange)
-  engine.on("toolOptionsChange", handleToolOptionsChange)
 
   onCleanup(() => {
     engine.off("change", handleChange)
     engine.off("viewportChange", handleViewportChange)
     engine.off("toolChange", handleToolChange)
     engine.off("selectionChange", handleSelectionChange)
-    engine.off("toolOptionsChange", handleToolOptionsChange)
     engine.destroy()
-  })
-
-  const updateToolOptions: SetToolOptions = (tool, options) => {
-    engine.setToolOptions(tool, options)
-  }
-
-  // Keep toolbar state in step when provider options are replaced.
-  createEffect(() => {
-    const tools = props.options?.tools
-    setToolOptions((previous) => ({
-      ...previous,
-      ...resolveAllToolOptions(tools),
-    }))
   })
 
   // Flip readiness once <Canvas> has mounted the engine. Subscriptions above
@@ -182,10 +139,7 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
     setHideWhileTransforming,
     setIsMounted,
     setSelectedIds,
-    setToolOptions,
     setViewport,
-    toolOptions,
-    updateToolOptions,
     viewport,
   }
 

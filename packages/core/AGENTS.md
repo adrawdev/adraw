@@ -35,10 +35,10 @@ src/
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
   text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
   text-bindings.ts   bound text: max width/height, centering, container growth, sync
-  tool-options.ts    per-tool style types, defaults, resolution helpers
+  style.ts           style types and global defaults
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
-    tool-options.ts  applyToolOptionsToElement/getElementStyle: style write-back and read-back
+    style.ts        applyStyleToElement/getElementStyle: style write-back and read-back
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements
@@ -101,10 +101,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `clearHistory()`                                        | Reset history with the current state as new baseline      |
 | `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                    |
 | `getSelectedIds()`                                      | `Set<ElementId>` of selected elements                     |
-| `getToolOptions(tool)`                                  | Resolved style options for a drawing tool                 |
-| `getStyle()`                                            | Selection style, active tool style, or global defaults    |
-| `setToolOptions(tool, partial)`                         | Merge tool styles; restyles matching selected elements    |
-| `setStyle(partial)`                                     | Merge styles into every tool; restyles selected elements  |
+| `getStyle()`                                            | Selection style or global defaults                        |
+| `setStyle(partial)`                                     | Merge global styles; restyles selected elements           |
 | `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                              |
 | `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                                 |
 
@@ -112,13 +110,12 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 
 `canvas.on(event, handler)` / `canvas.off(event, handler)` — emitted by the engine:
 
-| Event                 | Payload                                       |
-| --------------------- | --------------------------------------------- |
-| `"change"`            | `{ elements: Map<ElementId, CanvasElement> }` |
-| `"viewportChange"`    | `{ viewport: ViewportState }`                 |
-| `"toolChange"`        | `{ tool: ToolType }`                          |
-| `"selectionChange"`   | `{ selectedIds: Set<ElementId> }`             |
-| `"toolOptionsChange"` | `{ tool, options }` (resolved style options)  |
+| Event               | Payload                                       |
+| ------------------- | --------------------------------------------- |
+| `"change"`          | `{ elements: Map<ElementId, CanvasElement> }` |
+| `"viewportChange"`  | `{ viewport: ViewportState }`                 |
+| `"toolChange"`      | `{ tool: ToolType }`                          |
+| `"selectionChange"` | `{ selectedIds: Set<ElementId> }`             |
 
 Always copy the payload when storing (`new Map(elements)`, `new Set(selectedIds)`).
 
@@ -134,12 +131,11 @@ Passed to constructor as `CanvasOptions`:
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
 - `keyboard?: "canvas" | "document" | "none"` — shortcut scope; defaults to `"canvas"` (SVG is focusable and focuses on pointer down), `"document"` handles shortcuts page-wide, `"none"` disables them
 - `clipboard?: ClipboardOptions` — `{ serialize?, deserialize? }` hooks bridging the in-memory clipboard to the system clipboard
-- `tools?: ToolOptionsConfig` — per-tool style defaults, e.g. `{ draw: { strokeWidth: 4, smoothing: 0.7 }, rectangle: { cornerRadius: 8 }, text: { fontSize: 24, fontFamily: "monospace", textAlign: "center" } }`
 - `measureText?: TextMeasurer` — text layout measurer. Defaults to a character-count approximation; `AdrawCanvas.mount` installs a canvas-backed one unless this option is supplied. Set it later with `setTextMeasurer()` / read it with `getTextMeasurer()`.
 
 ### Tool styles
 
-`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text/note), `ToolOptionsConfig`, `StyleOptions`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, `setToolOptions(tool, partial)` restyles matching elements in the selection, and `setStyle(partial)` merges the same options into every tool (ignoring fields a tool does not support) and restyles the matching selection. `getStyle()` reads the selected elements' common style, falling back to the active tool's options and then the global style. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+`src/style.ts` defines `StyleOptions` and the built-in `DEFAULT_STYLE`. Styles are global: the engine stores the values set with `setStyle(partial)`, tools merge them over their own factory defaults for future gestures, and `setStyle` restyles the selected elements (fields an element does not support are ignored). `getStyle()` reads the selected elements' common style, falling back to `DEFAULT_STYLE` overlaid with the global values. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` affects rectangles, ellipses and notes. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`; paths add `smoothing`; rectangles and notes add `cornerRadius`. Tools read live style through `ToolContext.getStyle()` (optional for standalone factories, with `getStyleForContext()` in `tools/base.ts` as the fallback helper).
 
 ### Text layout
 
@@ -265,7 +261,7 @@ The DOM adapter renders to an `<svg>` with three `<g>` child layers: `.adraw-ele
 - `src/dom/render/overlay.ts` — `renderTransformOverlay()`
 - `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
 
-The adapter subscribes to the engine's change/viewport/tool/selection events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes. `toolOptionsChange` is consumed by framework bindings (React mirrors it into toolbar state).
+The adapter subscribes to the engine's change/viewport/tool/selection events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes.
 
 Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-background`, `--adraw-selection`. Defaults in `src/constants.ts`.
 

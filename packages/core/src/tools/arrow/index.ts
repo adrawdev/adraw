@@ -5,21 +5,26 @@ import {
 } from "../../bindings"
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createArrow, getNextZIndex } from "../../elements"
-import type { ArrowBinding, ArrowElement, ElementId, Point } from "../../types"
+import type {
+  ArrowBinding,
+  ArrowElement,
+  CanvasElementStyle,
+  ElementId,
+  Point,
+} from "../../types"
 import {
   createBaseToolState,
   getDefaultToolOptions,
-  getToolOptionsForContext,
+  getStyleForContext,
   type Tool,
   type ToolContext,
-  type ToolOptions,
   type ToolState,
 } from "../base"
 import { snapToolPoint } from "../snap"
 
-export function createArrowTool(options: ToolOptions = {}): Tool {
+export function createArrowTool(options: CanvasElementStyle = {}): Tool {
   const state: ToolState = createBaseToolState()
-  const toolOptions = { ...getDefaultToolOptions(), ...options }
+  const defaults = { ...getDefaultToolOptions(), ...options }
   let temporaryElement: ArrowElement | null = null
   let startBinding: ArrowBinding | null = null
   let bindingCandidate: ElementId | null = null
@@ -34,7 +39,7 @@ export function createArrowTool(options: ToolOptions = {}): Tool {
     startLink: ArrowBinding | null,
     endLink: ArrowBinding | null,
   ): ArrowElement => {
-    const currentOptions = getToolOptionsForContext(toolOptions, context)
+    const currentOptions = getStyleForContext(defaults, context)
     const element = createArrow({
       endArrowhead: true,
       endBinding: endLink,

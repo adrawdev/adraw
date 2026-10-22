@@ -228,7 +228,7 @@ describe("syncTextBindings", () => {
     canvas.addElement(label)
     canvas.setSelectedIds(new Set(["rect"]))
 
-    canvas.setToolOptions("text", { fontSize: 30 })
+    canvas.setStyle({ fontSize: 30 })
 
     const text = canvas.getElements().get("label") as TextElement
     const container = canvas.getElements().get("rect") as RectangleElement

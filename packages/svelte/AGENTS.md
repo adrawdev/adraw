@@ -16,8 +16,6 @@ From `src/index.ts`:
 - `useViewport()` — `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — `{ undo, redo, canUndo, canRedo }`
 - `useSelection()` — `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
-- `useToolOptions()` — `{ toolOptions, setToolOptions }` (reactive getter + generic setter)
-- `useStyle(tool?)` — `{ tool, style, setStyle }` reactive getters; infers from selection/active tool when omitted
 - `useTransformOverlay()` — `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasSvelteOptions` — type extending `CanvasOptions`
 - `CanvasContextValue` — type for context value
@@ -44,7 +42,7 @@ From `src/index.ts`:
 ## How it works
 
 1. `CanvasProvider` creates the headless engine and context synchronously, then provides it via Svelte 5's `setContext`/`getContext`
-2. The context subscribes to core events (including `toolOptionsChange`) and copies payloads into `$state`
+2. The context subscribes to core events and copies payloads into `$state`
 3. `Canvas` mounts/unmounts the provider-owned engine in a `$effect` block and calls `notifyReady` / `markUnmounted`
 4. `useCanvas()` returns the context set by the nearest ancestor `CanvasProvider` and throws outside one
 5. One canvas per `CanvasProvider` subtree

@@ -1,12 +1,6 @@
-import {
-  useCanvas,
-  useHistory,
-  useStyle,
-  useTool,
-  useViewport,
-} from "@adraw/angular"
+import { useCanvas, useHistory, useTool, useViewport } from "@adraw/angular"
 import type { ToolType } from "@adraw/core"
-import { Component, input } from "@angular/core"
+import { Component, input, signal } from "@angular/core"
 
 @Component({
   selector: "app-toolbar",
@@ -73,23 +67,17 @@ import { Component, input } from "@angular/core"
         </button>
       }
       <div class="separator"></div>
-      @if (styleApi.style(); as style) {
-        <label class="control">
-          Stroke
-          <input
-            type="range"
-            min="1"
-            max="16"
-            [value]="style.strokeWidth"
-            (input)="
-              styleApi.setStyle({
-                strokeWidth: Number($any($event.target).value),
-              })
-            "
-          />
-          {{ style.strokeWidth }}
-        </label>
-      }
+      <label class="control">
+        Stroke
+        <input
+          type="range"
+          min="1"
+          max="16"
+          [value]="strokeWidth()"
+          (input)="setStrokeWidth($event)"
+        />
+        {{ strokeWidth() }}
+      </label>
       <div class="separator"></div>
       <button [disabled]="!historyApi.canUndo()" (click)="historyApi.undo()">
         Undo
@@ -122,7 +110,13 @@ export class Toolbar {
   protected readonly toolApi = useTool()
   protected readonly viewportApi = useViewport()
   protected readonly historyApi = useHistory()
-  protected readonly styleApi = useStyle()
+  protected readonly strokeWidth = signal(2)
+
+  protected setStrokeWidth(event: Event): void {
+    const strokeWidth = Number((event.target as HTMLInputElement).value)
+    this.strokeWidth.set(strokeWidth)
+    this.canvasApi.instance.setStyle({ strokeWidth })
+  }
 
   protected readonly tools: {
     id: ToolType

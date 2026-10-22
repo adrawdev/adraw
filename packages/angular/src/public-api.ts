@@ -6,13 +6,8 @@ export {
   useCanvasEngine,
   useHistory,
   useSelection,
-  useStyle,
   useTool,
-  useToolOptions,
   useTransformOverlay,
   useViewport,
   type CanvasEngineState,
-  type InferredStyleResult,
-  type SetToolOptions,
-  type StyleResult,
 } from "./lib/hooks"

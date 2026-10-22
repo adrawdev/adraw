@@ -69,71 +69,32 @@ square/circle, or `Alt` to size it outward from the center point.
 
 ### Tool styles
 
-Configure per-tool styles at construction, or change them at runtime with
-`setToolOptions`. Changes also restyle matching elements in the current
-selection. Use `setStyle` to merge the same styles into every tool at once;
-fields a tool does not support are ignored for that tool. `getStyle` reads the
-effective style for the current context: the selected elements first, then the
-active tool, then the global style.
+Styles are global. `setStyle` merges partial options into every drawing tool and
+restyles matching elements in the current selection, so a toolbar can update
+both the next shape and the selected one. `getStyle` returns the selected
+elements' common style, falling back to the global style.
 
 ```ts
-const canvas = new AdrawCanvas({
-  container,
-  tools: {
-    draw: { smoothing: 0.7, strokeWidth: 4 },
-    rectangle: {
-      cornerRadius: 8,
-      fillColor: "#ffd43b",
-      opacity: 0.35,
-      strokeWidth: 3,
-    },
-    text: {
-      fontFamily: "monospace",
-      fontSize: 24,
-      lineHeight: 1.4,
-      strokeColor: "#111",
-      textAlign: "center",
-    },
-    note: {
-      fillColor: "#fde68a",
-      fontSize: 22,
-      textAlign: "center",
-    },
-  },
-})
-
-canvas.setToolOptions("draw", { strokeWidth: 6 })
-canvas.setToolOptions("text", { fontSize: 32, textAlign: "left" })
-
-canvas.getToolOptions("rectangle")
-// { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
+const canvas = new AdrawCanvas({ container })
 
 canvas.setStyle({ opacity: 0.5, strokeColor: "#f00", strokeWidth: 3 })
+canvas.setStyle({ cornerRadius: 8, fillColor: "#ffd43b" })
+canvas.setStyle({ fontSize: 24, textAlign: "center" })
 
-// Selected elements win, then the active tool, then global defaults.
+// Selected elements win; otherwise the global style is returned.
 canvas.selectAll()
+canvas.getStyle()
+
+canvas.clearSelection()
 canvas.getStyle()
 ```
 
-Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow`, `text`
-and `note`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
-`fillColor` applies to `rectangle`, `ellipse` and `note` (combine it with
-`opacity < 1` for translucent highlights). The tool-specific ones are
-`smoothing` (draw), `cornerRadius` (rectangle), and `fontSize`, `fontFamily`,
-`textAlign`, `lineHeight` and `autoSize` (text). Notes add `padding`, `width`
-and `height` sizing options. `setStyle` merges a partial style across every
-tool, applying each field only to the tools that support it; `getStyle` returns
-the style of the selection (or its common fields), the active tool, or the
-global style. `setStrokeColor` remains a shortcut for the global stroke color
-and clears per-tool color overrides.
-
-Subscribe to `toolOptionsChange` to keep a custom toolbar in sync:
-
-```ts
-canvas.on("toolOptionsChange", ({ tool, options }) => {
-  console.log(tool, options)
-})
-```
+Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
+applies to `rectangle`, `ellipse` and `note` (combine it with `opacity < 1` for
+translucent highlights). The tool-specific ones are `smoothing` (draw),
+`cornerRadius` (rectangle and note), and `fontSize`, `fontFamily`, `textAlign`,
+`lineHeight` and `autoSize` (text). Notes add `padding`. Fields an element does
+not support are ignored.
 
 ## Elements
 
@@ -190,7 +151,7 @@ note grows taller when the text no longer fits. Notes have a soft drop shadow;
 
 ```ts
 canvas.setActiveTool("note")
-canvas.setToolOptions("note", { fillColor: "#bbf7d0", fontSize: 24 })
+canvas.setStyle({ fillColor: "#bbf7d0", fontSize: 24 })
 ```
 
 ### Labels inside shapes and arrows
@@ -207,13 +168,13 @@ crosses the text. Labels move, rotate and resize with their container, are
 copied and pasted with it, and are deleted when it is.
 
 While a labeled shape is selected, text styles can still be applied to its
-label with `setToolOptions("text", { ... })`. The text tool's click has three
+label with `setStyle({ fontSize, textAlign })`. The text tool's click has three
 outcomes: edit the text under the pointer, add/edit a shape label, or create
 free text. Dragging horizontally with the text tool creates a fixed-width text
 instead of a click-sized one.
 
 ```ts
-canvas.setToolOptions("text", { fontSize: 18, textAlign: "center" })
+canvas.setStyle({ fontSize: 18, textAlign: "center" })
 
 const label = [...canvas.getElements().values()].find(
   (element) => element.type === "text" && element.containerId === rectId,

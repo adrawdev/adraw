@@ -208,7 +208,7 @@ test.describe("text tool", () => {
   }) => {
     await openCanvas(page)
     await page.evaluate(() => {
-      ;(window as any).adraw.setToolOptions("text", {
+      ;(window as any).adraw.setStyle({
         fontFamily: "monospace",
         lineHeight: 1.5,
         textAlign: "center",

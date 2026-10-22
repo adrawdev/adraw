@@ -64,11 +64,6 @@ Context provider that creates and owns the canvas engine. All hooks and `<Canvas
   options={{
     initialElements: savedElements,
     snapping: { threshold: 8 },
-    tools: {
-      draw: { strokeWidth: 4, smoothing: 0.7 },
-      rectangle: { cornerRadius: 8 },
-      text: { fontSize: 24 },
-    },
   }}
   onReady={(engine) => engine.setActiveTool("draw")}
 >
@@ -78,7 +73,7 @@ Context provider that creates and owns the canvas engine. All hooks and `<Canvas
 
 | Prop      | Type                            | Description                                                   |
 | --------- | ------------------------------- | ------------------------------------------------------------- |
-| `options` | `CanvasReactOptions`            | Snapping / viewport / per-tool styles and initial document    |
+| `options` | `CanvasReactOptions`            | Snapping / viewport options and initial document              |
 | `onReady` | `(engine: AdrawCanvas) => void` | Called once per engine after `<Canvas>` mounts and subscribes |
 
 The core options include initial content:
@@ -98,11 +93,10 @@ cycle still runs twice, but the engine instance and its document survive and
 
 `setOptions` applies live changes without recreating the engine:
 
-- `tools` and `hideOverlayWhileTransforming` update the current engine.
+- `hideOverlayWhileTransforming` updates the current engine.
 - `keyboard`, `snapping`, `viewport` config, `isSnapMode` and clipboard hooks are
   constructor-only. Changing them recreates the engine while preserving the
-  document, viewport and current per-tool styles (undo history and selection are
-  reset).
+  document and viewport (undo history and selection are reset).
 - Replacing `options` with a new object that has equal values is a no-op, so
   inline options objects no longer wipe the canvas.
 
@@ -175,44 +169,24 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
 
-### `useToolOptions()`
+### Styles
 
-Returns resolved style options for every configurable tool plus a setter:
-
-```ts
-const { toolOptions, setToolOptions } = useToolOptions()
-// toolOptions.rectangle.cornerRadius, toolOptions.draw.smoothing, ...
-setToolOptions("rectangle", { cornerRadius: 12 })
-```
-
-### `useStyle()`
-
-Convenience hook for one tool's style. Pass the tool explicitly, or omit it to
-follow a homogeneous selection and fall back to the active tool:
+Styles are global. Use the engine's `setStyle` / `getStyle` through
+`useCanvasEngine`:
 
 ```tsx
-const { style, setStyle, tool } = useStyle()
-// or: const { style, setStyle } = useStyle("rectangle")
+const { engine } = useCanvasEngine()
 
-if (style && tool) {
-  return (
-    <input
-      type="range"
-      value={style.strokeWidth}
-      onChange={(event) =>
-        setStyle({ strokeWidth: Number(event.target.value) })
-      }
-    />
-  )
-}
+engine.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+engine.getStyle() // selected elements' common style, or the global style
 ```
 
-All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
-to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
-highlights). Tool-specific fields are available when the inferred tool matches:
-`cornerRadius` (rectangle), `fontSize` (text), `smoothing` (draw). Changing a
-style restyles matching elements in the current selection, so the same control
-works for the selected shape and the next one.
+`setStyle` restyles matching elements in the current selection as well as future
+ones. All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
+applies to `rectangle`, `ellipse` and `note` (combine it with `opacity < 1` for
+translucent highlights). Tool-specific fields are `cornerRadius` (rectangle and
+note), `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize` (text),
+and `smoothing` (draw). Fields an element does not support are ignored.
 
 ### `useTransformOverlay()`
 

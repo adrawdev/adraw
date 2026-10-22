@@ -81,17 +81,16 @@ Creates the underlying canvas instance and makes it available to `Canvas` and al
 <CanvasProvider
   :options="{
     snapping: { threshold: 8 },
-    tools: { draw: { strokeWidth: 4 }, rectangle: { cornerRadius: 8 } },
   }"
 >
   ...
 </CanvasProvider>
 ```
 
-| Prop      | Type                            | Description                                                |
-| --------- | ------------------------------- | ---------------------------------------------------------- |
-| `options` | `CanvasVueOptions`              | Snapping / viewport / per-tool styles and initial document |
-| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine             |
+| Prop      | Type                            | Description                                      |
+| --------- | ------------------------------- | ------------------------------------------------ |
+| `options` | `CanvasVueOptions`              | Snapping / viewport options and initial document |
+| `onReady` | `(engine: AdrawCanvas) => void` | Called once after `<Canvas>` mounts the engine   |
 
 `options` accepts `initialElements` and `initialDocument` from
 `@adraw/core`; the latter takes precedence. Initial content is applied when the
@@ -172,41 +171,24 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
 
-### `useToolOptions()`
+### Styles
+
+Styles are global. Use the engine's `setStyle` / `getStyle` through
+`useCanvas().core`:
 
 ```ts
-const { toolOptions, setToolOptions } = useToolOptions()
-// toolOptions: getter — resolved styles for every configurable tool
-setToolOptions("rectangle", { cornerRadius: 12 })
+const { core } = useCanvas()
+
+core.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+core.getStyle() // selection style, or the global style
 ```
 
-### `useStyle(tool?)`
-
-Reactive getters for one tool. Omit `tool` to infer it from a homogeneous
-selection (or the active tool):
-
-```vue
-<script setup lang="ts">
-import { useStyle } from "@adraw/vue"
-
-const styles = useStyle()
-// or: const styles = useStyle("rectangle")
-</script>
-
-<template>
-  <input
-    v-if="styles.style"
-    type="range"
-    :value="styles.style.strokeWidth"
-    @input="styles.setStyle({ strokeWidth: Number($event.target.value) })"
-  />
-</template>
-```
-
-All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies
-to `rectangle` and `ellipse` (combine it with `opacity < 1` for translucent
-highlights). Tool-specific fields: `cornerRadius` (rectangle), `fontSize`
-(text), `smoothing` (draw). Changes also restyle matching selected elements.
+`setStyle` restyles matching selected elements as well as future ones. All tools
+share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies to
+`rectangle`, `ellipse` and `note`. Tool-specific fields: `cornerRadius`
+(rectangle and note), `fontSize` / `fontFamily` / `textAlign` / `lineHeight` /
+`autoSize` (text), and `smoothing` (draw). Fields an element does not support
+are ignored.
 
 ### `useTransformOverlay()`
 

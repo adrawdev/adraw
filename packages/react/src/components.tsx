@@ -5,21 +5,14 @@ import {
   type CanvasElement,
   type CanvasEventMap,
   type CanvasOptions,
-  type ConfigurableToolType,
-  CONFIGURABLE_TOOLS,
   createSnappingConfig,
   type ElementId,
-  type ResolvedToolOptions,
-  resolveToolOptions,
   resolveViewportConfig,
-  type ToolOptionsMap,
-  type ToolOptionsState,
   type ToolType,
   type ViewportConfig,
   type ViewportState,
 } from "@adraw/core"
 import React, {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -27,12 +20,7 @@ import React, {
   type ReactNode,
 } from "react"
 
-import {
-  CanvasContext,
-  useCanvas,
-  type CanvasContextValue,
-  type SetToolOptions,
-} from "./hooks"
+import { CanvasContext, useCanvas, type CanvasContextValue } from "./hooks"
 
 /**
  * React-specific canvas options. Currently an alias of {@link CanvasOptions};
@@ -60,8 +48,6 @@ export interface CanvasProviderProps {
   onReady?: (engine: AdrawCanvas) => void
 }
 
-type AnyToolOptions = ToolOptionsMap[ConfigurableToolType]
-
 /**
  * Drop initial document data before rebuilding the engine from live state.
  */
@@ -75,22 +61,12 @@ function withoutInitialData(
 }
 
 /**
- * Read every resolved per-tool style option from an engine.
- */
-function readToolOptions(engine: AdrawCanvas): ToolOptionsState {
-  return Object.fromEntries(
-    CONFIGURABLE_TOOLS.map((tool) => [tool, engine.getToolOptions(tool)]),
-  ) as ToolOptionsState
-}
-
-/**
- * Create a headless engine, optionally carrying over the document, viewport,
- * selection-independent state and resolved tool styles from a previous one.
+ * Create a headless engine, optionally carrying over the document and viewport
+ * from a previous one.
  */
 function createEngine(
   options: CanvasReactOptions | undefined,
   previous?: AdrawCanvas,
-  previousOptions?: CanvasReactOptions,
 ): AdrawCanvas {
   // Initial content is handled by the core constructor on first creation. On
   // rebuilds the live document wins, so strip the initial fields.
@@ -101,27 +77,6 @@ function createEngine(
   if (previous) {
     engine.loadDocument(previous.toDocument(), { history: false })
     engine.setViewport(previous.getViewport())
-
-    for (const tool of CONFIGURABLE_TOOLS) {
-      const defaults = resolveToolOptions(tool) as Record<string, unknown>
-      const previousOverrides = previousOptions?.tools?.[tool] as
-        | Record<string, unknown>
-        | undefined
-      const nextOverrides = options?.tools?.[tool] as
-        | Record<string, unknown>
-        | undefined
-      const merged: Record<string, unknown> = {
-        ...(previous.getToolOptions(tool) as Record<string, unknown>),
-        ...nextOverrides,
-      }
-      for (const key of Object.keys(previousOverrides ?? {})) {
-        if (!nextOverrides || !(key in nextOverrides)) {
-          merged[key] = defaults[key]
-        }
-      }
-      engine.setToolOptions(tool, merged as AnyToolOptions)
-    }
-
     engine.setActiveTool(previous.getActiveTool())
   }
 
@@ -149,23 +104,6 @@ function sameViewportConfig(
     a.maxZoom === b.maxZoom &&
     a.minZoom === b.minZoom &&
     a.zoomSensitivity === b.zoomSensitivity
-  )
-}
-
-/**
- * Compare tool overrides by value so a new inline object with the same styles
- * does not restyle the current selection.
- */
-function sameToolOptions(
-  left: Record<string, unknown> | undefined,
-  right: Record<string, unknown> | undefined,
-): boolean {
-  const a = left ?? {}
-  const b = right ?? {}
-  const keys = Object.keys(a)
-  return (
-    keys.length === Object.keys(b).length &&
-    keys.every((key) => a[key] === b[key])
   )
 }
 
@@ -202,32 +140,6 @@ function applyLiveOptions(
   const previousHide = previous?.hideOverlayWhileTransforming ?? true
   if (hide !== previousHide) {
     engine.setHideOverlayWhileTransforming(hide)
-  }
-
-  for (const tool of CONFIGURABLE_TOOLS) {
-    const next = options?.tools?.[tool] as Record<string, unknown> | undefined
-    const current = previous?.tools?.[tool] as
-      | Record<string, unknown>
-      | undefined
-    if (sameToolOptions(next, current)) {
-      continue
-    }
-
-    // Start from the engine's resolved values so runtime customizations made
-    // through `useStyle`/`setToolOptions` survive. Keys that were overridden
-    // by the previous options but are absent from the next ones fall back to
-    // their defaults (a plain merge would keep the stale override).
-    const defaults = resolveToolOptions(tool) as Record<string, unknown>
-    const merged: Record<string, unknown> = {
-      ...(engine.getToolOptions(tool) as Record<string, unknown>),
-      ...next,
-    }
-    for (const key of Object.keys(current ?? {})) {
-      if (!next || !(key in next)) {
-        merged[key] = defaults[key]
-      }
-    }
-    engine.setToolOptions(tool, merged as AnyToolOptions)
   }
 }
 
@@ -274,9 +186,6 @@ export function CanvasProvider({
   const [hideWhileTransforming, setHideWhileTransforming] = useState<boolean>(
     () => engine.getHideOverlayWhileTransforming(),
   )
-  const [toolOptions, setToolOptions] = useState<ToolOptionsState>(() =>
-    readToolOptions(engine),
-  )
   const [isMounted, setIsMounted] = useState(false)
   const [isReady, setIsReady] = useState(false)
 
@@ -294,30 +203,6 @@ export function CanvasProvider({
   // Engine for which `onReady` has already fired.
   const readyEngineRef = useRef<AdrawCanvas | null>(null)
 
-  const updateToolOptions = useCallback<SetToolOptions>(
-    (tool, nextOptions) => {
-      engine.setToolOptions(tool, nextOptions)
-      setToolOptions((previous) => ({
-        ...previous,
-        [tool]: engine.getToolOptions(tool),
-      }))
-    },
-    [engine],
-  )
-
-  const syncToolOptions = useCallback(
-    (
-      tool: ConfigurableToolType,
-      nextOptions: ResolvedToolOptions<ConfigurableToolType>,
-    ) => {
-      setToolOptions(
-        (previous) =>
-          ({ ...previous, [tool]: nextOptions }) as ToolOptionsState,
-      )
-    },
-    [],
-  )
-
   // Mirror engine state into React. Runs after child effects, so `<Canvas>`
   // has already mounted the engine by the time `onReady` is invoked below.
   useEffect(() => {
@@ -328,7 +213,6 @@ export function CanvasProvider({
       setActiveTool(engine.getActiveTool())
       setSelectedIds(new Set(engine.getSelectedIds()))
       setHideWhileTransforming(engine.getHideOverlayWhileTransforming())
-      setToolOptions(readToolOptions(engine))
     }
 
     const handleChange = ({
@@ -349,27 +233,19 @@ export function CanvasProvider({
     }: CanvasEventMap["selectionChange"]) => {
       setSelectedIds(new Set(newSelectedIds))
     }
-    const handleToolOptionsChange = ({
-      tool,
-      options: nextOptions,
-    }: CanvasEventMap["toolOptionsChange"]) => {
-      syncToolOptions(tool, nextOptions)
-    }
 
     engine.on("change", handleChange)
     engine.on("viewportChange", handleViewportChange)
     engine.on("toolChange", handleToolChange)
     engine.on("selectionChange", handleSelectionChange)
-    engine.on("toolOptionsChange", handleToolOptionsChange)
 
     return () => {
       engine.off("change", handleChange)
       engine.off("viewportChange", handleViewportChange)
       engine.off("toolChange", handleToolChange)
       engine.off("selectionChange", handleSelectionChange)
-      engine.off("toolOptionsChange", handleToolOptionsChange)
     }
-  }, [engine, syncToolOptions])
+  }, [engine])
 
   // Flip `isReady` after the engine is mounted and its events are subscribed.
   // The effect is declared after the subscription effect so that ordering
@@ -401,7 +277,7 @@ export function CanvasProvider({
     optionsRef.current = options
 
     if (!sameCreationOptions(previous, options)) {
-      const nextEngine = createEngine(options, engine, previous)
+      const nextEngine = createEngine(options, engine)
       setIsReady(false)
       setEngine(nextEngine)
       return
@@ -425,10 +301,7 @@ export function CanvasProvider({
       setIsMounted,
       setOptions,
       setSelectedIds,
-      setToolOptions: updateToolOptions,
       setViewport,
-      syncToolOptions,
-      toolOptions,
       vanillaRef,
       viewport,
     }),
@@ -441,9 +314,6 @@ export function CanvasProvider({
       options,
       selectedIds,
       setIsMounted,
-      updateToolOptions,
-      syncToolOptions,
-      toolOptions,
       viewport,
     ],
   )

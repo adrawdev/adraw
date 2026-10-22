@@ -45,60 +45,30 @@ canvas.getActiveTool() // "draw"
 
 ### Tool styles
 
-Set per-tool defaults when constructing the canvas, or change them at runtime
-with `setToolOptions`. Changing an option also restyles matching elements in the
-current selection, so a toolbar can update both the next shape and the selected
-one.
+Styles are global: `setStyle` merges partial options into every drawing tool and
+also restyles matching elements in the current selection. A toolbar can update
+both the next shape and the selected one.
 
 ```ts
-const canvas = new AdrawCanvas({
-  container,
-  tools: {
-    draw: { smoothing: 0.7, strokeWidth: 4 },
-    rectangle: {
-      cornerRadius: 8,
-      fillColor: "#ffd43b",
-      opacity: 0.35,
-      strokeWidth: 3,
-    },
-    text: { fontSize: 24, strokeColor: "#111" },
-  },
-})
+const canvas = new AdrawCanvas({ container })
 
-canvas.setToolOptions("draw", { strokeWidth: 6 })
-canvas.setToolOptions("text", { fontSize: 32 })
+canvas.setStyle({ strokeColor: "#f00", strokeWidth: 3, opacity: 0.5 })
+canvas.setStyle({ cornerRadius: 8, fillColor: "#ffd43b" })
+canvas.setStyle({ fontSize: 32, smoothing: 0.7 })
 
-canvas.getToolOptions("rectangle")
-// { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
-
-// Merge the same styles into every tool. Fields a tool does not support are
-// ignored for that tool.
-canvas.setStyle({ opacity: 0.5, strokeColor: "#f00", strokeWidth: 3 })
-
-// Effective style: selected elements first, then the active tool, then globals.
+// Effective style: selected elements first, then the global style.
 canvas.selectAll()
 canvas.getStyle() // style of the selected elements (common fields only)
 canvas.clearSelection()
-canvas.getStyle() // active tool options, or global defaults
+canvas.getStyle() // global style
 ```
 
-Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow`,
-`text` and `note`. Shared options are `strokeColor`, `strokeWidth` and
-`opacity`; `fillColor` applies to `rectangle`, `ellipse` and `note` (combine it
-with `opacity < 1` for translucent highlights). The tool-specific ones are
-`smoothing` (draw), `cornerRadius` (rectangle and note) and `fontSize`,
-`fontFamily`, `textAlign`, `lineHeight` and `autoSize` (text). `setStyle`
-merges shared styles into every tool at once, while `getStyle` resolves the
-style for the current selection or tool. `setStrokeColor` remains a shortcut
-for changing the global stroke color and clears per-tool color overrides.
-
-Subscribe to `toolOptionsChange` to mirror style state in custom UI:
-
-```ts
-canvas.on("toolOptionsChange", ({ tool, options }) => {
-  console.log(tool, options)
-})
-```
+Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
+applies to `rectangle`, `ellipse` and `note` (combine it with `opacity < 1` for
+translucent highlights). The tool-specific ones are `smoothing` (draw),
+`cornerRadius` (rectangle and note) and `fontSize`, `fontFamily`, `textAlign`,
+`lineHeight` and `autoSize` (text). Notes add `padding`. Fields an element does
+not support are ignored.
 
 ## Elements
 
