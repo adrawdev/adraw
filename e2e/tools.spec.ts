@@ -12,6 +12,7 @@ test.describe("tool selection", () => {
     "arrow",
     "eraser",
     "text",
+    "note",
     "select",
   ]
 
@@ -50,6 +51,7 @@ test.describe("tool selection", () => {
       ["h", "hand"],
       ["v", "select"],
       ["t", "text"],
+      ["n", "note"],
       ["a", "arrow"],
     ]
 

@@ -1,5 +1,11 @@
-import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
+import {
+  FILL_COLOR,
+  NOTE_FILL_COLOR,
+  STROKE_COLOR,
+  STROKE_WIDTH,
+} from "../constants"
 import type { CanvasEngine } from "../engine/engine"
+import { getNoteContentWidth, getNoteTextTop, measureNoteText } from "../note"
 import { approximateTextMeasurer, type TextMeasurer } from "../text"
 import type { BoundingBox, CanvasElement } from "../types"
 import { renderGuides } from "./render/guides"
@@ -7,9 +13,12 @@ import { renderTransformOverlay } from "./render/overlay"
 import { renderSelectionBox } from "./render/overlay-nodes"
 import type { DomState } from "./state"
 import {
+  appendNoteTextLines,
   appendTextLines,
   applyArrowShaft,
   applyElementOpacity,
+  applyNoteFold,
+  applyNoteTextAttributes,
   applyTextAttributes,
   bindingTargetClass,
   createElementGroup,
@@ -36,7 +45,7 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
   }
 
   renderTemporary(state, engine)
-  setTextElementVisibility(state, !state.textEditor)
+  setTextElementVisibility(state, engine, !state.textEditor)
   renderBindingHighlight(state, engine)
   renderGuides(state, engine)
   renderTransformOverlay(state, engine)
@@ -92,6 +101,7 @@ export function renderTemporary(state: DomState, engine: CanvasEngine): void {
 
 export function setTextElementVisibility(
   state: DomState,
+  engine: CanvasEngine,
   visible: boolean,
 ): void {
   if (state.temporaryNode) {
@@ -101,10 +111,20 @@ export function setTextElementVisibility(
     return
   }
 
+  const editing = engine.getElements().get(state.textEditElementId)
   for (const child of state.elementsGroup.children) {
     if (child.id === state.textEditElementId) {
       const group = child as SVGGElement
-      group.style.visibility = visible ? "" : "hidden"
+      if (editing?.type === "note") {
+        // Keep the sticky background visible while its text is edited by the
+        // overlay; only the painted glyphs are hidden.
+        const text = group.querySelector("text")
+        if (text) {
+          text.style.visibility = visible ? "" : "hidden"
+        }
+      } else {
+        group.style.visibility = visible ? "" : "hidden"
+      }
       break
     }
   }
@@ -249,6 +269,25 @@ export function updateElementGeometry(
       appendTextLines(textElement, element, textMeasurer)
       break
     }
+    case "note": {
+      const rectElement = group.getElementsByTagName("rect")[0]
+      rectElement.setAttribute("width", `${element.width}`)
+      rectElement.setAttribute("height", `${element.height}`)
+      rectElement.setAttribute("rx", `${element.cornerRadius}`)
+      rectElement.setAttribute("ry", `${element.cornerRadius}`)
+      rectElement.setAttribute("fill", element.fillColor || NOTE_FILL_COLOR)
+
+      const foldElement = group.getElementsByTagName("path")[0]
+      if (foldElement) {
+        applyNoteFold(foldElement, element)
+      }
+
+      const textElement = group.getElementsByTagName("text")[0]
+      applyNoteTextAttributes(textElement, element)
+      textElement.textContent = ""
+      appendNoteTextLines(textElement, element, textMeasurer)
+      break
+    }
   }
 }
 
@@ -275,18 +314,34 @@ export function positionTextEditor(
     ? engine.getElements().get(state.textEditElementId)
     : engine.getTemporaryElement()
   const element = editing?.type === "text" ? editing : null
+  const note = editing?.type === "note" ? editing : null
   const options = engine.getToolOptions("text")
+  const noteOptions = engine.getToolOptions("note")
 
-  const fontSize = element?.fontSize ?? options.fontSize
-  const fontFamily = element?.fontFamily ?? options.fontFamily
-  const lineHeight = element?.lineHeight ?? options.lineHeight
-  const autoSize = element?.autoSize ?? options.autoSize
-  const textAlign = element?.textAlign ?? options.textAlign
-  const rotation = element?.rotation ?? 0
-  const x = element?.x ?? state.textEditPoint?.x ?? 0
-  const y = element?.y ?? state.textEditPoint?.y ?? 0
-  const width = Math.max(element?.width ?? 1, fontSize * 0.3)
-  const height = Math.max(fontSize * lineHeight, element?.height ?? 0)
+  const fontOptions = note ? noteOptions : options
+  const fontSize = note?.fontSize ?? element?.fontSize ?? fontOptions.fontSize
+  const fontFamily =
+    note?.fontFamily ?? element?.fontFamily ?? fontOptions.fontFamily
+  const lineHeight =
+    note?.lineHeight ?? element?.lineHeight ?? fontOptions.lineHeight
+  const autoSize = note ? false : (element?.autoSize ?? options.autoSize)
+  const textAlign = note
+    ? (note.textAlign ?? noteOptions.textAlign)
+    : (element?.textAlign ?? options.textAlign)
+  const rotation = editing?.rotation ?? 0
+
+  let x = element?.x ?? state.textEditPoint?.x ?? 0
+  let y = element?.y ?? state.textEditPoint?.y ?? 0
+  let width = Math.max(element?.width ?? 1, fontSize * 0.3)
+  let height = Math.max(fontSize * lineHeight, element?.height ?? 0)
+
+  if (note) {
+    const layout = measureNoteText(note, engine.getTextMeasurer())
+    x = note.x + note.padding
+    y = note.y + getNoteTextTop(note, layout)
+    width = getNoteContentWidth(note)
+    height = Math.max(layout.height, fontSize * lineHeight)
+  }
 
   const viewport = engine.getViewport()
   const canvasSize = engine.getCanvasSize()
@@ -295,17 +350,22 @@ export function positionTextEditor(
   const scrollX = container.ownerDocument.defaultView?.scrollX ?? 0
   const scrollY = container.ownerDocument.defaultView?.scrollY ?? 0
 
-  // Position by the box center so `scale(zoom) rotate()` around the center
-  // leaves the text exactly over the element it replaces.
-  const screenCenterX =
+  // Rotate around the element's center, not the editor box's center: a note's
+  // editor only covers the padded content area, which is not centered in the
+  // sticky when its text is short or overflowing.
+  const originCanvasX = note ? note.x + note.width / 2 : x + width / 2
+  const originCanvasY = note ? note.y + note.height / 2 : y + height / 2
+  const pivotX = note ? note.width / 2 - (x - note.x) : width / 2
+  const pivotY = note ? note.height / 2 - (y - note.y) : height / 2
+  const screenOriginX =
     canvasRect.left +
     scrollX +
-    (x + width / 2 - viewport.x) * viewport.zoom +
+    (originCanvasX - viewport.x) * viewport.zoom +
     canvasWidth / 2
-  const screenCenterY =
+  const screenOriginY =
     canvasRect.top +
     scrollY +
-    (y + height / 2 - viewport.y) * viewport.zoom +
+    (originCanvasY - viewport.y) * viewport.zoom +
     canvasHeight / 2
 
   const style = editor.style
@@ -313,15 +373,15 @@ export function positionTextEditor(
   style.fontSize = `${fontSize}px`
   style.lineHeight = `${fontSize * lineHeight}px`
   style.textAlign = textAlign
-  style.opacity = `${element?.opacity ?? 1}`
+  style.opacity = `${editing?.opacity ?? 1}`
   style.whiteSpace = autoSize ? "pre" : "pre-wrap"
   style.wordBreak = autoSize ? "normal" : "break-word"
   style.overflowWrap = autoSize ? "normal" : "break-word"
   editor.wrap = autoSize ? "off" : "soft"
-  style.left = `${screenCenterX - width / 2}px`
-  style.top = `${screenCenterY - height / 2}px`
+  style.left = `${screenOriginX - pivotX}px`
+  style.top = `${screenOriginY - pivotY}px`
   style.width = `${width}px`
   style.height = `${height}px`
-  style.transformOrigin = "center center"
+  style.transformOrigin = note ? `${pivotX}px ${pivotY}px` : "center center"
   style.transform = `scale(${viewport.zoom}) rotate(${rotation}deg)`
 }

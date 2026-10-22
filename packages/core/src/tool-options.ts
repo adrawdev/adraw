@@ -1,5 +1,9 @@
 import {
   FILL_COLOR,
+  NOTE_CORNER_RADIUS,
+  NOTE_FILL_COLOR,
+  NOTE_PADDING,
+  NOTE_SIZE,
   STROKE_COLOR,
   STROKE_WIDTH,
   TEXT_FONT_FAMILY,
@@ -9,6 +13,7 @@ import {
 import { DEFAULT_PATH_SMOOTHING } from "./elements"
 import type { ToolOptions } from "./tools/base"
 import type { DrawToolOptions } from "./tools/draw"
+import type { NoteToolOptions } from "./tools/note"
 import type { RectangleToolOptions } from "./tools/rectangle"
 import type { TextToolOptions } from "./tools/text"
 import type { CanvasElement, ElementId, ElementType, ToolType } from "./types"
@@ -26,6 +31,8 @@ export interface ToolOptionsMap {
   ellipse: ToolOptions
   /** Line stroke options. */
   line: ToolOptions
+  /** Sticky-note options, including background and text styling. */
+  note: NoteToolOptions
   /** Rectangle options, including `cornerRadius`. */
   rectangle: RectangleToolOptions
   /** Text options, including `fontSize`. */
@@ -73,6 +80,7 @@ export const CONFIGURABLE_TOOLS = [
   "draw",
   "ellipse",
   "line",
+  "note",
   "rectangle",
   "text",
 ] as const satisfies readonly ConfigurableToolType[]
@@ -93,6 +101,18 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptionsState = {
   draw: { ...DEFAULT_BASE_OPTIONS, smoothing: DEFAULT_PATH_SMOOTHING },
   ellipse: { ...DEFAULT_BASE_OPTIONS },
   line: { ...DEFAULT_BASE_OPTIONS },
+  note: {
+    ...DEFAULT_BASE_OPTIONS,
+    cornerRadius: NOTE_CORNER_RADIUS,
+    fillColor: NOTE_FILL_COLOR,
+    fontFamily: TEXT_FONT_FAMILY,
+    fontSize: TEXT_FONT_SIZE,
+    height: NOTE_SIZE,
+    lineHeight: TEXT_LINE_HEIGHT,
+    padding: NOTE_PADDING,
+    textAlign: "center",
+    width: NOTE_SIZE,
+  },
   rectangle: { ...DEFAULT_BASE_OPTIONS, cornerRadius: 0 },
   text: {
     ...DEFAULT_BASE_OPTIONS,
@@ -109,6 +129,7 @@ const TOOL_ELEMENT_TYPES: Record<ConfigurableToolType, ElementType> = {
   draw: "path",
   ellipse: "ellipse",
   line: "line",
+  note: "note",
   rectangle: "rectangle",
   text: "text",
 }
@@ -248,6 +269,7 @@ export function resolveAllToolOptions(
     draw: resolveToolOptions("draw", config?.draw),
     ellipse: resolveToolOptions("ellipse", config?.ellipse),
     line: resolveToolOptions("line", config?.line),
+    note: resolveToolOptions("note", config?.note),
     rectangle: resolveToolOptions("rectangle", config?.rectangle),
     text: resolveToolOptions("text", config?.text),
   }

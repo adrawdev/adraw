@@ -25,6 +25,7 @@ import {
    */
   undo,
 } from "../history"
+import { getNoteMinHeight } from "../note"
 import type {
   CanvasEventMap,
   CanvasOptions,
@@ -61,6 +62,7 @@ import {
   createEraserTool,
   createHandTool,
   createLineTool,
+  createNoteTool,
   createRectangleTool,
   createSelectTool,
   createTextTool,
@@ -274,6 +276,7 @@ export class CanvasEngine {
     this.tools.set("draw", createDrawTool(this.getToolOptions("draw")))
     this.tools.set("eraser", createEraserTool())
     this.tools.set("text", createTextTool(this.getToolOptions("text")))
+    this.tools.set("note", createNoteTool(this.getToolOptions("note")))
 
     this.activeTool = this.tools.get("select")!
     this.activeTool.onActivate(this.createToolContext())
@@ -935,6 +938,14 @@ export class CanvasEngine {
   private remeasureTextElements(emit = true): boolean {
     let changed = false
     for (const [id, element] of this.elements) {
+      if (element.type === "note") {
+        const minHeight = getNoteMinHeight(element, this.textMeasurer)
+        if (minHeight > element.height) {
+          this.elements.set(id, { ...element, height: minHeight })
+          changed = true
+        }
+        continue
+      }
       if (element.type !== "text") {
         continue
       }

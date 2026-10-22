@@ -41,6 +41,43 @@ export const TEXT_FONT_FAMILY = "system-ui, sans-serif"
 export const TEXT_LINE_HEIGHT = 1.25
 
 /**
+ * Default note (sticky note) size in canvas pixels.
+ */
+export const NOTE_SIZE = 200
+
+/**
+ * Default inner padding, in pixels, between a note's border and its text.
+ */
+export const NOTE_PADDING = 16
+
+/**
+ * Default corner radius of a note, in pixels.
+ */
+export const NOTE_CORNER_RADIUS = 10
+
+/**
+ * Maximum size of the folded corner drawn on a note, in pixels.
+ */
+export const NOTE_FOLD_SIZE = 28
+
+/**
+ * Default note background color.
+ */
+export const NOTE_FILL_COLOR = "var(--adraw-note, light-dark(#fde68a, #4b3000))"
+
+/**
+ * CSS drop-shadow applied to sticky notes. Kept in note-local units so it
+ * scales with the viewport like the note itself.
+ */
+export const NOTE_SHADOW = "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18))"
+
+/**
+ * How far the note shadow paints past the note's bounds, in pixels. Export
+ * bounds grow by this much so the shadow is not clipped.
+ */
+export const NOTE_SHADOW_OVERHANG = 8
+
+/**
  * Inner padding, in pixels, between a shape and the text bound to it.
  */
 export const BOUND_TEXT_PADDING = 5

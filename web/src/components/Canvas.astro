@@ -16,6 +16,7 @@ import {
   RedoIcon,
   ScissorsIcon,
   SquareIcon,
+  StickyNoteIcon,
   TypeIcon,
   UndoIcon
 } from "@lucide/astro";
@@ -51,6 +52,9 @@ const { class: className, ...props } = Astro.props;
     </button>
     <button class="tool-button" data-tool="text" title="Text (T)">
       <TypeIcon size={16} />
+    </button>
+    <button class="tool-button" data-tool="note" title="Note (N)">
+      <StickyNoteIcon size={16} />
     </button>
     <button class="tool-button" data-tool="eraser" title="Eraser (E)">
       <EraserIcon size={16} />

@@ -8,7 +8,7 @@ import {
   setActiveToolText,
   updateTextElement,
 } from "../engine/internal"
-import type { TextElement } from "../types"
+import type { EditableTextElement } from "../types"
 import {
   positionTextEditor,
   renderAll,
@@ -17,14 +17,14 @@ import {
 import type { DomState } from "./state"
 import { textEditorClass } from "./svg"
 
-// Start editing a committed text element in place. Live edits mutate the
-// element directly; commit pushes history, cancel restores it. Selection is
+// Start editing a committed text or note element in place. Live edits mutate
+// the element directly; commit pushes history, cancel restores it. Selection is
 // cleared while the editor is open so no resize/rotation handles compete with
 // the caret; it comes back when the edit ends.
 export function startExistingTextEditing(
   state: DomState,
   engine: CanvasEngine,
-  element: TextElement,
+  element: EditableTextElement,
 ): void {
   if (!state.container) {
     return
@@ -129,9 +129,9 @@ function openTextEditor(
   })
 }
 
-function removeTextEditor(state: DomState): void {
+function removeTextEditor(state: DomState, engine: CanvasEngine): void {
   const editor = state.textEditor
-  setTextElementVisibility(state, true)
+  setTextElementVisibility(state, engine, true)
   // Null the ref first so a blur event fired by removal can't re-enter the
   // commit/cancel paths.
   state.textEditor = null
@@ -150,7 +150,7 @@ export function commitTextEditing(
   const editingExisting = state.textEditElementId !== null
   const id = state.textEditElementId
   const point = state.textEditPoint
-  removeTextEditor(state)
+  removeTextEditor(state, engine)
 
   if (editingExisting && id) {
     const before = engine.getElements().get(id)
@@ -159,6 +159,8 @@ export function commitTextEditing(
       // the text itself for free text. An empty free text is deleted below and
       // commitTextEdit drops it from the selection again.
       engine.setSelectedIds(new Set([before.containerId ?? before.id]))
+    } else if (before?.type === "note") {
+      engine.setSelectedIds(new Set([before.id]))
     }
     state.textEditElementId = null
     state.textEditOriginalElement = null
@@ -184,7 +186,7 @@ export function cancelTextEditing(state: DomState, engine: CanvasEngine): void {
   const editingExisting = state.textEditElementId !== null
   const original = state.textEditOriginalElement
   const id = state.textEditElementId
-  removeTextEditor(state)
+  removeTextEditor(state, engine)
   state.textEditPoint = null
   state.textEditElementId = null
   state.textEditOriginalElement = null

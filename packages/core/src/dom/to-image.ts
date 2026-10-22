@@ -1,4 +1,4 @@
-import { BACKGROUND_COLOR } from "../constants"
+import { BACKGROUND_COLOR, NOTE_SHADOW_OVERHANG } from "../constants"
 import { getElementBounds } from "../coordinates"
 import type { CanvasEngine } from "../engine/engine"
 import type { ToImageOptions } from "../options"
@@ -34,6 +34,9 @@ function getElementOverhang(element: CanvasElement): number {
     case "path":
     case "rectangle": {
       return element.strokeWidth / 2
+    }
+    case "note": {
+      return NOTE_SHADOW_OVERHANG
     }
     default: {
       return 0

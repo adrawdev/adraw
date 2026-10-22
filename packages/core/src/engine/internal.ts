@@ -1,7 +1,8 @@
 import { syncArrowBindings } from "../bindings"
+import { measureNoteText } from "../note"
 import { syncTextBindings } from "../text-bindings"
 import type { TextTool } from "../tools"
-import type { BoundingBox, ElementId, TextElement } from "../types"
+import type { BoundingBox, EditableTextElement, ElementId } from "../types"
 import type { EngineInternal } from "./engine"
 
 export {
@@ -41,7 +42,7 @@ export function reactivateActiveTool(engine: EngineInternal): void {
   tool.onActivate(context)
 }
 
-// Live-update a committed text element while the editor is open.
+// Live-update a committed text or note element while the editor is open.
 /** @internal */
 export function updateTextElement(
   engine: EngineInternal,
@@ -49,24 +50,38 @@ export function updateTextElement(
   text: string,
 ): void {
   const element = engine.getElements().get(id)
-  if (element?.type !== "text") {
+  if (!element || (element.type !== "text" && element.type !== "note")) {
     return
   }
-  const layout = engine.measureText(text, {
-    autoSize: element.autoSize,
-    fontFamily: element.fontFamily,
-    fontSize: element.fontSize,
-    lineHeight: element.lineHeight,
-    maxWidth: element.wrapWidth ?? element.width,
-    shrinkWidth:
-      element.containerId !== null && element.containerId !== undefined,
-  })
-  engine.getElements().set(id, {
-    ...element,
-    height: layout.height,
-    text,
-    width: layout.width,
-  })
+
+  if (element.type === "note") {
+    const layout = measureNoteText(
+      { ...element, text },
+      engine.getTextMeasurer(),
+    )
+    engine.getElements().set(id, {
+      ...element,
+      height: Math.max(element.height, layout.height + element.padding * 2),
+      text,
+    })
+  } else {
+    const layout = engine.measureText(text, {
+      autoSize: element.autoSize,
+      fontFamily: element.fontFamily,
+      fontSize: element.fontSize,
+      lineHeight: element.lineHeight,
+      maxWidth: element.wrapWidth ?? element.width,
+      shrinkWidth:
+        element.containerId !== null && element.containerId !== undefined,
+    })
+    engine.getElements().set(id, {
+      ...element,
+      height: layout.height,
+      text,
+      width: layout.width,
+    })
+  }
+
   syncTextBindings(engine.getElements(), engine.getTextMeasurer())
   syncArrowBindings(engine.getElements())
   engine.emit("change", { elements: engine.getElements() })
@@ -78,11 +93,11 @@ export function updateTextElement(
 /** @internal */
 export function commitTextEdit(engine: EngineInternal, id: ElementId): void {
   const element = engine.getElements().get(id)
-  if (element?.type !== "text") {
+  if (!element || (element.type !== "text" && element.type !== "note")) {
     return
   }
-  if (element.text.trim() === "") {
-    // Deleting all text removes the element.
+  if (element.type === "text" && element.text.trim() === "") {
+    // Deleting all text removes the element. Notes stay, even when empty.
     engine.getElements().delete(id)
     const selectedIds = engine.getSelectedIds()
     if (selectedIds.has(id)) {
@@ -101,7 +116,7 @@ export function commitTextEdit(engine: EngineInternal, id: ElementId): void {
 export function restoreTextElement(
   engine: EngineInternal,
   id: ElementId,
-  original: TextElement,
+  original: EditableTextElement,
 ): void {
   engine.getElements().set(id, original)
   syncArrowBindings(engine.getElements())

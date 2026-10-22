@@ -55,6 +55,9 @@ canvas. Adapters expose the same options through their provider/service.
 | `rectangle` | Draw rectangles                           |
 | `ellipse`   | Draw ellipses                             |
 | `line`      | Draw lines                                |
+| `arrow`     | Draw arrows                               |
+| `text`      | Add free text or shape labels             |
+| `note`      | Place a sticky note and edit its text     |
 
 ```ts
 canvas.setActiveTool("draw")
@@ -88,6 +91,11 @@ const canvas = new AdrawCanvas({
       strokeColor: "#111",
       textAlign: "center",
     },
+    note: {
+      fillColor: "#fde68a",
+      fontSize: 22,
+      textAlign: "center",
+    },
   },
 })
 
@@ -98,13 +106,14 @@ canvas.getToolOptions("rectangle")
 // { fillColor: "#ffd43b", opacity: 0.35, strokeColor, strokeWidth: 3, cornerRadius: 8 }
 ```
 
-Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow` and
-`text`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
-`fillColor` applies to `rectangle` and `ellipse` (combine it with `opacity <
-1` for translucent highlights). The tool-specific ones are `smoothing`
-(draw), `cornerRadius` (rectangle), and `fontSize`, `fontFamily`, `textAlign`,
-`lineHeight` and `autoSize` (text). `setStrokeColor` remains a shortcut for the
-global stroke color and clears per-tool color overrides.
+Configurable tools are `draw`, `rectangle`, `ellipse`, `line`, `arrow`, `text`
+and `note`. Shared options are `strokeColor`, `strokeWidth` and `opacity`;
+`fillColor` applies to `rectangle`, `ellipse` and `note` (combine it with
+`opacity < 1` for translucent highlights). The tool-specific ones are
+`smoothing` (draw), `cornerRadius` (rectangle), and `fontSize`, `fontFamily`,
+`textAlign`, `lineHeight` and `autoSize` (text). Notes add `padding`, `width`
+and `height` sizing options. `setStrokeColor` remains a shortcut for the global
+stroke color and clears per-tool color overrides.
 
 Subscribe to `toolOptionsChange` to keep a custom toolbar in sync:
 
@@ -124,6 +133,7 @@ Each element on the canvas has a type:
 - `line` — line
 - `arrow` — two-ended connector with optional bindings
 - `text` — label, free or bound to a shape/arrow
+- `note` — sticky note with wrapping text and a folded corner
 - `media` — raster image
 - `group` — container for other elements
 
@@ -154,6 +164,21 @@ const canvas = new AdrawCanvas({
   container,
   measureText: (text, options) => measureTextLayout(text, options),
 })
+```
+
+### Sticky notes
+
+The `note` tool (`N`) places a sticky note: click to create a default-sized note
+(200×200) centered on the pointer, or drag to size it. The note opens its inline
+editor immediately, so you can start typing. Double-click a note (or press
+`Enter`/`F2` while it is selected) to edit it later. Text is centered and
+vertically aligned inside the note, wraps at the padded content width, and the
+note grows taller when the text no longer fits. Notes have a soft drop shadow;
+`strokeColor` is the note's ink and `fillColor` is its background.
+
+```ts
+canvas.setActiveTool("note")
+canvas.setToolOptions("note", { fillColor: "#bbf7d0", fontSize: 24 })
 ```
 
 ### Labels inside shapes and arrows

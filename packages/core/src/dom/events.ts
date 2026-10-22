@@ -24,6 +24,7 @@ export function updateCursor(state: DomState, tool: ToolType): void {
     eraser: "crosshair",
     hand: "grab",
     line: "crosshair",
+    note: "crosshair",
     rectangle: "crosshair",
     select: "default",
     text: "text",
@@ -107,7 +108,7 @@ export function setupEventListeners(
     const { x, y } = getRelativePoint(state, event)
     const point = toCanvasPoint(engine, x, y)
     const element = getElementAtPoint(engine.getElements(), point)
-    if (element?.type === "text") {
+    if (element?.type === "text" || element?.type === "note") {
       startExistingTextEditing(state, engine, element)
       return
     }
@@ -139,7 +140,9 @@ export function setupEventListeners(
         toCanvasPoint(engine, x, y),
       )
       state.svgElement.style.cursor =
-        hovered?.type === "text" ? "text" : "default"
+        hovered?.type === "text" || hovered?.type === "note"
+          ? "text"
+          : "default"
     } else if (!state.svgElement.style.cursor.startsWith("grab")) {
       state.svgElement.style.cursor = "default"
     }
@@ -175,7 +178,10 @@ export function setupEventListeners(
       if (selectedIds.size === 1) {
         const [id] = selectedIds
         const element = engine.getElements().get(id)
-        if (element?.type === "text" && !element.locked) {
+        if (
+          (element?.type === "text" || element?.type === "note") &&
+          !element.locked
+        ) {
           event.preventDefault()
           startExistingTextEditing(state, engine, element)
           return

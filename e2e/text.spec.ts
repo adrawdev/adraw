@@ -110,6 +110,9 @@ test.describe("text tool", () => {
 
     const editor = page.locator("textarea.adraw-text-editor")
     await expect(editor).toBeVisible()
+    // The editor focuses on the next frame; wait so Escape reaches its keydown
+    // handler instead of racing the focus and leaving the empty text behind.
+    await expect(editor).toBeFocused()
     await page.keyboard.press("Escape")
 
     const state = await snapshot(page)

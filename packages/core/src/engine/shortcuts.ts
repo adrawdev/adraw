@@ -90,6 +90,10 @@ export function handleShortcutKey(
         actions.setActiveTool("text")
         break
       }
+      case "n": {
+        actions.setActiveTool("note")
+        break
+      }
       case "delete":
       case "backspace": {
         actions.deleteSelected()

@@ -1,4 +1,9 @@
-import type { ElementId, Point, TextElement, ViewportState } from "../types"
+import type {
+  EditableTextElement,
+  ElementId,
+  Point,
+  ViewportState,
+} from "../types"
 
 export interface OverlayNodes {
   group: SVGGElement
@@ -64,7 +69,7 @@ export interface DomState {
   // through the text tool's temporary element.
   textEditElementId: ElementId | null
   // Snapshot of the element being edited, restored on cancel.
-  textEditOriginalElement: TextElement | null
+  textEditOriginalElement: EditableTextElement | null
   // Pending text-tool press: a click creates a label/free text, while a
   // horizontal drag turns it into a fixed-width text. Null when no press is
   // pending or the editor is already open.

@@ -40,6 +40,7 @@ export type ElementType =
   | "path"
   | "media"
   | "text"
+  | "note"
   | "group"
 
 /**
@@ -223,6 +224,40 @@ export interface TextElement extends BaseElement {
 }
 
 /**
+ * A sticky note: a filled box with centered, wrapping text and a folded
+ * bottom-right corner. Notes are created by the `note` tool and edited in
+ * place by double-clicking them.
+ */
+export interface NoteElement extends BaseElement {
+  type: "note"
+  text: string
+  fontSize: number
+  /**
+   * Ink color of the note's text.
+   */
+  strokeColor: string
+  /**
+   * Background color of the sticky note.
+   */
+  fillColor: string
+  /** Font family stack. Defaults to the built-in system font stack. */
+  fontFamily?: string
+  /** Horizontal alignment of the text. Defaults to `"center"`. */
+  textAlign?: TextAlign
+  /** Unitless line height multiplier. Defaults to `1.25`. */
+  lineHeight?: number
+  /** Inner padding between the note border and its text, in pixels. */
+  padding: number
+  /** Corner radius of the note box, in pixels. */
+  cornerRadius: number
+}
+
+/**
+ * Elements with editable text content: free text and notes.
+ */
+export type EditableTextElement = TextElement | NoteElement
+
+/**
  * Union of all concrete canvas element types.
  */
 export type CanvasElement =
@@ -233,6 +268,7 @@ export type CanvasElement =
   | PathElement
   | MediaElement
   | TextElement
+  | NoteElement
   | GroupElement
 
 /**
@@ -248,6 +284,7 @@ export type ToolType =
   | "line"
   | "arrow"
   | "text"
+  | "note"
 
 /**
  * Viewport pan/zoom state.
@@ -283,13 +320,13 @@ export interface CanvasState {
 /**
  * Optional visual styling shared by elements and tool options. Element
  * interfaces expose the concrete values: `strokeColor` and `strokeWidth` on
- * stroked shapes, `fillColor` on rectangles/ellipses, and `opacity` on every
+ * stroked shapes, `fillColor` on rectangles/ellipses/notes, and `opacity` on every
  * element.
  */
 export interface CanvasElementStyle {
   /** Stroke color. */
   strokeColor?: string
-  /** Fill color. Applies to rectangles and ellipses. */
+  /** Fill color. Applies to rectangles, ellipses and notes. */
   fillColor?: string
   /** Stroke width in pixels. */
   strokeWidth?: number

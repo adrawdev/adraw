@@ -65,6 +65,8 @@ src/
   elements/          factories (elements.ts) + hit-testing (hit-test.ts)
   tools/<tool>/      one directory per tool; index.ts exports the factory
   tools/select/      brush, move, rotate, resize, resize-rotated, resize-text
+  tools/note/        sticky-note tool (click places, drag sizes, N shortcut)
+  note.ts           sticky-note text layout, fold size, padding helpers
   tools/snap.ts      snapToolPoint: pointer snapping for tool gestures
   coordinates.ts, history.ts, snapping.ts, viewport.ts, types.ts, constants.ts
 ```
@@ -135,7 +137,7 @@ Passed to constructor as `CanvasOptions`:
 
 ### Tool styles
 
-`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
+`src/tool-options.ts` defines `ToolOptionsMap` (draw/rectangle/ellipse/line/arrow/text/note), `ToolOptionsConfig`, resolved defaults via `resolveToolOptions`, and `ToolOptionsChangeEvent`. The engine stores partial overrides in `toolOptions`; `getToolOptions(tool)` merges defaults + overrides + the global stroke color, and `setToolOptions(tool, partial)` also restyles matching elements in the selection. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` only affects rectangles and ellipses. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`. Tools read live options through `ToolContext.getToolOptions()` (optional for standalone factories, with `getToolOptionsForContext()` in `tools/base.ts` as the fallback helper). Framework adapters use `inferConfigurableTool(activeTool, elements, selectedIds)` to decide which tool's style a toolbar should show.
 
 ### Text layout
 
@@ -165,12 +167,13 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 | `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                                     |
 | `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                      |
 | `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`, `fontFamily?`, `textAlign?`, `lineHeight?`, `autoSize?`, `containerId?`, `labelPosition?` |
+| `"note"`      | `NoteElement`      | `text`, `fontSize`, `fillColor`, `strokeColor` (ink), `fontFamily?`, `textAlign?`, `lineHeight?`, `padding`, `cornerRadius`  |
 
 `opacity` (0–1) is rendered on the element's SVG group, so it fades stroke and fill together. `fillColor` only exists on rectangles and ellipses; omitting it uses the `--adraw-fill` CSS variable (transparent).
 
 ### Tool types
 
-`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "arrow" | "text"`
+`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "arrow" | "text" | "note"`
 
 ### Coordinate types
 

@@ -3,7 +3,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
-import { createLine, createRectangle } from "../elements"
+import { NOTE_SHADOW_OVERHANG } from "../constants"
+import { createLine, createNote, createRectangle } from "../elements"
 import type { RectangleElement } from "../types"
 
 function makeRect(overrides: Partial<RectangleElement> = {}): RectangleElement {
@@ -115,6 +116,36 @@ describe("toImage", () => {
     expect(viewBox[1]).toBeCloseTo(-25)
     expect(viewBox[2]).toBeCloseTo(50)
     expect(viewBox[3]).toBeCloseTo(100)
+  })
+
+  it("keeps note shadows inside the exported region", async () => {
+    const { canvas } = mount()
+    canvas.addElement(
+      createNote({
+        cornerRadius: 10,
+        fillColor: "#fde68a",
+        fontSize: 20,
+        height: 100,
+        locked: false,
+        padding: 16,
+        rotation: 0,
+        strokeColor: "#111",
+        text: "",
+        visible: true,
+        width: 100,
+        x: 0,
+        y: 0,
+        zIndex: 0,
+      }),
+      { history: false },
+    )
+
+    const svg = await exportSvg(canvas)
+    const group = svg.querySelector("g[id]")!
+    expect(group.getAttribute("style")).toContain("drop-shadow")
+    expect(svg.getAttribute("viewBox")).toBe(
+      `${-NOTE_SHADOW_OVERHANG} ${-NOTE_SHADOW_OVERHANG} ${100 + NOTE_SHADOW_OVERHANG * 2} ${100 + NOTE_SHADOW_OVERHANG * 2}`,
+    )
   })
 
   it("keeps a horizontal line from collapsing to a 1px-tall region", async () => {

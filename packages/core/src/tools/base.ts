@@ -100,8 +100,8 @@ export function createBaseToolState(): ToolState {
 
 /**
  * Optional visual style overrides for a tool. Shared with
- * {@link CanvasElementStyle}; `fillColor` only affects rectangles and
- * ellipses, while `opacity` affects every element type.
+ * {@link CanvasElementStyle}; `fillColor` affects rectangles, ellipses and
+ * notes, while `opacity` affects every element type.
  */
 export type ToolOptions = CanvasElementStyle
 

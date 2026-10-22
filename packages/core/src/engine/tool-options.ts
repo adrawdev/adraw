@@ -1,3 +1,4 @@
+import { measureNoteText } from "../note"
 import {
   approximateTextMeasurer,
   measureTextElement,
@@ -13,14 +14,16 @@ type ApplicableToolOptions = ToolOptions & {
   fontFamily?: string
   fontSize?: number
   lineHeight?: number
+  padding?: number
   smoothing?: number
   textAlign?: TextAlign
 }
 
 /**
  * Apply the style fields a tool owns to one element. Fields the element does
- * not support are ignored, so `fillColor` only touches rectangles/ellipses,
- * `cornerRadius` only touches rectangles and the text options only touch text.
+ * not support are ignored: `fillColor` touches rectangles, ellipses and notes,
+ * `cornerRadius` touches rectangles and notes, and the text options touch text
+ * and notes.
  *
  * @param element Element to restyle.
  * @param options Tool style options.
@@ -41,7 +44,9 @@ export function applyToolOptionsToElement(
     next = { ...next, strokeWidth: options.strokeWidth }
   }
   if (
-    (next.type === "rectangle" || next.type === "ellipse") &&
+    (next.type === "rectangle" ||
+      next.type === "ellipse" ||
+      next.type === "note") &&
     options.fillColor !== undefined &&
     next.fillColor !== options.fillColor
   ) {
@@ -50,13 +55,19 @@ export function applyToolOptionsToElement(
   if (options.opacity !== undefined && next.opacity !== options.opacity) {
     next = { ...next, opacity: options.opacity }
   }
-  if (next.type === "rectangle" && options.cornerRadius !== undefined) {
+  if (
+    (next.type === "rectangle" || next.type === "note") &&
+    options.cornerRadius !== undefined
+  ) {
     next = { ...next, cornerRadius: options.cornerRadius }
+  }
+  if (next.type === "note" && options.padding !== undefined) {
+    next = { ...next, padding: options.padding }
   }
   if (next.type === "path" && options.smoothing !== undefined) {
     next = { ...next, smoothing: options.smoothing }
   }
-  if (next.type === "text") {
+  if (next.type === "text" || next.type === "note") {
     let text = next
     if (options.fontSize !== undefined && options.fontSize !== text.fontSize) {
       text = { ...text, fontSize: options.fontSize }
@@ -79,12 +90,24 @@ export function applyToolOptionsToElement(
     ) {
       text = { ...text, lineHeight: options.lineHeight }
     }
-    if (options.autoSize !== undefined && options.autoSize !== text.autoSize) {
+    if (
+      text.type === "text" &&
+      options.autoSize !== undefined &&
+      options.autoSize !== text.autoSize
+    ) {
       text = { ...text, autoSize: options.autoSize }
     }
     if (text !== next) {
-      const layout = measureTextElement(text, measurer)
-      next = { ...text, height: layout.height, width: layout.width }
+      if (text.type === "note") {
+        const layout = measureNoteText(text, measurer)
+        next = {
+          ...text,
+          height: Math.max(text.height, layout.height + text.padding * 2),
+        }
+      } else {
+        const layout = measureTextElement(text, measurer)
+        next = { ...text, height: layout.height, width: layout.width }
+      }
     }
   }
 

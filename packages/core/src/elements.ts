@@ -7,6 +7,7 @@ import type {
   GroupElement,
   LineElement,
   MediaElement,
+  NoteElement,
   PathElement,
   Point,
   RectangleElement,
@@ -131,6 +132,17 @@ export function createText(factory: ElementFactory<TextElement>): TextElement {
     ...factory,
     id: factory.id ?? generateId(),
     type: "text",
+  }
+}
+
+/**
+ * Create a sticky note element.
+ */
+export function createNote(factory: ElementFactory<NoteElement>): NoteElement {
+  return {
+    ...factory,
+    id: factory.id ?? generateId(),
+    type: "note",
   }
 }
 

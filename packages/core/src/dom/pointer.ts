@@ -209,5 +209,19 @@ export function handlePointerUp(
     return
   }
 
+  // The note tool commits and selects the note on pointer-up; open its inline
+  // editor immediately, matching tldraw's sticky-note flow. Cancelled pointers
+  // create nothing and must not reopen an editor.
+  const creatingNote =
+    engine.getActiveTool() === "note" && event.type !== "pointercancel"
+
   dispatchPointerUp(engine, toCanvasPoint(engine, screenX, screenY), event)
+
+  if (creatingNote) {
+    const [selectedId] = engine.getSelectedIds()
+    const note = selectedId ? engine.getElements().get(selectedId) : null
+    if (note?.type === "note") {
+      startExistingTextEditing(state, engine, note)
+    }
+  }
 }

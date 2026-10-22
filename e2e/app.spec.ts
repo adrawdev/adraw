@@ -27,6 +27,7 @@ test.describe("app shell", () => {
       "line",
       "arrow",
       "text",
+      "note",
       "eraser",
     ]
     await Promise.all(

@@ -9,7 +9,12 @@ import {
   syncTextBindings,
   type BoundTextContainer,
 } from "../text-bindings"
-import type { CanvasElement, ElementId, Point, TextElement } from "../types"
+import type {
+  CanvasElement,
+  EditableTextElement,
+  ElementId,
+  Point,
+} from "../types"
 import type { DomState } from "./state"
 import { startExistingTextEditing } from "./text-editor"
 
@@ -17,7 +22,7 @@ import { startExistingTextEditing } from "./text-editor"
  * What a text-tool click (or a double-click with the select tool) resolves to.
  */
 export type TextTarget =
-  | { kind: "text"; element: TextElement }
+  | { kind: "text"; element: EditableTextElement }
   | { kind: "bound"; container: BoundTextContainer }
   | { kind: "free" }
 
@@ -40,7 +45,7 @@ export function resolveTextTarget(
   if (!hit) {
     return { kind: "free" }
   }
-  if (hit.type === "text") {
+  if (hit.type === "text" || hit.type === "note") {
     return { element: hit, kind: "text" }
   }
   if (hit.type === "arrow") {

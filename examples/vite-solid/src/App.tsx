@@ -19,6 +19,7 @@ const tools: { id: ToolType; label: string; shortcut: string }[] = [
   { id: "arrow", label: "Arrow", shortcut: "A" },
   { id: "eraser", label: "Eraser", shortcut: "E" },
   { id: "text", label: "Text", shortcut: "T" },
+  { id: "note", label: "Note", shortcut: "N" },
 ]
 
 function Toolbar() {

@@ -1,10 +1,21 @@
 import {
   FILL_COLOR,
+  NOTE_FILL_COLOR,
+  NOTE_SHADOW,
   STROKE_COLOR,
   STROKE_WIDTH,
   TEXT_FONT_FAMILY,
 } from "../constants"
 import { DEFAULT_PATH_SMOOTHING } from "../elements"
+import {
+  getNoteFoldSize,
+  getNoteLineHeightPx,
+  getNoteTextAnchor,
+  getNoteTextLeading,
+  getNoteTextLineX,
+  getNoteTextTop,
+  measureNoteText,
+} from "../note"
 import {
   approximateTextMeasurer,
   getTextAnchor,
@@ -18,6 +29,7 @@ import type {
   ArrowElement,
   BoundingBox,
   CanvasElement,
+  NoteElement,
   Point,
   TextElement,
 } from "../types"
@@ -470,6 +482,33 @@ export function createElementGroup(
       group.appendChild(text)
       break
     }
+
+    case "note": {
+      group.style.filter = NOTE_SHADOW
+
+      const rect = document.createElementNS(svgNamespaceURI, "rect")
+      rect.setAttribute("width", `${element.width}`)
+      rect.setAttribute("height", `${element.height}`)
+      rect.setAttribute("rx", `${element.cornerRadius}`)
+      rect.setAttribute("ry", `${element.cornerRadius}`)
+      rect.setAttribute("fill", element.fillColor || NOTE_FILL_COLOR)
+      rect.setAttribute("stroke", "none")
+      group.appendChild(rect)
+
+      const fold = document.createElementNS(svgNamespaceURI, "path")
+      applyNoteFold(fold, element)
+      group.appendChild(fold)
+
+      const text = document.createElementNS(svgNamespaceURI, "text")
+      text.setAttribute("dominant-baseline", "hanging")
+      applyNoteTextAttributes(text, element)
+      text.style.whiteSpace = "pre"
+      text.style.userSelect = "none"
+      text.style.setProperty("-webkit-user-select", "none")
+      appendNoteTextLines(text, element, textMeasurer)
+      group.appendChild(text)
+      break
+    }
   }
 
   return group
@@ -510,4 +549,78 @@ export function appendTextLines(
     tspan.textContent = line
     text.appendChild(tspan)
   })
+}
+
+/**
+ * Write the font, color and alignment shared by note text creation and
+ * in-place updates.
+ *
+ * @param text Note `<text>` node.
+ * @param note Note element.
+ */
+export function applyNoteTextAttributes(
+  text: SVGTextElement,
+  note: NoteElement,
+): void {
+  text.setAttribute("font-family", note.fontFamily || TEXT_FONT_FAMILY)
+  text.setAttribute("font-size", `${note.fontSize}`)
+  text.setAttribute("fill", note.strokeColor || STROKE_COLOR)
+  text.setAttribute("text-anchor", getNoteTextAnchor(note))
+}
+
+/**
+ * Append one `<tspan>` per wrapped note line, vertically centered inside the
+ * note when the text fits.
+ *
+ * @param text Note `<text>` node.
+ * @param note Note element.
+ * @param measurer Text measurer used for wrapping.
+ */
+export function appendNoteTextLines(
+  text: SVGTextElement,
+  note: NoteElement,
+  measurer: TextMeasurer = approximateTextMeasurer,
+): void {
+  const layout = measureNoteText(note, measurer)
+  const lineHeight = getNoteLineHeightPx(note)
+  const leading = getNoteTextLeading(note)
+  const top = getNoteTextTop(note, layout)
+  const x = getNoteTextLineX(note)
+
+  layout.lines.forEach((line, i) => {
+    const tspan = document.createElementNS(svgNamespaceURI, "tspan")
+    tspan.setAttribute("x", `${x}`)
+    tspan.setAttribute("y", `${top + leading + i * lineHeight}`)
+    tspan.textContent = line
+    text.appendChild(tspan)
+  })
+}
+
+/**
+ * Update the folded bottom-right corner of a note.
+ *
+ * @param path Fold path node.
+ * @param note Note element.
+ */
+export function applyNoteFold(path: SVGPathElement, note: NoteElement): void {
+  const size = getNoteFoldSize(note)
+  if (size <= 0) {
+    path.setAttribute("display", "none")
+    return
+  }
+  path.removeAttribute("display")
+  // Follow the note's rounded bottom-right corner so the fold keeps the same
+  // roundness instead of squaring it off. `getNoteFoldSize` guarantees the
+  // fold is at least as large as the corner radius.
+  const radius = Math.min(note.cornerRadius, size)
+  const outer =
+    radius > 0
+      ? `L ${note.width - radius} ${note.height} A ${radius} ${radius} 0 0 0 ${note.width} ${note.height - radius}`
+      : `L ${note.width} ${note.height}`
+  path.setAttribute(
+    "d",
+    `M ${note.width - size} ${note.height} ${outer} L ${note.width} ${note.height - size} Z`,
+  )
+  path.setAttribute("fill", "rgba(0, 0, 0, 0.14)")
+  path.setAttribute("stroke", "none")
 }
