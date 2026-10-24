@@ -67,8 +67,8 @@ All hooks return signals for reactive values — read by calling them.
 ## Build
 
 ```bash
-pnpm build:angular    # ng-packagr -p ng-package.json -c tsconfig.json
-pnpm dev:angular      # ng-packagr -p ng-package.json -c tsconfig.json --watch
+pnpm angular:build    # ng-packagr -p ng-package.json -c tsconfig.json
+pnpm angular:dev      # ng-packagr -p ng-package.json -c tsconfig.json --watch
 ```
 
 Build produces partial-Ivy output in `dist/`. The `scripts/finalize-dist.mjs` post-build step handles any required dist adjustments.

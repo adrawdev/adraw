@@ -54,8 +54,8 @@ function Toolbar() {
 ## Build
 
 ```bash
-pnpm build:vue    # tsdown --minify
-pnpm dev:vue      # watch mode
+pnpm vue:build    # build
+pnpm vue:dev      # watch mode
 ```
 
 ## Code style

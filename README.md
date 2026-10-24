@@ -96,22 +96,21 @@ export default function App() {
 This is a [pnpm](https://pnpm.io) monorepo. Node 18+ required.
 
 ```bash
-# Install dependencies
 pnpm install
 
-# Build all packages
-pnpm build:all
+pnpm build      # all packages
+pnpm core:build # or react:build / vue:build / svelte:build / solid:build / angular:build / web-components:build
+pnpm web:build  # Astro docs site
 
-# Watch mode
-pnpm dev:all
+pnpm dev        # all packages + web in parallel
+pnpm core:dev   # watch mode; same per-package suffix convention
+pnpm web:dev    # Astro docs site
 
-# Run tests
-pnpm test
+pnpm test       # Run tests
 
 # End-to-end tests (Playwright)
 pnpm test:e2e:install  # download browsers + OS deps (one-time)
 pnpm test:e2e          # run Playwright tests
-pnpm test:e2e:ui       # run with the Playwright UI
 
 # Lint and format
 pnpm lint        # check

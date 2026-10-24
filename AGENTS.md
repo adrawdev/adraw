@@ -27,16 +27,16 @@ All commands run from the repo root using `pnpm`.
 ```bash
 pnpm install
 
-pnpm build:all      # all packages
-pnpm build:core     # or build:react / build:vue / build:svelte / build:solid / build:angular / build:web-components
-pnpm build:web      # Astro docs site
+pnpm build      # all packages
+pnpm core:build # or react:build / vue:build / svelte:build / solid:build / angular:build / web-components:build
+pnpm web:build  # Astro docs site
 
-pnpm dev:all        # all packages + web in parallel
-pnpm dev:core       # watch mode; same per-package suffix convention
-pnpm dev:web        # Astro docs site
+pnpm dev        # all packages + web in parallel
+pnpm core:dev   # watch mode; same per-package suffix convention
+pnpm web:dev    # Astro docs site
 
-pnpm lint           # oxlint + oxfmt --check
-pnpm lint:fix       # auto-fix
+pnpm lint       # oxlint + oxfmt --check
+pnpm lint:fix   # auto-fix
 
 pnpm test run               # one-off Vitest run over packages/**/*.{test,spec}.{ts,tsx}
 pnpm test run packages/core/src/__tests__/coordinates.test.ts   # one test file

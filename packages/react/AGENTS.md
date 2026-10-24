@@ -58,8 +58,8 @@ function Toolbar() {
 ## Build
 
 ```bash
-pnpm build:react    # tsdown --minify
-pnpm dev:react      # watch mode
+pnpm react:build    # build
+pnpm react:dev      # watch mode
 ```
 
 ## Code style

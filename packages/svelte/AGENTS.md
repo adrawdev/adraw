@@ -50,8 +50,8 @@ From `src/index.ts`:
 ## Build
 
 ```bash
-pnpm build:svelte    # tsdown with rollup-plugin-svelte + svelteDtsPlugin for .d.ts
-pnpm dev:svelte      # watch mode
+pnpm svelte:build    # tsdown with rollup-plugin-svelte + svelteDtsPlugin for .d.ts
+pnpm svelte:dev      # watch mode
 ```
 
 ## Build specifics

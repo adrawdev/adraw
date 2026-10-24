@@ -56,8 +56,8 @@ function Toolbar() {
 ## Build & test
 
 ```bash
-pnpm build:solid    # tsdown --minify with rolldown-plugin-solid
-pnpm dev:solid      # watch mode
+pnpm solid:build    # build
+pnpm solid:dev      # watch mode
 pnpm lint                    # from root
 ```
 

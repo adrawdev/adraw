@@ -7,8 +7,8 @@ Framework-agnostic core canvas engine. Pure logic (elements, viewport, tools, hi
 ## Build & test
 
 ```bash
-pnpm build:core    # tsdown --minify → dist/{index.js,index.cjs,index.d.ts}
-pnpm dev:core      # watch mode
+pnpm core:build    # build
+pnpm core:dev      # watch mode
 pnpm test          # from root — Vitest includes packages/**/*
 pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 ```

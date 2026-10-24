@@ -15,7 +15,7 @@ Use this workflow for public package releases. Run commands from the repository 
 - `examples/*` and `web` are ignored by Changesets and are not published packages.
 - Published packages use tags named `@adraw/<package>@<version>`.
 - `pnpm ci:version` runs `changeset version` and does not commit changes (`commit: false` in the config).
-- `pnpm ci:release` runs `pnpm install`, `pnpm build:all`, `npm login`, publishes `@adraw/core` first via `pnpm release:core` (which also creates the core tag), then `changeset publish` for the remaining packages.
+- `pnpm ci:release` runs `pnpm install`, `pnpm build`, `npm login`, publishes `@adraw/core` first via `pnpm core:release` (which also creates the core tag), then `changeset publish` for the remaining packages.
 - The GitHub workflow at `.github/workflows/release.yml` creates a GitHub release when an `@adraw/*` tag is pushed.
 
 ## Preflight
@@ -42,8 +42,8 @@ Inspect package tags and commits since the relevant package release. Tags are pe
 ```bash
 git tag --list '@adraw/*' --sort=-version:refname
 git log --oneline --decorate <last-tag>..HEAD
-pnpm exec changeset status
-pnpm exec changeset status --since=main
+pnpm changeset status
+pnpm changeset status --since=main
 ```
 
 Use the first `changeset status` command to inspect all pending changesets. Use the `--since=main` form when checking that branch changes have corresponding changesets. Confirm that every user-visible change to a published package is represented and that changes affecting only ignored packages do not create a release.
@@ -71,7 +71,7 @@ Run the repository checks before consuming the changesets:
 ```bash
 pnpm lint
 pnpm test
-pnpm build:all
+pnpm build
 ```
 
 Run the relevant E2E checks when the release changes browser behavior. Do not continue to version or publish while a required check is failing.

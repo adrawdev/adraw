@@ -82,8 +82,8 @@ From `src/index.ts`:
 ## Build
 
 ```bash
-pnpm build:web-components    # tsdown --minify
-pnpm dev:web-components      # watch mode
+pnpm web-components:build    # build
+pnpm web-components:dev      # watch mode
 ```
 
 Same tsdown config as `react`/`solid`/`svelte` — no special build tooling.
