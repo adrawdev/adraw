@@ -47,6 +47,7 @@ import {
 } from "../text-bindings"
 import {
   createArrowTool,
+  createDiamondTool,
   createDrawTool,
   createEllipseTool,
   createEraserTool,
@@ -264,6 +265,7 @@ export class CanvasEngine {
     this.tools.set("hand", createHandTool())
     this.tools.set("rectangle", createRectangleTool())
     this.tools.set("ellipse", createEllipseTool())
+    this.tools.set("diamond", createDiamondTool())
     this.tools.set("line", createLineTool())
     this.tools.set("arrow", createArrowTool())
     this.tools.set("draw", createDrawTool())

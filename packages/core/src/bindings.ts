@@ -16,6 +16,7 @@ export const BINDING_GAP = 4
 const BINDABLE_TYPES = new Set([
   "rectangle",
   "ellipse",
+  "diamond",
   "text",
   "media",
   "group",
@@ -108,7 +109,9 @@ function clipToBorder(
   }
 
   let t: number
-  if (element.type === "ellipse") {
+  if (element.type === "diamond") {
+    t = 1 / (Math.abs(localX) / halfWidth + Math.abs(localY) / halfHeight)
+  } else if (element.type === "ellipse") {
     t = 1 / Math.hypot(localX / halfWidth, localY / halfHeight)
   } else {
     const tx =

@@ -4,6 +4,7 @@ import type {
   ArrowElement,
   BoundingBox,
   CanvasElement,
+  DiamondElement,
   EllipseElement,
   ElementId,
   RectangleElement,
@@ -16,6 +17,7 @@ import type {
 export type BoundTextContainer =
   | RectangleElement
   | EllipseElement
+  | DiamondElement
   | ArrowElement
 
 const TEXT_PADDING = BOUND_TEXT_PADDING * 2
@@ -24,7 +26,7 @@ const TEXT_PADDING = BOUND_TEXT_PADDING * 2
  * Whether an element can own a bound text label.
  *
  * @param element Element to check.
- * @returns `true` for rectangles, ellipses and arrows.
+ * @returns `true` for rectangles, ellipses, diamonds and arrows.
  */
 export function isBoundTextContainer(
   element: CanvasElement | null | undefined,
@@ -32,6 +34,7 @@ export function isBoundTextContainer(
   return (
     element?.type === "rectangle" ||
     element?.type === "ellipse" ||
+    element?.type === "diamond" ||
     element?.type === "arrow"
   )
 }
@@ -81,7 +84,8 @@ export function getBoundTextBounds(
 
 /**
  * Maximum text width inside a container, in pixels. Arrows use a fraction of
- * their length; ellipses use the largest rectangle inscribed in the ellipse.
+ * their length; ellipses and diamonds use the largest rectangle inscribed in
+ * the shape.
  *
  * @param container Label container.
  * @param fontSize Font size used for the arrow minimum width.
@@ -104,6 +108,9 @@ export function getBoundTextMaxWidth(
       Math.round((container.width / 2) * Math.SQRT2) - TEXT_PADDING,
     )
   }
+  if (container.type === "diamond") {
+    return Math.max(1, Math.round(container.width / 2) - TEXT_PADDING)
+  }
   return Math.max(1, container.width - TEXT_PADDING)
 }
 
@@ -122,6 +129,9 @@ export function getBoundTextMaxHeight(container: BoundTextContainer): number {
       1,
       Math.round((container.height / 2) * Math.SQRT2) - TEXT_PADDING,
     )
+  }
+  if (container.type === "diamond") {
+    return Math.max(1, Math.round(container.height / 2) - TEXT_PADDING)
   }
   return Math.max(1, container.height - TEXT_PADDING)
 }
@@ -176,7 +186,9 @@ function growBoundTextContainer(
   const height =
     container.type === "ellipse"
       ? Math.round(((textHeight + TEXT_PADDING) / Math.SQRT2) * 2)
-      : Math.ceil(textHeight + TEXT_PADDING)
+      : container.type === "diamond"
+        ? Math.round((textHeight + TEXT_PADDING) * 2)
+        : Math.ceil(textHeight + TEXT_PADDING)
   if (height <= container.height) {
     return null
   }

@@ -151,7 +151,7 @@ clipboard (`copy()`, `cut()`, `paste()`).
 
 ```ts
 const { tool, setTool } = useTool()
-// tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line"
+// tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "diamond" | "line"
 setTool("draw")
 ```
 
@@ -192,7 +192,7 @@ engine.getStyle() // selected elements' common style, or the global style
 
 `setStyle` restyles matching elements in the current selection as well as future
 ones. All tools share `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
-applies to `rectangle`, `ellipse` and `note`. Tool-specific fields are
+applies to `rectangle`, `ellipse`, `diamond` and `note`. Tool-specific fields are
 `cornerRadius` (rectangle and note), `fontSize`, `fontFamily`, `textAlign`,
 `lineHeight` and `autoSize` (text), and `smoothing` (draw). Fields an element
 does not support are ignored.

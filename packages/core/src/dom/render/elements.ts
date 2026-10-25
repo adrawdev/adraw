@@ -45,6 +45,9 @@ function geometrySignature(
     case "ellipse": {
       return `ellipse|${base}|${element.strokeColor}|${element.strokeWidth}|${element.fillColor ?? ""}`
     }
+    case "diamond": {
+      return `diamond|${base}|${element.strokeColor}|${element.strokeWidth}|${element.fillColor ?? ""}`
+    }
     default: {
       return `${element.type}|${base}`
     }

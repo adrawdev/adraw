@@ -135,7 +135,7 @@ Passed to constructor as `CanvasOptions`:
 
 ### Tool styles
 
-`src/style.ts` defines `StyleOptions` and the built-in `DEFAULT_STYLE`. Styles are global: the engine stores the values set with `setStyle(partial)`, tools merge them over their own factory defaults for future gestures, and `setStyle` restyles the selected elements (fields an element does not support are ignored). `getStyle()` reads the selected elements' common style, falling back to `DEFAULT_STYLE` overlaid with the global values. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` affects rectangles, ellipses and notes. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`; paths add `smoothing`; rectangles and notes add `cornerRadius`. Tools read live style through `ToolContext.getStyle()` (optional for standalone factories, with `getStyleForContext()` in `tools/base.ts` as the fallback helper).
+`src/style.ts` defines `StyleOptions` and the built-in `DEFAULT_STYLE`. Styles are global: the engine stores the values set with `setStyle(partial)`, tools merge them over their own factory defaults for future gestures, and `setStyle` restyles the selected elements (fields an element does not support are ignored). `getStyle()` reads the selected elements' common style, falling back to `DEFAULT_STYLE` overlaid with the global values. Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor` affects rectangles, ellipses, diamonds and notes. Text adds `fontSize`, `fontFamily`, `textAlign`, `lineHeight` and `autoSize`; paths add `smoothing`; rectangles and notes add `cornerRadius`. Tools read live style through `ToolContext.getStyle()` (optional for standalone factories, with `getStyleForContext()` in `tools/base.ts` as the fallback helper).
 
 ### Text layout
 
@@ -145,7 +145,7 @@ Passed to constructor as `CanvasOptions`:
 
 Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` commits. Opening an editor clears the selection and switches the active tool to `select`; committing selects the edited text (or its container for a label). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
 
-`src/text-bindings.ts` handles labels bound to a rectangle, ellipse or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, mirrors the container's rotation/visibility and grows the container vertically when the label no longer fits. Arrows use `labelPosition` (0–1) and auto-size labels; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the label box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes labels whose container disappeared. The DOM creates labels through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
+`src/text-bindings.ts` handles labels bound to a rectangle, ellipse, diamond or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, mirrors the container's rotation/visibility and grows the container vertically when the label no longer fits. Arrows use `labelPosition` (0–1) and auto-size labels; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the label box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes labels whose container disappeared. The DOM creates labels through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
 
 ## Type system
 
@@ -159,6 +159,7 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | `"rectangle"` | `RectangleElement` | `cornerRadius`, `strokeWidth`, `strokeColor`, `fillColor?`                                                                   |
 | `"ellipse"`   | `EllipseElement`   | `strokeWidth`, `strokeColor`, `fillColor?`                                                                                   |
+| `"diamond"`   | `DiamondElement`   | `strokeWidth`, `strokeColor`, `fillColor?`                                                                                   |
 | `"line"`      | `LineElement`      | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`                                                                           |
 | `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?`       |
 | `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` (paths are never filled)                                              |
@@ -167,11 +168,11 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 | `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`, `fontFamily?`, `textAlign?`, `lineHeight?`, `autoSize?`, `containerId?`, `labelPosition?` |
 | `"note"`      | `NoteElement`      | `text`, `fontSize`, `fillColor`, `strokeColor` (ink), `fontFamily?`, `textAlign?`, `lineHeight?`, `padding`, `cornerRadius`  |
 
-`opacity` (0–1) is rendered on the element's SVG group, so it fades stroke and fill together. `fillColor` only exists on rectangles and ellipses; omitting it uses the `--adraw-fill` CSS variable (transparent).
+`opacity` (0–1) is rendered on the element's SVG group, so it fades stroke and fill together. `fillColor` only exists on rectangles, ellipses and diamonds; omitting it uses the `--adraw-fill` CSS variable (transparent).
 
 ### Tool types
 
-`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "arrow" | "text" | "note"`
+`"select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "diamond" | "line" | "arrow" | "text" | "note"`
 
 ### Coordinate types
 
@@ -228,6 +229,7 @@ File: `src/elements.ts`. Each returns a typed element with an auto-generated ID:
 ```ts
 createRectangle({ x, y, width, height, cornerRadius?, rotation? })
 createEllipse({ x, y, width, height })
+createDiamond({ x, y, width, height })
 createLine({ startX, startY, endX, endY })
 createPath({ points, smoothing? })
 createMedia({ src, mimeType, naturalWidth, naturalHeight })

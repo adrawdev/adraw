@@ -313,6 +313,27 @@ describe("arrow binding geometry", () => {
     expect(resolved.endY).toBeCloseTo(125)
   })
 
+  it("clips diamond targets at the diamond border", () => {
+    const diamond = {
+      ...makeRect("diamond", 100, 100, 100, 100),
+      type: "diamond" as const,
+    }
+    const arrow = makeArrow("a1", 0, 0, 300, 300, {
+      endBinding: { elementId: "diamond" },
+    })
+    const elements = new Map<ElementId, CanvasElement>([
+      [diamond.id, diamond],
+      [arrow.id, arrow],
+    ])
+
+    const resolved = resolveArrowElement(arrow, elements)
+    const gap = Math.max(BINDING_GAP, arrow.strokeWidth)
+    // The diagonal from the center reaches the diamond border at (125, 125),
+    // then the tip moves `gap` further along the same direction.
+    expect(resolved.endX).toBeCloseTo(125 - gap / Math.SQRT2)
+    expect(resolved.endY).toBeCloseTo(125 - gap / Math.SQRT2)
+  })
+
   it("follows the target when it moves", () => {
     const rect = makeRect("rect", 100, 100)
     const arrow = makeArrow("a1", 0, 125, 150, 125, {

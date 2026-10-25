@@ -109,7 +109,7 @@ const { engine, isReady } = useCanvasEngine()
 
 ```ts
 const tool = useTool()
-// tool.tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "line" | "text" | "arrow"
+// tool.tool: ToolType — "select" | "hand" | "draw" | "eraser" | "rectangle" | "ellipse" | "diamond" | "line" | "text" | "arrow"
 tool.setTool("draw")
 ```
 
@@ -162,7 +162,7 @@ Styles are global. Use the engine's `setStyle` / `getStyle` through
 
 `setStyle` restyles matching selected elements as well as future ones. All tools
 share `strokeColor`, `strokeWidth` and `opacity`; `fillColor` applies to
-`rectangle`, `ellipse` and `note`. Tool-specific fields: `cornerRadius`
+`rectangle`, `ellipse`, `diamond` and `note`. Tool-specific fields: `cornerRadius`
 (rectangle and note), `fontSize` / `fontFamily` / `textAlign` / `lineHeight` /
 `autoSize` (text), and `smoothing` (draw). Fields an element does not support
 are ignored.

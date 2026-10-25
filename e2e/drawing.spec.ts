@@ -28,6 +28,16 @@ test.describe("drawing", () => {
     expect(state.elementTypes).toEqual(["ellipse"])
   })
 
+  test("drags a diamond onto the canvas", async ({ page }) => {
+    const svg = await openCanvas(page)
+    await pickTool(page, "diamond")
+    await drag(page, svg, { x: 180, y: 140 }, { x: 340, y: 300 })
+
+    await expect(page.locator(".adraw-elements-group polygon")).toHaveCount(1)
+    const state = await snapshot(page)
+    expect(state.elementTypes).toEqual(["diamond"])
+  })
+
   test("draws a freehand path", async ({ page }) => {
     const svg = await openCanvas(page)
     await pickTool(page, "draw")

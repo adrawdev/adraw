@@ -286,6 +286,26 @@ describe("style", () => {
     expect(updated.opacity).toBe(0.2)
   })
 
+  it("applies fill and opacity to diamonds", () => {
+    const canvas = new AdrawCanvas()
+    canvas.setStyle({ fillColor: "#d0bfff", opacity: 0.5, strokeWidth: 3 })
+
+    canvas.setActiveTool("diamond")
+    drag(canvas, { x: 10, y: 10 }, { x: 110, y: 60 })
+
+    const diamond = findElement(canvas, "diamond")
+    expect(diamond.fillColor).toBe("#d0bfff")
+    expect(diamond.opacity).toBe(0.5)
+    expect(diamond.strokeWidth).toBe(3)
+
+    canvas.selectAll()
+    canvas.setStyle({ fillColor: "#ffd8a8", opacity: 0.2 })
+
+    const updated = findElement(canvas, "diamond")
+    expect(updated.fillColor).toBe("#ffd8a8")
+    expect(updated.opacity).toBe(0.2)
+  })
+
   it("gets the style of the selected elements", () => {
     const rectangle = createRectangle({
       cornerRadius: 6,

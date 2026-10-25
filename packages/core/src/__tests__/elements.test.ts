@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   cloneElement,
+  createDiamond,
   createEllipse,
   createGroup,
   createMedia,
@@ -83,6 +84,28 @@ describe("elements", () => {
       })
 
       expect(ellipse.type).toBe("ellipse")
+    })
+
+    it("createDiamond assigns diamond type and fill", () => {
+      const diamond = createDiamond({
+        fillColor: "#ffd43b",
+        height: 20,
+        locked: false,
+        rotation: 0,
+        strokeColor: "#000",
+        strokeWidth: 2,
+        visible: true,
+        width: 30,
+        x: 5,
+        y: 6,
+        zIndex: 0,
+      })
+
+      expect(diamond.type).toBe("diamond")
+      expect(diamond.id).toBeTruthy()
+      expect(diamond.fillColor).toBe("#ffd43b")
+      expect(diamond.width).toBe(30)
+      expect(diamond.height).toBe(20)
     })
 
     it("createPath defaults points to an empty array", () => {

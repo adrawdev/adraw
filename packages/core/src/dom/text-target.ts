@@ -57,7 +57,11 @@ export function resolveTextTarget(
   if (hit.type === "arrow") {
     return { container: hit, kind: "bound" }
   }
-  if (hit.type === "rectangle" || hit.type === "ellipse") {
+  if (
+    hit.type === "rectangle" ||
+    hit.type === "ellipse" ||
+    hit.type === "diamond"
+  ) {
     const centerX = hit.x + hit.width / 2
     const centerY = hit.y + hit.height / 2
     const threshold = TEXT_CONTAINER_SNAP_THRESHOLD / Math.max(zoom, 0.01)
@@ -120,7 +124,7 @@ export function startFreeTextEditing(
  *
  * @param state DOM adapter state.
  * @param engine Canvas engine.
- * @param container Live rectangle, ellipse or arrow.
+ * @param container Live rectangle, ellipse, diamond or arrow.
  * @returns `true` when an editor was opened.
  */
 export function startBoundTextEditing(

@@ -30,6 +30,7 @@ function getElementOverhang(element: CanvasElement): number {
       )
     }
     case "ellipse":
+    case "diamond":
     case "line":
     case "path":
     case "rectangle": {

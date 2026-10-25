@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
-import { createArrow, createRectangle, createText } from "../elements"
+import {
+  createArrow,
+  createDiamond,
+  createRectangle,
+  createText,
+} from "../elements"
 import { approximateTextMeasurer } from "../text"
 import { syncTextBindings } from "../text-bindings"
 import type {
   ArrowElement,
   CanvasElement,
+  DiamondElement,
   RectangleElement,
   TextElement,
 } from "../types"
@@ -95,6 +101,40 @@ describe("syncTextBindings", () => {
     expect(text.height).toBe(50)
     expect(text.x).toBe(20)
     expect(text.y).toBe(5)
+  })
+
+  it("wraps, centers and grows a diamond label", () => {
+    const diamond = createDiamond({
+      height: 100,
+      id: "diamond",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      strokeWidth: 2,
+      visible: true,
+      width: 200,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    const label = makeLabel("diamond", { id: "label" })
+    const elements = mapOf([diamond, label])
+
+    syncTextBindings(elements, approximateTextMeasurer)
+
+    const resized = elements.get("diamond") as DiamondElement
+    const text = elements.get("label") as TextElement
+    // The inscribed rectangle is half the diamond's size: 90px wide after
+    // padding, so "hello world" wraps into two 60px lines (50px tall). The
+    // 40px-tall inner space grows the diamond to 120px.
+    expect(resized.width).toBe(200)
+    expect(resized.height).toBe(120)
+    expect(text.autoSize).toBe(false)
+    expect(text.wrapWidth).toBe(90)
+    expect(text.width).toBe(60)
+    expect(text.height).toBe(50)
+    expect(text.x).toBe(70)
+    expect(text.y).toBe(35)
   })
 
   it("follows the container when it moves and rotates", () => {

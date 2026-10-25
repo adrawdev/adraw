@@ -3,6 +3,7 @@ import {
   CircleIcon,
   ClipboardPasteIcon,
   CopyIcon,
+  DiamondIcon,
   EraserIcon,
   HandIcon,
   ImageIcon,
@@ -41,7 +42,10 @@ const { class: className, ...props } = Astro.props;
     <button class="tool-button" data-tool="ellipse" title="Ellipse (E)">
       <CircleIcon size={16} />
     </button>
-    <button class="tool-button" data-tool="draw" title="Draw (D)">
+    <button class="tool-button" data-tool="diamond" title="Diamond (D)">
+      <DiamondIcon size={16} />
+    </button>
+    <button class="tool-button" data-tool="draw" title="Draw (P)">
       <PencilIcon size={16} />
     </button>
     <button class="tool-button" data-tool="line" title="Line (L)">

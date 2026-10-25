@@ -334,6 +334,13 @@ export function applyArrowShaft(
 }
 
 /**
+ * SVG `points` attribute for a diamond inscribed in a `width`×`height` box.
+ */
+export function getDiamondPoints(width: number, height: number): string {
+  return `0,${height / 2} ${width / 2},0 ${width},${height / 2} ${width / 2},${height}`
+}
+
+/**
  * Build the SVG group for one canvas element.
  *
  * @param element Element to render.
@@ -382,6 +389,22 @@ export function createElementGroup(
         `${element.strokeWidth || STROKE_WIDTH}`,
       )
       group.appendChild(ellipse)
+      break
+    }
+
+    case "diamond": {
+      const diamond = document.createElementNS(svgNamespaceURI, "polygon")
+      diamond.setAttribute(
+        "points",
+        getDiamondPoints(element.width, element.height),
+      )
+      diamond.setAttribute("fill", element.fillColor || FILL_COLOR)
+      diamond.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      diamond.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
+      group.appendChild(diamond)
       break
     }
 

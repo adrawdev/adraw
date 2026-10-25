@@ -67,11 +67,15 @@ export function handleShortcutKey(
         break
       }
       case "d": {
-        actions.setActiveTool("draw")
+        actions.setActiveTool("diamond")
         break
       }
       case "e": {
         actions.setActiveTool("eraser")
+        break
+      }
+      case "p": {
+        actions.setActiveTool("draw")
         break
       }
       case "r": {

@@ -54,6 +54,7 @@ canvas. Adapters expose the same options through their provider/service.
 | `eraser`    | Erase elements by painting over them      |
 | `rectangle` | Draw rectangles                           |
 | `ellipse`   | Draw ellipses                             |
+| `diamond`   | Draw diamonds                             |
 | `line`      | Draw lines                                |
 | `arrow`     | Draw arrows                               |
 | `text`      | Add free text or shape labels             |
@@ -64,8 +65,8 @@ canvas.setActiveTool("draw")
 canvas.getActiveTool() // "draw"
 ```
 
-While drawing a `rectangle` or `ellipse`, hold `Shift` to constrain it to a
-square/circle, or `Alt` to size it outward from the center point.
+While drawing a `rectangle`, `ellipse` or `diamond`, hold `Shift` to constrain
+it to a square/circle, or `Alt` to size it outward from the center point.
 
 ### Tool styles
 
@@ -90,7 +91,8 @@ canvas.getStyle()
 ```
 
 Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
-applies to `rectangle`, `ellipse` and `note` (combine it with `opacity < 1` for
+applies to `rectangle`, `ellipse`, `diamond` and `note` (combine it with
+`opacity < 1` for
 translucent highlights). The tool-specific ones are `smoothing` (draw),
 `cornerRadius` (rectangle and note), and `fontSize`, `fontFamily`, `textAlign`,
 `lineHeight` and `autoSize` (text). Notes add `padding`. Fields an element does
@@ -102,6 +104,7 @@ Each element on the canvas has a type:
 
 - `rectangle` — rounded or sharp-cornered rect
 - `ellipse` — oval / circle
+- `diamond` — diamond (rhombus) inscribed in its bounding box
 - `path` — freehand stroke (Catmull-Rom smoothing)
 - `line` — line
 - `arrow` — two-ended connector with optional bindings
@@ -110,7 +113,8 @@ Each element on the canvas has a type:
 - `media` — raster image
 - `group` — container for other elements
 
-Rectangles and ellipses accept `fillColor`; every element accepts `opacity`
+Rectangles, ellipses and diamonds accept `fillColor`; every element accepts
+`opacity`
 (`0`–`1`). A translucent highlighter background is just a rectangle with
 `fillColor: "#ffd43b"` and `opacity: 0.35`. Freehand paths are stroked only.
 
@@ -156,10 +160,10 @@ canvas.setStyle({ fillColor: "#bbf7d0", fontSize: 24 })
 
 ### Labels inside shapes and arrows
 
-Double-clicking a rectangle, ellipse or arrow — or clicking near a shape's
-center with the text tool — creates a centered label. Labels are regular text
-elements with a `containerId`, so they are measured, styled and serialized like
-any other text. A shape label wraps at the shape's inner width but its box
+Double-clicking a rectangle, ellipse, diamond or arrow — or clicking near a
+shape's center with the text tool — creates a centered label. Labels are regular
+text elements with a `containerId`, so they are measured, styled and serialized
+like any other text. A shape label wraps at the shape's inner width but its box
 shrinks to the longest wrapped line, so the editor grows and shrinks
 horizontally until it reaches that width, and grows vertically as lines are
 added. An arrow label sits on the line and follows `labelPosition` (`0`–`1`,

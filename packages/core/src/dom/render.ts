@@ -26,6 +26,7 @@ import {
   bindingTargetClass,
   createElementGroup,
   getArrowSvgGeometry,
+  getDiamondPoints,
   getTransformElementAttribute,
   pointsToPath,
   temporaryClass,
@@ -254,6 +255,20 @@ export function updateElementGeometry(
       ellipseElement.setAttribute("fill", element.fillColor || FILL_COLOR)
       ellipseElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
       ellipseElement.setAttribute(
+        "stroke-width",
+        `${element.strokeWidth || STROKE_WIDTH}`,
+      )
+      break
+    }
+    case "diamond": {
+      const diamondElement = group.getElementsByTagName("polygon")[0]
+      diamondElement.setAttribute(
+        "points",
+        getDiamondPoints(element.width, element.height),
+      )
+      diamondElement.setAttribute("fill", element.fillColor || FILL_COLOR)
+      diamondElement.setAttribute("stroke", element.strokeColor || STROKE_COLOR)
+      diamondElement.setAttribute(
         "stroke-width",
         `${element.strokeWidth || STROKE_WIDTH}`,
       )

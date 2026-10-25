@@ -3,6 +3,7 @@ import { measureTextLayout, type TextLayoutOptions } from "./text"
 import type {
   ArrowElement,
   CanvasElement,
+  DiamondElement,
   EllipseElement,
   GroupElement,
   LineElement,
@@ -70,6 +71,19 @@ export function createEllipse(
     ...factory,
     id: factory.id ?? generateId(),
     type: "ellipse",
+  }
+}
+
+/**
+ * Create a diamond element.
+ */
+export function createDiamond(
+  factory: ElementFactory<DiamondElement>,
+): DiamondElement {
+  return {
+    ...factory,
+    id: factory.id ?? generateId(),
+    type: "diamond",
   }
 }
 

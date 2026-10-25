@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
-import { createRectangle, createText } from "../elements"
+import { createDiamond, createRectangle, createText } from "../elements"
 import type { TextElement } from "../types"
 
 function mount(): {
@@ -332,6 +332,50 @@ describe("text editor DOM integration", () => {
     expect(text.width).toBe(60)
     expect(text.x).toBe(20)
     expect(canvas.getSelectedIds().has("rect")).toBe(true)
+  })
+
+  it("creates a centered label when double-clicking a diamond", () => {
+    const { canvas, svg } = mount()
+    const diamond = createDiamond({
+      height: 100,
+      id: "diamond",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      strokeWidth: 2,
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    canvas.addElement(diamond)
+
+    svg.dispatchEvent(
+      new MouseEvent("dblclick", {
+        bubbles: true,
+        clientX: 450,
+        clientY: 350,
+      }),
+    )
+
+    const editor = document.querySelector<HTMLTextAreaElement>("textarea")
+    expect(editor).not.toBeNull()
+    editor!.value = "Hi"
+    editor!.dispatchEvent(new Event("input", { bubbles: true }))
+    editor!.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }),
+    )
+
+    const text = firstText(canvas)
+    expect(text.containerId).toBe("diamond")
+    expect(text.textAlign).toBe("center")
+    // The inscribed rectangle is half the diamond's size: 40px after padding.
+    expect(text.wrapWidth).toBe(40)
+    expect(text.width).toBe(24)
+    expect(text.x).toBe(38)
+    expect(text.y).toBeCloseTo(37.5)
+    expect(canvas.getSelectedIds().has("diamond")).toBe(true)
   })
 
   it("double-clicking empty canvas creates the same auto-sized editor", () => {

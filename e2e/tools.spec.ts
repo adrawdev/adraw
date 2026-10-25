@@ -7,6 +7,7 @@ test.describe("tool selection", () => {
     "hand",
     "rectangle",
     "ellipse",
+    "diamond",
     "draw",
     "line",
     "arrow",
@@ -47,7 +48,8 @@ test.describe("tool selection", () => {
     const shortcuts: [string, string][] = [
       ["r", "rectangle"],
       ["e", "eraser"],
-      ["d", "draw"],
+      ["d", "diamond"],
+      ["p", "draw"],
       ["h", "hand"],
       ["v", "select"],
       ["t", "text"],

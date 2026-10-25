@@ -35,6 +35,7 @@ Pass `container` to mount immediately, or omit it and call `canvas.mount(el)` la
 | `eraser`    | Erase elements by painting over them      |
 | `rectangle` | Draw rectangles                           |
 | `ellipse`   | Draw ellipses                             |
+| `diamond`   | Draw diamonds                             |
 | `line`      | Draw lines                                |
 | `arrow`     | Draw arrows; endpoints can bind to shapes |
 
@@ -64,7 +65,7 @@ canvas.getStyle() // global style
 ```
 
 Shared options are `strokeColor`, `strokeWidth` and `opacity`; `fillColor`
-applies to `rectangle`, `ellipse` and `note` (combine it with `opacity < 1` for
+applies to `rectangle`, `ellipse`, `diamond` and `note` (combine it with `opacity < 1` for
 translucent highlights). The tool-specific ones are `smoothing` (draw),
 `cornerRadius` (rectangle and note) and `fontSize`, `fontFamily`, `textAlign`,
 `lineHeight` and `autoSize` (text). Notes add `padding`. Fields an element does
@@ -76,13 +77,14 @@ Each element on the canvas has a type:
 
 - `rectangle` — rounded or sharp-cornered rect
 - `ellipse` — oval / circle
+- `diamond` — diamond (rhombus) inscribed in its bounding box
 - `path` — freehand stroke (Catmull-Rom smoothing)
 - `line` — line
 - `arrow` — line with optional arrowheads; either endpoint can bind to a shape
 - `media` — raster image
 - `group` — container for other elements
 
-Rectangles and ellipses accept `fillColor`; every element accepts `opacity`
+Rectangles, ellipses and diamonds accept `fillColor`; every element accepts `opacity`
 (`0`–`1`). A translucent highlighter background is just a rectangle with
 `fillColor: "#ffd43b"` and `opacity: 0.35`. Freehand paths are stroked only.
 
@@ -92,7 +94,7 @@ The `arrow` tool draws a straight arrow with a filled head (`startArrowhead` and
 `endArrowhead` are optional booleans; the tool enables the end head). Press `A`
 or `canvas.setActiveTool("arrow")` to activate it.
 
-Drop an endpoint on a rectangle, ellipse, text, media, or group to bind it. A
+Drop an endpoint on a rectangle, ellipse, diamond, text, media, or group to bind it. A
 bound endpoint aims at the target's center, is clipped just outside the target's
 border (with a `max(4, strokeWidth)` gap), and follows the target through moves,
 resizes, and rotations. Bound arrows are re-resolved automatically on every

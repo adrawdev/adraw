@@ -394,6 +394,38 @@ test.describe("text tool", () => {
     )
   })
 
+  test("double-clicking a diamond adds a centered label", async ({ page }) => {
+    await openCanvas(page)
+    const svg = page.locator(".canvas-container svg")
+    const box = await svg.boundingBox()
+    if (!box) {
+      throw new Error("canvas svg has no bounding box")
+    }
+
+    await pickTool(page, "diamond")
+    await drag(page, svg, { x: 200, y: 150 }, { x: 400, y: 350 })
+    await pickTool(page, "select")
+
+    await page.mouse.dblclick(box.x + 300, box.y + 250)
+    const editor = page.locator("textarea.adraw-text-editor")
+    await expect(editor).toBeVisible()
+    await editor.fill("Hi")
+    await page.keyboard.press("Escape")
+
+    const state = await page.evaluate(() => {
+      const canvas = (window as any).adraw
+      const elements = [...canvas.getElements().values()]
+      return {
+        diamond: elements.find((el: any) => el.type === "diamond"),
+        text: elements.find((el: any) => el.type === "text"),
+      }
+    })
+    expect(state.text.containerId).toBe(state.diamond.id)
+    expect(state.text.text).toBe("Hi")
+    expect(state.text.textAlign).toBe("center")
+    expect(state.text.wrapWidth).toBe(90)
+  })
+
   test("clicking an arrow with the text tool creates a label on the line", async ({
     page,
   }) => {

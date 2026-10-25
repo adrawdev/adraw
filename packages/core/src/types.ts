@@ -35,6 +35,7 @@ export type ElementId = string
 export type ElementType =
   | "rectangle"
   | "ellipse"
+  | "diamond"
   | "line"
   | "arrow"
   | "path"
@@ -85,6 +86,20 @@ export interface RectangleElement extends BaseElement {
  */
 export interface EllipseElement extends BaseElement {
   type: "ellipse"
+  strokeWidth: number
+  strokeColor: string
+  /**
+   * Fill color. Defaults to the `--adraw-fill` CSS variable (transparent)
+   * when omitted; use `"none"` for no fill.
+   */
+  fillColor?: string
+}
+
+/**
+ * A diamond (rhombus) element inscribed in its bounding box.
+ */
+export interface DiamondElement extends BaseElement {
+  type: "diamond"
   strokeWidth: number
   strokeColor: string
   /**
@@ -205,9 +220,9 @@ export interface TextElement extends BaseElement {
    */
   autoSize?: boolean
   /**
-   * Id of the rectangle, ellipse or arrow this text labels. Bound text is
-   * centered inside the container, wraps to its inner width and follows it when
-   * it moves, resizes or rotates.
+   * Id of the rectangle, ellipse, diamond or arrow this text labels. Bound text
+   * is centered inside the container, wraps to its inner width and follows it
+   * when it moves, resizes or rotates.
    */
   containerId?: ElementId | null
   /**
@@ -263,6 +278,7 @@ export type EditableTextElement = TextElement | NoteElement
 export type CanvasElement =
   | RectangleElement
   | EllipseElement
+  | DiamondElement
   | LineElement
   | ArrowElement
   | PathElement
@@ -281,6 +297,7 @@ export type ToolType =
   | "eraser"
   | "rectangle"
   | "ellipse"
+  | "diamond"
   | "line"
   | "arrow"
   | "text"
@@ -320,13 +337,13 @@ export interface CanvasState {
 /**
  * Optional visual styling shared by elements and tool options. Element
  * interfaces expose the concrete values: `strokeColor` and `strokeWidth` on
- * stroked shapes, `fillColor` on rectangles/ellipses/notes, and `opacity` on every
- * element.
+ * stroked shapes, `fillColor` on rectangles/ellipses/diamonds/notes, and
+ * `opacity` on every element.
  */
 export interface CanvasElementStyle {
   /** Stroke color. */
   strokeColor?: string
-  /** Fill color. Applies to rectangles, ellipses and notes. */
+  /** Fill color. Applies to rectangles, ellipses, diamonds and notes. */
   fillColor?: string
   /** Stroke width in pixels. */
   strokeWidth?: number

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { calculateShapeBounds, type ToolContext } from "../tools/base"
+import { createDiamondTool } from "../tools/diamond"
 import { createEllipseTool } from "../tools/ellipse"
 import { createRectangleTool } from "../tools/rectangle"
 import type {
   CanvasElement,
+  DiamondElement,
   ElementId,
   EllipseElement,
   RectangleElement,
@@ -299,6 +301,57 @@ describe("rectangle tool modifiers", () => {
 
     expect(ctx.getElements().size).toBe(0)
     expect(ctx.historyCount()).toBe(0)
+  })
+})
+
+describe("diamond tool modifiers", () => {
+  it("creates a temporary diamond on pointer move", () => {
+    const tool = createDiamondTool()
+    const ctx = makeContext()
+
+    tool.onActivate(ctx)
+    tool.onPointerDown(ctx, { x: 10, y: 20 }, pointerEvent())
+    tool.onPointerMove(ctx, { x: 110, y: 70 }, pointerEvent())
+
+    const temp = tool.getTemporaryElement() as DiamondElement
+    expect(temp.type).toBe("diamond")
+    expect(temp.x).toBe(10)
+    expect(temp.y).toBe(20)
+    expect(temp.width).toBe(100)
+    expect(temp.height).toBe(50)
+  })
+
+  it("constrains to a square with Shift", () => {
+    const tool = createDiamondTool()
+    const ctx = makeContext()
+
+    tool.onActivate(ctx)
+    tool.onPointerDown(ctx, { x: 10, y: 20 }, pointerEvent())
+    tool.onPointerMove(ctx, { x: 60, y: 120 }, pointerEvent(true))
+
+    const temp = tool.getTemporaryElement() as DiamondElement
+    expect(temp.width).toBe(100)
+    expect(temp.height).toBe(100)
+  })
+
+  it("commits the diamond on pointer up", () => {
+    const tool = createDiamondTool()
+    const ctx = makeContext()
+    const event = pointerEvent()
+
+    tool.onActivate(ctx)
+    tool.onPointerDown(ctx, { x: 10, y: 20 }, event)
+    tool.onPointerMove(ctx, { x: 110, y: 70 }, event)
+    tool.onPointerUp(ctx, { x: 110, y: 70 }, event)
+
+    expect(ctx.getElements().size).toBe(1)
+    const diamond = ctx.getElements().values().next().value as DiamondElement
+    expect(diamond.type).toBe("diamond")
+    expect(diamond.x).toBe(10)
+    expect(diamond.y).toBe(20)
+    expect(diamond.width).toBe(100)
+    expect(diamond.height).toBe(50)
+    expect(ctx.historyCount()).toBe(1)
   })
 })
 

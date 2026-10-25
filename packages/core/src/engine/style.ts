@@ -23,8 +23,9 @@ type ApplicableStyle = CanvasElementStyle & {
 
 /**
  * Apply the style fields an element supports. Fields it does not support are
- * ignored: `fillColor` touches rectangles, ellipses and notes, `cornerRadius`
- * touches rectangles and notes, and the text options touch text and notes.
+ * ignored: `fillColor` touches rectangles, ellipses, diamonds and notes,
+ * `cornerRadius` touches rectangles and notes, and the text options touch text
+ * and notes.
  *
  * @param element Element to restyle.
  * @param options Style options to apply.
@@ -47,6 +48,7 @@ export function applyStyleToElement(
   if (
     (next.type === "rectangle" ||
       next.type === "ellipse" ||
+      next.type === "diamond" ||
       next.type === "note") &&
     options.fillColor !== undefined &&
     next.fillColor !== options.fillColor
@@ -134,6 +136,10 @@ export function getElementStyle(element: CanvasElement): StyleOptions {
   }
 
   switch (element.type) {
+    case "diamond": {
+      style.fillColor = element.fillColor ?? FILL_COLOR
+      break
+    }
     case "ellipse": {
       style.fillColor = element.fillColor ?? FILL_COLOR
       break
