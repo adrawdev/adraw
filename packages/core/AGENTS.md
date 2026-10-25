@@ -15,7 +15,7 @@ pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 
 ## Main entry point: `AdrawCanvas` class
 
-`src/canvas.ts` defines `AdrawCanvas extends CanvasEngine` — the engine is the base class (state, tools, history, events), and this subclass composes the DOM adapter (`src/dom/`). Constructed headless or with a container:
+`src/canvas.ts` defines `AdrawCanvas extends CanvasEngine` — the engine is the base class (state, tools, history, state notifier), and this subclass composes the DOM adapter (`src/dom/`). Constructed headless or with a container:
 
 ```ts
 import { AdrawCanvas } from "@adraw/core"
@@ -32,22 +32,25 @@ const canvas = new AdrawCanvas({ container: divElement })
 ```
 src/
   canvas.ts          AdrawCanvas extends CanvasEngine — adds mount/render/destroy + DOM event handling
-  options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, CanvasEventMap, ToImageOptions
+  options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, ToImageOptions
   text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
   text-bindings.ts   bound text: max width/height, centering, container growth, sync
   style.ts           style types and global defaults
+  store.ts           AdrawStore / AdrawSnapshot: state snapshots for adapters
   engine/            headless core (no DOM imports)
-    engine.ts        CanvasEngine: state, events, getToolContext, public API, @internal accessors
+    engine.ts        CanvasEngine: state, notifier, getToolContext, public API, @internal accessors
+    scene.ts         Scene: elements, selection, history, binding sync, atomic commits
+    state-notifier.ts internal kind-carrying state notifications
     style.ts        applyStyleToElement/getElementStyle: style write-back and read-back
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements
     z-order.ts       bringToFront / sendToBack / setZIndex math
     shortcuts.ts     handleShortcutKey (pure keyboard-shortcut function)
-    internal.ts      text-editing + overlay hooks over EngineInternal
+    internal.ts      text-editing + overlay hooks over CanvasEngine
     pointer.ts       screen→canvas dispatch, wheel zoom/pan (headless pointer paths)
   dom/               DOM adapter (imports engine/*, never the reverse)
-    adapter.ts       mountDom: SVG layers, engine event wiring, destroy
+    adapter.ts       mountDom: SVG layers, state-notifier wiring, destroy
     events.ts        setupEventListeners (pointer/wheel/dblclick/cursor/keyboard)
     touch.ts         pinch/touch listeners
     pointer.ts       mounted pointer handlers + getRelativePoint
@@ -71,9 +74,9 @@ src/
   coordinates.ts, history.ts, snapping.ts, viewport.ts, types.ts, constants.ts
 ```
 
-Rules: `dom/*` and `engine/*` never import each other cyclically — `engine.ts` exports the narrow `EngineInternal` interface that `engine/internal.ts` / `engine/pointer.ts` and the DOM modules consume. The engine stays DOM-free; the adapter subscribes to engine events and renders.
+Rules: `dom/*` and `engine/*` never import each other cyclically. `engine/internal.ts` and `engine/pointer.ts` type against `CanvasEngine`; the engine stays DOM-free, and the adapter subscribes to the internal state notifier and renders.
 
-Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own) and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
+Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own), `AdrawStore` / `AdrawSnapshot` (adapter-facing state), and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
 
 ### Key methods
 
@@ -108,18 +111,29 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `getIsToolLocked()`                                     | Whether tools stay active after creating an element       |
 | `setIsToolLocked(bool)`                                 | Control the post-creation tool switch                     |
 
-### Events
+### State observation
 
-`canvas.on(event, handler)` / `canvas.off(event, handler)` — emitted by the engine:
+Public state is read through `AdrawStore` / `AdrawSnapshot`:
 
-| Event               | Payload                                       |
-| ------------------- | --------------------------------------------- |
-| `"change"`          | `{ elements: Map<ElementId, CanvasElement> }` |
-| `"viewportChange"`  | `{ viewport: ViewportState }`                 |
-| `"toolChange"`      | `{ tool: ToolType }`                          |
-| `"selectionChange"` | `{ selectedIds: Set<ElementId> }`             |
+```ts
+import { AdrawStore } from "@adraw/core"
 
-Always copy the payload when storing (`new Map(elements)`, `new Set(selectedIds)`).
+const store = new AdrawStore(canvas)
+const unsubscribe = store.subscribe(() => {
+  const snapshot = store.getSnapshot()
+  // snapshot.elements, selectedIds, selectedElements, viewport, tool,
+  // canUndo/canRedo, style, snapping, isSnapMode, isToolLocked,
+  // hideWhileTransforming, isReady
+})
+unsubscribe()
+store.dispose()
+```
+
+The engine has no public `on`/`off`/`emit`; the DOM adapter and the store share one internal kind-carrying notifier. Snapshot maps and sets are copies, and unchanged slices are reused.
+
+### Scene
+
+`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine publishes as internal state changes. Commits and replacements sync arrow and bound-text bindings and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
 
 ### Config
 
@@ -244,9 +258,9 @@ Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection
 
 ## History
 
-File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the current state as a checkpoint, and `undo()`/`redo()` restore elements and trigger a `"change"` event.
+File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the current state as a checkpoint, and `undo()`/`redo()` restore elements and publish the change.
 
-Programmatic changes can stay out of history: `addElement`, `insertMedia`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it emits `"change"` so reactive bindings refresh undo availability. `pushHistory()` is a no-op inside `withoutHistory`.
+Programmatic changes can stay out of history: `addElement`, `insertMedia`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
 
 ## Clipboard
 
@@ -266,7 +280,7 @@ The DOM adapter renders to an `<svg>` with three `<g>` child layers: `.adraw-ele
 - `src/dom/render/overlay.ts` — `renderTransformOverlay()`
 - `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
 
-The adapter subscribes to the engine's change/viewport/tool/selection events and renders on change; the mount layer owns the `renderRequested` and `onToolWillChange` callbacks the engine invokes.
+The adapter subscribes to the internal state notifier and renders on change; the mount layer owns the `onToolWillChange` callback the engine invokes.
 
 Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-background`, `--adraw-selection`. Defaults in `src/constants.ts`.
 
@@ -280,6 +294,8 @@ arrow.test.ts                  — arrow tool, bindings, endpoint drag, clipboar
 coordinates.test.ts            — screenToCanvas, canvasToScreen, bounds, hit-test
 elements.test.ts               — factory functions, clone, move, resize, rotate
 history.test.ts                — undo/redo stack
+scene.test.ts                  — atomic scene commits, history, binding sync, selection clamping
+store.test.ts                  — AdrawStore snapshots, slice reuse, readiness and disposal
 line.test.ts                   — line tool
 select-brush.test.ts           — marquee selection
 select-deactivate.test.ts      — select deactivation

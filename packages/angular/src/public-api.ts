@@ -6,6 +6,7 @@ export {
   useCanvasEngine,
   useHistory,
   useSelection,
+  useStyle,
   useTool,
   useTransformOverlay,
   useViewport,

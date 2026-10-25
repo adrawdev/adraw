@@ -358,24 +358,34 @@ canvas.deserializeClipboard(await navigator.clipboard.readText())
 canvas.paste()
 ```
 
-## Events
+## State observation
+
+Public state is read through `AdrawStore`; the engine no longer exposes events.
 
 ```ts
-canvas.on("change", ({ elements }) => {
-  /* elements changed */
-})
-canvas.on("viewportChange", ({ viewport }) => {
-  /* viewport moved/zoomed */
-})
-canvas.on("toolChange", ({ tool }) => {
-  /* active tool switched */
-})
-canvas.on("selectionChange", ({ selectedIds }) => {
-  /* selection changed */
+import { AdrawCanvas, AdrawStore } from "@adraw/core"
+
+const canvas = new AdrawCanvas({ container: el })
+const store = new AdrawStore(canvas)
+const unsubscribe = store.subscribe(() => {
+  const snapshot = store.getSnapshot()
+  console.log(
+    snapshot.elements,
+    snapshot.selectedIds,
+    snapshot.viewport,
+    snapshot.tool,
+  )
 })
 
-canvas.off("change", handler)
+// Later
+unsubscribe()
+store.dispose()
 ```
+
+The snapshot also includes `selectedElements`, `canUndo`, `canRedo`, `style`,
+`snapping`, `isSnapMode`, `isToolLocked`, `hideWhileTransforming` and `isReady`.
+Pass `onReady` to `new AdrawStore(canvas, { onReady })` to run DOM-dependent
+setup once the canvas is mounted.
 
 ## Snapping
 

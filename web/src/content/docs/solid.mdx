@@ -135,16 +135,13 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
 // selectedIds / elements: reactive getters
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().canvasRef.current`:
+### `useStyle()`
 
 ```ts
-const { canvasRef } = useCanvas()
+const { style, setStyle } = useStyle()
 
-canvasRef.current.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-canvasRef.current.getStyle() // selection style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+// style: reactive getter — selection style, or the global style
 ```
 
 `setStyle` restyles matching selected elements as well as future ones. Fields an

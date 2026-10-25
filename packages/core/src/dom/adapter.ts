@@ -1,6 +1,6 @@
 import { BACKGROUND_COLOR } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
-import type { CanvasEventMap } from "../options"
+import { subscribeState, type StateChangeKind } from "../engine/state-notifier"
 import { setupEventListeners, updateCursor } from "./events"
 import { cancelTextGesture } from "./pointer"
 import { renderAll } from "./render"
@@ -22,8 +22,8 @@ export interface MountedDom {
 }
 
 // Mount the DOM adapter into `container`: build the SVG layers, wire pointer /
-// wheel / touch / keyboard events, and subscribe to engine events so renders
-// follow state changes.
+// wheel / touch / keyboard events, and subscribe to engine state changes so
+// renders follow state changes.
 export function mountDom(
   engine: CanvasEngine,
   container: HTMLElement,
@@ -33,49 +33,43 @@ export function mountDom(
   initDom(state, engine)
   const removeEventListeners = setupEventListeners(state, engine)
 
-  engine.renderRequested = () => renderAll(state, engine)
   engine.onToolWillChange = () => {
     commitTextEditing(state, engine, { switchTool: false })
     cancelTextGesture(state, engine)
     renderAll(state, engine)
   }
 
-  const handleChange = (): void => {
-    if (engine.getActiveTool() === "select") {
-      renderSelectElements(state, engine)
+  const handleStateChange = (kind: StateChangeKind): void => {
+    if (kind === "elements") {
+      if (engine.getActiveTool() === "select") {
+        renderSelectElements(state, engine)
+      }
+      reconcileElements(state, engine)
+      renderGuides(state, engine)
+      return
     }
-    reconcileElements(state, engine)
-    renderGuides(state, engine)
+    if (kind === "selection") {
+      renderSelectElements(state, engine)
+      renderTransformOverlay(state, engine)
+      return
+    }
+    if (kind === "viewport" || kind === "overlay") {
+      renderAll(state, engine)
+      return
+    }
+    if (kind === "tool") {
+      renderGuides(state, engine)
+      renderTransformOverlay(state, engine)
+      updateCursor(state, engine.getActiveTool())
+    }
   }
 
-  const handleViewportChange = (): void => {
-    renderAll(state, engine)
-  }
-
-  const handleToolChange = ({ tool }: CanvasEventMap["toolChange"]): void => {
-    renderGuides(state, engine)
-    renderTransformOverlay(state, engine)
-    updateCursor(state, tool)
-  }
-
-  const handleSelectionChange = (): void => {
-    renderSelectElements(state, engine)
-    renderTransformOverlay(state, engine)
-  }
-
-  engine.on("change", handleChange)
-  engine.on("viewportChange", handleViewportChange)
-  engine.on("toolChange", handleToolChange)
-  engine.on("selectionChange", handleSelectionChange)
+  const unsubscribeState = subscribeState(engine, handleStateChange)
 
   return {
     destroy: () => {
       removeEventListeners()
-      engine.off("change", handleChange)
-      engine.off("viewportChange", handleViewportChange)
-      engine.off("toolChange", handleToolChange)
-      engine.off("selectionChange", handleSelectionChange)
-      engine.renderRequested = null
+      unsubscribeState()
       engine.onToolWillChange = null
       state.resizeObserver?.disconnect()
       state.textEditor?.remove()

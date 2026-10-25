@@ -2,21 +2,18 @@
 
 import {
   AdrawCanvas,
-  type CanvasElement,
-  type CanvasEventMap,
+  AdrawStore,
   type CanvasOptions,
   createSnappingConfig,
-  type ElementId,
   resolveViewportConfig,
-  type ToolType,
   type ViewportConfig,
-  type ViewportState,
 } from "@adraw/core"
 import React, {
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react"
 
@@ -41,11 +38,16 @@ export interface CanvasProviderProps {
    */
   options?: CanvasReactOptions
   /**
-   * Called once per engine instance, after `<Canvas>` has mounted it and the
-   * provider has subscribed to its events. In React StrictMode the effect
-   * cycle runs twice, but the callback is only invoked for the live engine.
+   * Called once per engine instance, after `<Canvas>` has mounted it. In React
+   * StrictMode the effect cycle runs twice, but the callback is only invoked
+   * for the live engine.
    */
   onReady?: (engine: AdrawCanvas) => void
+}
+
+interface CanvasSession {
+  engine: AdrawCanvas
+  store: AdrawStore
 }
 
 /**
@@ -86,6 +88,19 @@ function createEngine(
   )
 
   return engine
+}
+
+/**
+ * Create the engine/store pair owned by a provider session.
+ */
+function createSession(
+  options: CanvasReactOptions | undefined,
+  onReady: (engine: AdrawCanvas) => void,
+  previous?: AdrawCanvas,
+): CanvasSession {
+  const engine = createEngine(options, previous)
+  const store = new AdrawStore(engine, { onReady })
+  return { engine, store }
 }
 
 /**
@@ -152,9 +167,9 @@ function applyLiveOptions(
 /**
  * Context provider holding the React state synced with an adraw canvas.
  *
- * The provider creates a headless {@link AdrawCanvas} synchronously, so the
- * engine is available to descendants before any effect runs. `<Canvas>` only
- * mounts it into the DOM.
+ * The provider creates a headless {@link AdrawCanvas} and its
+ * {@link AdrawStore} synchronously, so both are available to descendants
+ * before any effect runs. `<Canvas>` only mounts the engine into the DOM.
  *
  * @example
  * ```tsx
@@ -174,107 +189,45 @@ export function CanvasProvider({
   const [options, setOptions] = useState<CanvasReactOptions | undefined>(
     defaultOptions,
   )
-  const [engine, setEngine] = useState<AdrawCanvas>(() =>
-    createEngine(defaultOptions),
-  )
-  const [elements, setElements] = useState<Map<ElementId, CanvasElement>>(
-    () => new Map(engine.getElements()),
-  )
-  const [viewport, setViewport] = useState<ViewportState>(() =>
-    engine.getViewport(),
-  )
-  const [activeTool, setActiveTool] = useState<ToolType>(() =>
-    engine.getActiveTool(),
-  )
-  const [selectedIds, setSelectedIds] = useState<Set<ElementId>>(
-    () => new Set(engine.getSelectedIds()),
-  )
-  const [hideWhileTransforming, setHideWhileTransforming] = useState<boolean>(
-    () => engine.getHideOverlayWhileTransforming(),
-  )
-  const [isMounted, setIsMounted] = useState(false)
-  const [isReady, setIsReady] = useState(false)
-
-  const vanillaRef = useRef<AdrawCanvas | null>(null)
-  vanillaRef.current = engine
-
-  const optionsRef = useRef(options)
   const onReadyRef = useRef(onReady)
   onReadyRef.current = onReady
 
-  // Engine whose state is already mirrored into React state. Used to resync
-  // after `setOptions` replaces the engine without resetting on every effect
-  // setup (including StrictMode's double invocation).
-  const syncedEngineRef = useRef(engine)
-  // Engine for which `onReady` has already fired.
-  const readyEngineRef = useRef<AdrawCanvas | null>(null)
-
-  // Mirror engine state into React. Runs after child effects, so `<Canvas>`
-  // has already mounted the engine by the time `onReady` is invoked below.
-  useEffect(() => {
-    if (syncedEngineRef.current !== engine) {
-      syncedEngineRef.current = engine
-      setElements(new Map(engine.getElements()))
-      setViewport(engine.getViewport())
-      setActiveTool(engine.getActiveTool())
-      setSelectedIds(new Set(engine.getSelectedIds()))
-      setHideWhileTransforming(engine.getHideOverlayWhileTransforming())
-    }
-
-    const handleChange = ({
-      elements: newElements,
-    }: CanvasEventMap["change"]) => {
-      setElements(new Map(newElements))
-    }
-    const handleViewportChange = ({
-      viewport: newViewport,
-    }: CanvasEventMap["viewportChange"]) => {
-      setViewport(newViewport)
-    }
-    const handleToolChange = ({ tool }: CanvasEventMap["toolChange"]) => {
-      setActiveTool(tool)
-    }
-    const handleSelectionChange = ({
-      selectedIds: newSelectedIds,
-    }: CanvasEventMap["selectionChange"]) => {
-      setSelectedIds(new Set(newSelectedIds))
-    }
-
-    engine.on("change", handleChange)
-    engine.on("viewportChange", handleViewportChange)
-    engine.on("toolChange", handleToolChange)
-    engine.on("selectionChange", handleSelectionChange)
-
-    return () => {
-      engine.off("change", handleChange)
-      engine.off("viewportChange", handleViewportChange)
-      engine.off("toolChange", handleToolChange)
-      engine.off("selectionChange", handleSelectionChange)
-    }
-  }, [engine])
-
-  // Flip `isReady` after the engine is mounted and its events are subscribed.
-  // The effect is declared after the subscription effect so that ordering
-  // holds on every commit.
-  useEffect(() => {
-    if (!isMounted) {
-      return
-    }
-
-    setIsReady(true)
-    if (readyEngineRef.current !== engine) {
-      readyEngineRef.current = engine
+  const [session, setSession] = useState<CanvasSession>(() =>
+    createSession(defaultOptions, (engine) => {
       onReadyRef.current?.(engine)
-    }
+    }),
+  )
+  const optionsRef = useRef(options)
 
+  const snapshot = useSyncExternalStore(
+    session.store.subscribe,
+    session.store.getSnapshot,
+    session.store.getSnapshot,
+  )
+
+  // Dispose the store on a real provider unmount, but not on StrictMode's
+  // simulated cleanup/re-setup cycle.
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
     return () => {
-      setIsReady(false)
+      mountedRef.current = false
     }
-  }, [engine, isMounted])
+  }, [])
+  useEffect(() => {
+    const store = session.store
+    return () => {
+      queueMicrotask(() => {
+        if (!mountedRef.current) {
+          store.dispose()
+        }
+      })
+    }
+  }, [session.store])
 
   // Apply `setOptions` changes. Constructor-only options rebuild the engine
-  // while preserving the document and viewport; everything else is applied to
-  // the live engine. Identity changes with equal values are a no-op.
+  // and store while preserving the document and viewport; everything else is
+  // applied to the live engine.
   useEffect(() => {
     const previous = optionsRef.current
     if (previous === options) {
@@ -283,45 +236,47 @@ export function CanvasProvider({
     optionsRef.current = options
 
     if (!sameCreationOptions(previous, options)) {
-      const nextEngine = createEngine(options, engine)
-      setIsReady(false)
-      setEngine(nextEngine)
+      const nextSession = createSession(
+        options,
+        (engine) => {
+          onReadyRef.current?.(engine)
+        },
+        session.engine,
+      )
+      session.store.dispose()
+      setSession(nextSession)
       return
     }
 
-    applyLiveOptions(engine, options, previous)
-  }, [engine, options])
+    applyLiveOptions(session.engine, options, previous)
+  }, [options, session.engine, session.store])
+
+  const vanillaRef = useRef<AdrawCanvas | null>(session.engine)
+  vanillaRef.current = session.engine
 
   const value = useMemo<CanvasContextValue>(
     () => ({
-      activeTool,
-      elements,
-      engine,
-      hideWhileTransforming,
-      isReady,
+      activeTool: snapshot.tool,
+      elements: snapshot.elements,
+      engine: session.engine,
+      hideWhileTransforming: snapshot.hideWhileTransforming,
+      isReady: snapshot.isReady,
       options,
-      selectedIds,
-      setActiveTool,
-      setElements,
-      setHideWhileTransforming,
-      setIsMounted,
+      selectedIds: snapshot.selectedIds,
+      setActiveTool: (tool) => session.engine.setActiveTool(tool),
+      setElements: (elements) => session.engine.setElements(elements),
+      setHideWhileTransforming: (hide) =>
+        session.engine.setHideOverlayWhileTransforming(hide),
       setOptions,
-      setSelectedIds,
-      setViewport,
+      setSelectedIds: (ids) => session.engine.setSelectedIds(ids),
+      setViewport: (viewport) => session.engine.setViewport(viewport),
+      snapshot,
+      store: session.store,
+      style: snapshot.style,
       vanillaRef,
-      viewport,
+      viewport: snapshot.viewport,
     }),
-    [
-      activeTool,
-      elements,
-      engine,
-      hideWhileTransforming,
-      isReady,
-      options,
-      selectedIds,
-      setIsMounted,
-      viewport,
-    ],
+    [options, session, snapshot],
   )
 
   return (
@@ -349,7 +304,7 @@ export interface CanvasProps {
  */
 export function Canvas({ className, style }: CanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { engine, setIsMounted } = useCanvas()
+  const { engine } = useCanvas()
 
   useEffect(() => {
     const container = containerRef.current
@@ -358,13 +313,11 @@ export function Canvas({ className, style }: CanvasProps) {
     }
 
     engine.mount(container)
-    setIsMounted(true)
 
     return () => {
-      setIsMounted(false)
       engine.destroy()
     }
-  }, [engine, setIsMounted])
+  }, [engine])
 
   return (
     <div

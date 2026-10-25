@@ -144,19 +144,16 @@ selection.clearSelection()
 selection.deleteSelected()
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().instance.current`:
+### `useStyle()`
 
 ```svelte
 <script lang="ts">
-  import { useCanvas } from "@adraw/svelte"
+  import { useStyle } from "@adraw/svelte"
 
-  const canvas = useCanvas()
+  const { style, setStyle } = useStyle()
 
-  canvas.instance.current?.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-  canvas.instance.current?.getStyle() // selection style, or the global style
+  setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+  // style: getter — selection style, or the global style
 </script>
 ```
 

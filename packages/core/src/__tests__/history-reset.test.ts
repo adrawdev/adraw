@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { createRectangle } from "../elements"
+import { AdrawStore } from "../store"
 import type { RectangleElement } from "../types"
 
 function makeRectangle(id: string, x = 0, y = 0): RectangleElement {
@@ -51,15 +52,18 @@ describe("clearHistory", () => {
     expect(canvas.getElements().has("also-base")).toBe(true)
   })
 
-  it("emits change so reactive history state refreshes", () => {
+  it("notifies the store so history availability refreshes", () => {
     const canvas = new AdrawCanvas()
     canvas.addElement(makeRectangle("a"))
+    const store = new AdrawStore(canvas)
     const listener = vi.fn()
-    canvas.on("change", listener)
+    store.subscribe(listener)
 
     canvas.clearHistory()
 
-    expect(listener).toHaveBeenCalledOnce()
+    expect(listener).toHaveBeenCalled()
+    expect(store.getSnapshot().canUndo).toBe(false)
+    store.dispose()
   })
 })
 

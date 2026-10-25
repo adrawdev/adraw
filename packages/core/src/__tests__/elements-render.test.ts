@@ -106,8 +106,8 @@ function nodeFor(container: HTMLElement, id: ElementId): SVGGElement {
   return node
 }
 
-function emitChange(canvas: AdrawCanvas): void {
-  canvas.emit("change", { elements: canvas.getElements() })
+function commitChange(canvas: AdrawCanvas): void {
+  canvas.setElements(new Map(canvas.getElements()), { history: false })
 }
 
 describe("element node reconciliation", () => {
@@ -177,7 +177,7 @@ describe("element node reconciliation", () => {
 
     const element = canvas.getElements().get(a.id)!
     element.x = 123.5
-    emitChange(canvas)
+    commitChange(canvas)
 
     expect(nodeFor(container, a.id)).toBe(nodeA)
     expect(nodeA.getAttribute("transform")).toContain("123.5")
@@ -194,18 +194,18 @@ describe("element node reconciliation", () => {
     const element = canvas.getElements().get(a.id)!
 
     element.visible = false
-    emitChange(canvas)
+    commitChange(canvas)
     expect(nodesFor(container, a.id)).toHaveLength(0)
 
     element.visible = true
-    emitChange(canvas)
+    commitChange(canvas)
     const recreated = nodeFor(container, a.id)
     expect(recreated.querySelector("rect")?.getAttribute("width")).toBe("100")
 
     // The recreated node must be tracked again by the node cache.
     const spy = vi.spyOn(recreated, "setAttribute")
     element.x = 5
-    emitChange(canvas)
+    commitChange(canvas)
     expect(spy).toHaveBeenCalled()
   })
 
@@ -225,12 +225,12 @@ describe("element node reconciliation", () => {
     )
 
     canvas.getElements().delete(a.id)
-    emitChange(canvas)
+    commitChange(canvas)
     expect(nodesFor(container, a.id)).toHaveLength(0)
 
     const nodeB = nodeFor(container, b.id)
     const spyB = vi.spyOn(nodeB, "setAttribute")
-    emitChange(canvas)
+    commitChange(canvas)
     expect(nodeFor(container, b.id)).toBe(nodeB)
     expect(spyB).not.toHaveBeenCalled()
   })
@@ -243,7 +243,7 @@ describe("element node reconciliation", () => {
     for (const rect of rects) {
       canvas.getElements().set(rect.id, rect)
     }
-    emitChange(canvas)
+    commitChange(canvas)
 
     const spies = rects.map((rect) =>
       vi.spyOn(nodeFor(container, rect.id), "setAttribute"),
@@ -253,7 +253,7 @@ describe("element node reconciliation", () => {
       ...rects[targetIndex],
       x: rects[targetIndex].x + 3,
     })
-    emitChange(canvas)
+    commitChange(canvas)
 
     const written = spies
       .map((spy, index) => (spy.mock.calls.length > 0 ? index : -1))
@@ -281,7 +281,7 @@ describe("element node reconciliation", () => {
       zIndex: 0,
     })
     canvas.getElements().set(path.id, path)
-    emitChange(canvas)
+    commitChange(canvas)
 
     const node = nodeFor(container, path.id)
     const pathNode = node.querySelector("path")!
@@ -291,12 +291,12 @@ describe("element node reconciliation", () => {
       ...path,
       points: [{ x: 5, y: 5 }, ...path.points],
     })
-    emitChange(canvas)
+    commitChange(canvas)
     expect(pathNode.getAttribute("d")).not.toBe(dBefore)
 
     // An unchanged element must not be rewritten at all.
     const spy = vi.spyOn(node.querySelector("path")!, "setAttribute")
-    emitChange(canvas)
+    commitChange(canvas)
     expect(spy).not.toHaveBeenCalled()
   })
 
@@ -325,7 +325,7 @@ describe("element node reconciliation", () => {
 
     // The adopted node must be tracked by the node cache for later edits.
     element.text = "Changed"
-    emitChange(canvas)
+    commitChange(canvas)
     expect(committed[0].querySelector("text")?.textContent).toBe("Changed")
   })
 
@@ -336,7 +336,7 @@ describe("element node reconciliation", () => {
 
     canvas.getElements().set(top.id, top)
     canvas.getElements().set(bottom.id, bottom)
-    emitChange(canvas)
+    commitChange(canvas)
 
     const group = container.querySelector(".adraw-elements-group")!
     expect([...group.children].map((child) => child.id)).toEqual([

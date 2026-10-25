@@ -1,5 +1,6 @@
 import {
   type AdrawCanvas,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
@@ -33,7 +34,7 @@ export function useCanvasEngine(): CanvasEngineState {
   return {
     engine: context.instance.current,
     get isReady() {
-      return context.isReady
+      return context.snapshot.isReady
     },
   }
 }
@@ -50,7 +51,7 @@ export function useTool() {
       context.instance.current.setActiveTool(tool)
     },
     get tool() {
-      return context.state.activeTool
+      return context.snapshot.tool
     },
   }
 }
@@ -65,7 +66,7 @@ export function useViewport() {
       context.instance.current.setViewport(viewport)
     },
     get viewport() {
-      return context.state.viewport
+      return context.snapshot.viewport
     },
     zoomIn: () => context.instance.current.zoomIn(),
     zoomOut: () => context.instance.current.zoomOut(),
@@ -79,10 +80,10 @@ export function useHistory() {
   const context = useCanvas()
 
   return {
-    canRedo: () => context.instance.current.canRedo() ?? false,
-    canUndo: () => context.instance.current.canUndo() ?? false,
-    redo: () => context.instance.current.redo() ?? false,
-    undo: () => context.instance.current.undo() ?? false,
+    canRedo: () => context.snapshot.canRedo,
+    canUndo: () => context.snapshot.canUndo,
+    redo: () => context.instance.current.redo(),
+    undo: () => context.instance.current.undo(),
   }
 }
 
@@ -92,11 +93,24 @@ export function useTransformOverlay() {
 
   return {
     get hideWhileTransforming() {
-      return context.state.hideWhileTransforming
+      return context.snapshot.hideWhileTransforming
     },
     setHideWhileTransforming: (hide: boolean) => {
       context.instance.current.setHideOverlayWhileTransforming(hide)
-      context.state.hideWhileTransforming = hide
+    },
+  }
+}
+
+/** Access the current style and update the global/selected style. */
+export function useStyle() {
+  const context = useCanvas()
+
+  return {
+    setStyle: (options: StyleOptions) => {
+      context.instance.current.setStyle(options)
+    },
+    get style() {
+      return context.snapshot.style
     },
   }
 }
@@ -109,11 +123,11 @@ export function useSelection() {
     clearSelection: () => context.instance.current.clearSelection(),
     deleteSelected: () => context.instance.current.deleteSelected(),
     get elements() {
-      return context.state.elements
+      return context.snapshot.selectedElements
     },
     selectAll: () => context.instance.current.selectAll(),
     get selectedIds() {
-      return context.state.selectedIds
+      return context.snapshot.selectedIds
     },
   }
 }

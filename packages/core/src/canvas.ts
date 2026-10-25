@@ -16,11 +16,11 @@ import {
   dispatchPointerMoveAt,
   dispatchPointerUpAt,
 } from "./engine/internal"
+import { notifyState } from "./engine/state-notifier"
 import type { AdrawCanvasOptions, ToImageOptions } from "./options"
 
 export type {
   AdrawCanvasOptions,
-  CanvasEventMap,
   CanvasOptions,
   ClipboardOptions,
   KeyboardScope,
@@ -30,11 +30,11 @@ export type {
 export { createElementGroup, pointsToPath } from "./dom/svg"
 
 // AdrawCanvas is the engine with a DOM adapter attached: all state/tools/
-// history/events API is inherited from `CanvasEngine`; this class adds the
-// mount lifecycle, DOM event wiring and rendering (see `dom/`).
+// history API is inherited from `CanvasEngine`; this class adds the mount
+// lifecycle, DOM event wiring and rendering (see `dom/`).
 /**
- * Canvas engine with a DOM adapter attached. State, tools, history and events
- * are inherited from {@link CanvasEngine}; this class adds the mount lifecycle,
+ * Canvas engine with a DOM adapter attached. State, tools and history are
+ * inherited from {@link CanvasEngine}; this class adds the mount lifecycle,
  * DOM event handling and rendering (see `dom/`).
  *
  * Construct with `new AdrawCanvas({ container })` to mount immediately, or
@@ -149,6 +149,14 @@ export class AdrawCanvas extends CanvasEngine {
         }
       })
     }
+    notifyState(this, "mount")
+  }
+
+  /**
+   * Whether the canvas is currently mounted into a DOM container.
+   */
+  isMounted(): boolean {
+    return this.mounted !== null
   }
 
   /**
@@ -164,8 +172,12 @@ export class AdrawCanvas extends CanvasEngine {
    * Tear down the DOM adapter, removing the SVG and event listeners.
    */
   destroy(): void {
+    const wasMounted = this.mounted !== null
     this.mounted?.destroy()
     this.mounted = null
+    if (wasMounted) {
+      notifyState(this, "mount")
+    }
     this.resetTextMeasurer()
   }
 

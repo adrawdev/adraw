@@ -1,12 +1,15 @@
 import {
   type AdrawCanvas,
+  type AdrawSnapshot,
+  type AdrawStore,
   type CanvasElement,
   type ElementId,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
 } from "@adraw/core"
-import { createContext, useContext, type Accessor, type Setter } from "solid-js"
+import { createContext, useContext, type Accessor } from "solid-js"
 
 import type { CanvasSolidOptions } from "./components"
 
@@ -18,24 +21,21 @@ export interface CanvasRef {
 /** Solid context value synced with an adraw canvas. */
 export interface CanvasContextValue {
   canvasRef: CanvasRef
+  /** Store owning the snapshot and subscriptions. */
+  store: AdrawStore
+  /** Current immutable snapshot accessor. */
+  snapshot: Accessor<AdrawSnapshot>
   /** `true` after `<Canvas>` mounts the engine. */
   isReady: Accessor<boolean>
-  /** @internal Called by `<Canvas>` when its DOM adapter mounts or unmounts. */
-  setIsMounted: Setter<boolean>
-  elements: Accessor<Map<ElementId, CanvasElement>>
-  setElements: Setter<Map<ElementId, CanvasElement>>
+  elements: Accessor<ReadonlyMap<ElementId, CanvasElement>>
+  selectedElements: Accessor<readonly CanvasElement[]>
   viewport: Accessor<ViewportState>
-  setViewport: Setter<ViewportState>
   activeTool: Accessor<ToolType>
-  setActiveTool: Setter<ToolType>
-  selectedIds: Accessor<Set<ElementId>>
-  setSelectedIds: Setter<Set<ElementId>>
+  selectedIds: Accessor<ReadonlySet<ElementId>>
   canUndo: Accessor<boolean>
-  setCanUndo: Setter<boolean>
   canRedo: Accessor<boolean>
-  setCanRedo: Setter<boolean>
   hideWhileTransforming: Accessor<boolean>
-  setHideWhileTransforming: Setter<boolean>
+  style: Accessor<StyleOptions>
   options?: CanvasSolidOptions
 }
 
@@ -128,8 +128,7 @@ export function useHistory() {
 
 /** Access and control the transform-overlay visibility. */
 export function useTransformOverlay() {
-  const { canvasRef, hideWhileTransforming, setHideWhileTransforming } =
-    useCanvas()
+  const { canvasRef, hideWhileTransforming } = useCanvas()
 
   return {
     get hideWhileTransforming() {
@@ -137,20 +136,33 @@ export function useTransformOverlay() {
     },
     setHideWhileTransforming: (hide: boolean) => {
       canvasRef.current.setHideOverlayWhileTransforming(hide)
-      setHideWhileTransforming(hide)
+    },
+  }
+}
+
+/** Access the current style and update the global/selected style. */
+export function useStyle() {
+  const { canvasRef, style } = useCanvas()
+
+  return {
+    setStyle: (options: StyleOptions) => {
+      canvasRef.current.setStyle(options)
+    },
+    get style() {
+      return style()
     },
   }
 }
 
 /** Access selection state and selection operations. */
 export function useSelection() {
-  const { canvasRef, selectedIds, elements } = useCanvas()
+  const { canvasRef, selectedElements, selectedIds } = useCanvas()
 
   return {
     clearSelection: () => canvasRef.current.clearSelection(),
     deleteSelected: () => canvasRef.current.deleteSelected(),
     get elements() {
-      return elements()
+      return selectedElements()
     },
     selectAll: () => canvasRef.current.selectAll(),
     get selectedIds() {

@@ -48,7 +48,7 @@ A lightweight, framework-agnostic infinity canvas library built on SVG. Supports
 ## Quick Start
 
 ```ts
-import { AdrawCanvas } from "@adraw/core"
+import { AdrawCanvas, AdrawStore } from "@adraw/core"
 
 const canvas = new AdrawCanvas({
   container: document.getElementById("app"),
@@ -62,10 +62,12 @@ canvas.copy()
 canvas.cut()
 canvas.paste()
 
-// Listen for changes
-canvas.on("change", (elements) => {
-  console.log(elements)
+// Observe state
+const store = new AdrawStore(canvas)
+const unsubscribe = store.subscribe(() => {
+  console.log(store.getSnapshot().elements)
 })
+// Later: unsubscribe(); store.dispose()
 
 // Tear down
 canvas.destroy()

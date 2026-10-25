@@ -1,7 +1,11 @@
 import {
   AdrawCanvas,
+  AdrawStore,
+  type AdrawSnapshot,
   type CanvasElement,
   type ElementId,
+  type SnappingConfig,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
@@ -13,89 +17,81 @@ import {
   Injectable,
   type Provider,
   signal,
+  type Signal,
+  type WritableSignal,
 } from "@angular/core"
 
 import { CANVAS_OPTIONS, type CanvasAngularOptions } from "./canvas.tokens"
 
-// One AdrawCanvas per service instance. The core is created headless in the
-// constructor and mounted later by <adraw-canvas>, so every method here is
-// safe to call before mount — it just operates on headless state. Core state
-// is mirrored into Angular signals by subscribing to the four core events.
+// One AdrawCanvas and AdrawStore per service instance. The core is created
+// headless in the constructor and mounted later by <adraw-canvas>, so every
+// method here is safe to call before mount — it just operates on headless
+// state. The store mirrors state into one snapshot signal; the read-only
+// signals below derive from it.
 /**
- * Injectable service wrapping a headless `AdrawCanvas`. Core state is mirrored
- * into Angular signals by subscribing to the four core events. Safe to use
- * before mount.
+ * Injectable service wrapping a headless `AdrawCanvas` and its `AdrawStore`.
+ * Safe to use before mount.
  */
 @Injectable()
 export class CanvasService {
   private readonly core: AdrawCanvas
+  private readonly adrawStore: AdrawStore
+  private readonly _snapshot: WritableSignal<AdrawSnapshot>
+  private readonly unsubscribe: () => void
 
-  private readonly _elements = signal<Map<ElementId, CanvasElement>>(new Map())
-  private readonly _viewport = signal<ViewportState>({ x: 0, y: 0, zoom: 1 })
-  private readonly _activeTool = signal<ToolType>("select")
-  private readonly _selectedIds = signal<Set<ElementId>>(new Set())
-  private readonly _hideWhileTransforming = signal(true)
-  private readonly _isReady = signal(false)
-  private readonly onReady?: (engine: AdrawCanvas) => void
-  private readyNotified = false
-
-  // Read-only views of the mirrored core state. Consumers read them by calling
-  // the signal (including in templates); state only ever changes via the core.
-  readonly elements = this._elements.asReadonly()
-  readonly viewport = this._viewport.asReadonly()
-  readonly activeTool = this._activeTool.asReadonly()
-  readonly selectedIds = this._selectedIds.asReadonly()
-  readonly hideWhileTransforming = this._hideWhileTransforming.asReadonly()
-  readonly isReady = this._isReady.asReadonly()
-
-  // Bumped on every "change" event (draw, erase, undo, redo, delete) so the
-  // canUndo/canRedo computeds recompute even though the core's history stack
-  // isn't itself reactive.
-  private readonly historyVersion = signal(0)
-
-  readonly canUndo = computed(() => {
-    this.historyVersion()
-    return this.core.canUndo()
-  })
-
-  readonly canRedo = computed(() => {
-    this.historyVersion()
-    return this.core.canRedo()
-  })
+  // Read-only views of the store state. Consumers read them by calling the
+  // signal (including in templates); state only ever changes via the core.
+  readonly snapshot: Signal<AdrawSnapshot>
+  readonly elements: Signal<ReadonlyMap<ElementId, CanvasElement>>
+  readonly selectedElements: Signal<readonly CanvasElement[]>
+  readonly viewport: Signal<ViewportState>
+  readonly activeTool: Signal<ToolType>
+  readonly selectedIds: Signal<ReadonlySet<ElementId>>
+  readonly hideWhileTransforming: Signal<boolean>
+  readonly style: Signal<StyleOptions>
+  readonly snapping: Signal<SnappingConfig>
+  readonly isSnapMode: Signal<boolean>
+  readonly isToolLocked: Signal<boolean>
+  readonly isReady: Signal<boolean>
+  readonly canUndo: Signal<boolean>
+  readonly canRedo: Signal<boolean>
 
   constructor() {
     const options = inject(CANVAS_OPTIONS, { optional: true })
     const { onReady, ...coreOptions } = options ?? {}
-    this.onReady = onReady
     this.core = new AdrawCanvas(coreOptions)
     // Core defaults this to false; the Angular adapter documents `true`.
     this.core.setHideOverlayWhileTransforming(
       options?.hideOverlayWhileTransforming ?? true,
     )
 
-    this._elements.set(new Map(this.core.getElements()))
-    this._viewport.set(this.core.getViewport())
-    this._activeTool.set(this.core.getActiveTool())
-    this._selectedIds.set(new Set(this.core.getSelectedIds()))
-    this._hideWhileTransforming.set(this.core.getHideOverlayWhileTransforming())
+    this.adrawStore = new AdrawStore(this.core, { onReady })
+    this._snapshot = signal(this.adrawStore.getSnapshot())
+    this.unsubscribe = this.adrawStore.subscribe(() => {
+      this._snapshot.set(this.adrawStore.getSnapshot())
+    })
 
-    this.core.on("change", ({ elements }) => {
-      this._elements.set(new Map(elements))
-      this.historyVersion.update((v) => v + 1)
-    })
-    this.core.on("viewportChange", ({ viewport }) => {
-      this._viewport.set(viewport)
-    })
-    this.core.on("toolChange", ({ tool }) => {
-      this._activeTool.set(tool)
-    })
-    this.core.on("selectionChange", ({ selectedIds }) => {
-      this._selectedIds.set(new Set(selectedIds))
-    })
+    this.snapshot = this._snapshot.asReadonly()
+    this.elements = computed(() => this._snapshot().elements)
+    this.selectedElements = computed(() => this._snapshot().selectedElements)
+    this.viewport = computed(() => this._snapshot().viewport)
+    this.activeTool = computed(() => this._snapshot().tool)
+    this.selectedIds = computed(() => this._snapshot().selectedIds)
+    this.hideWhileTransforming = computed(
+      () => this._snapshot().hideWhileTransforming,
+    )
+    this.style = computed(() => this._snapshot().style)
+    this.snapping = computed(() => this._snapshot().snapping)
+    this.isSnapMode = computed(() => this._snapshot().isSnapMode)
+    this.isToolLocked = computed(() => this._snapshot().isToolLocked)
+    this.isReady = computed(() => this._snapshot().isReady)
+    this.canUndo = computed(() => this._snapshot().canUndo)
+    this.canRedo = computed(() => this._snapshot().canRedo)
 
     inject(DestroyRef).onDestroy(() => {
+      this.unsubscribe()
+      this.adrawStore.dispose()
       this.core.destroy()
-      this._isReady.set(false)
     })
   }
 
@@ -104,19 +100,17 @@ export class CanvasService {
     return this.core
   }
 
+  /** The store backing the signals. */
+  get store(): AdrawStore {
+    return this.adrawStore
+  }
+
   /**
    * Mount the canvas into a container element (called by `<adraw-canvas>`).
    * @param container Container element.
    */
   mount(container: HTMLElement): void {
     this.core.mount(container)
-    this.core.render()
-    this._isReady.set(true)
-
-    if (!this.readyNotified) {
-      this.readyNotified = true
-      this.onReady?.(this.core)
-    }
   }
 
   /**
@@ -125,7 +119,6 @@ export class CanvasService {
    */
   unmount(): void {
     this.core.destroy()
-    this._isReady.set(false)
   }
 
   /**
@@ -142,7 +135,14 @@ export class CanvasService {
    */
   setHideWhileTransforming(hide: boolean): void {
     this.core.setHideOverlayWhileTransforming(hide)
-    this._hideWhileTransforming.set(hide)
+  }
+
+  /**
+   * Set the global style and restyle the selection.
+   * @param options Style options.
+   */
+  setStyle(options: StyleOptions): void {
+    this.core.setStyle(options)
   }
 
   /**

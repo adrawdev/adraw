@@ -16,10 +16,8 @@ $effect(() => {
   const canvas = context.instance.current
 
   canvas.mount(container)
-  context.notifyReady()
 
   return () => {
-    context.markUnmounted()
     canvas.destroy()
   }
 })

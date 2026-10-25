@@ -57,13 +57,14 @@ describe("transform overlay rotation with multi-selection", () => {
   let canvas: AdrawCanvas
 
   function setElements(elements: CanvasElement[]) {
-    ;(canvas as any).elements = new Map<ElementId, CanvasElement>(
-      elements.map((el) => [el.id, el]),
+    canvas.setElements(
+      new Map<ElementId, CanvasElement>(elements.map((el) => [el.id, el])),
+      { history: false },
     )
   }
 
   function setSelectedIds(ids: ElementId[]) {
-    ;(canvas as any).selectedIds = new Set(ids)
+    canvas.setSelectedIds(new Set(ids))
   }
 
   beforeEach(() => {
@@ -304,13 +305,14 @@ describe("multi-selection boxes", () => {
   let canvas: AdrawCanvas
 
   function setElements(elements: CanvasElement[]) {
-    ;(canvas as any).elements = new Map<ElementId, CanvasElement>(
-      elements.map((el) => [el.id, el]),
+    canvas.setElements(
+      new Map<ElementId, CanvasElement>(elements.map((el) => [el.id, el])),
+      { history: false },
     )
   }
 
   function setSelectedIds(ids: ElementId[]) {
-    ;(canvas as any).selectedIds = new Set(ids)
+    canvas.setSelectedIds(new Set(ids))
   }
 
   beforeEach(() => {

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { createArrow, createRectangle } from "../elements"
+import { AdrawStore } from "../store"
 import type { ArrowElement, CanvasElement, RectangleElement } from "../types"
 
 function makeRectangle(
@@ -54,15 +55,17 @@ describe("addElement", () => {
     expect(canvas.getElements().has("b")).toBe(true)
   })
 
-  it("emits change", () => {
+  it("publishes the new element to the store", () => {
     const canvas = new AdrawCanvas()
+    const store = new AdrawStore(canvas)
     const listener = vi.fn()
-    canvas.on("change", listener)
+    store.subscribe(listener)
 
     canvas.addElement(makeRectangle("rect-1"))
 
-    expect(listener).toHaveBeenCalledOnce()
-    expect(listener.mock.calls[0][0].elements.size).toBe(1)
+    expect(listener).toHaveBeenCalled()
+    expect(store.getSnapshot().elements.size).toBe(1)
+    store.dispose()
   })
 
   it("pushes history by default so the addition is undoable", () => {
@@ -174,17 +177,18 @@ describe("loadDocument", () => {
     expect(canvas.getSelectedIds().size).toBe(0)
   })
 
-  it("emits change and selectionChange", () => {
+  it("publishes elements and the cleared selection", () => {
     const canvas = new AdrawCanvas()
-    const change = vi.fn()
-    const selection = vi.fn()
-    canvas.on("change", change)
-    canvas.on("selectionChange", selection)
+    const store = new AdrawStore(canvas)
+    const listener = vi.fn()
+    store.subscribe(listener)
 
     canvas.loadDocument({ elements: [makeRectangle("rect-1")], version: 1 })
 
-    expect(change).toHaveBeenCalled()
-    expect(selection).toHaveBeenCalled()
+    expect(listener).toHaveBeenCalled()
+    expect(store.getSnapshot().elements.size).toBe(1)
+    expect(store.getSnapshot().selectedIds.size).toBe(0)
+    store.dispose()
   })
 
   it("pushes history by default", () => {

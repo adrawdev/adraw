@@ -1,4 +1,3 @@
-import { syncArrowBindings } from "../bindings"
 import {
   STROKE_COLOR,
   TEXT_CONTAINER_SNAP_THRESHOLD,
@@ -12,7 +11,6 @@ import {
   findBoundText,
   getBoundTextMaxWidth,
   isBoundTextContainer,
-  syncTextBindings,
   type BoundTextContainer,
 } from "../text-bindings"
 import type {
@@ -110,8 +108,7 @@ export function startFreeTextEditing(
     zIndex: getNextZIndex(elements.values()),
   })
 
-  elements.set(text.id, text)
-  engine.emit("change", { elements })
+  engine.addElement(text, { history: false })
   startExistingTextEditing(state, engine, text)
   return true
 }
@@ -171,15 +168,12 @@ export function startBoundTextEditing(
     zIndex: live.zIndex + 0.5,
   })
 
-  elements.set(text.id, text)
-  syncTextBindings(elements, engine.getTextMeasurer())
-  syncArrowBindings(elements)
-  const positioned = elements.get(text.id)
+  engine.addElement(text, { history: false })
+  const positioned = engine.getElements().get(text.id)
   if (positioned?.type !== "text") {
     return false
   }
 
-  engine.emit("change", { elements })
   startExistingTextEditing(state, engine, positioned)
   return true
 }

@@ -1,15 +1,6 @@
-import {
-  AdrawCanvas,
-  type CanvasElement,
-  type CanvasEventMap,
-  type CanvasOptions,
-  type ElementId,
-  type ToolType,
-  type ViewportState,
-} from "@adraw/core"
+import { AdrawCanvas, AdrawStore, type CanvasOptions } from "@adraw/core"
 import {
   createComponent,
-  createEffect,
   createSignal,
   onCleanup,
   onMount,
@@ -34,8 +25,8 @@ export interface CanvasProviderProps {
 /**
  * Context provider holding the Solid state synced with an adraw canvas.
  *
- * The provider creates the headless engine synchronously; `<Canvas>` only
- * mounts its DOM adapter.
+ * The provider creates the headless engine and store synchronously;
+ * `<Canvas>` only mounts its DOM adapter.
  */
 export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   const engine = new AdrawCanvas(props.options)
@@ -43,81 +34,29 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
   engine.setHideOverlayWhileTransforming(
     props.options?.hideOverlayWhileTransforming ?? true,
   )
-  const canvasRef: CanvasContextValue["canvasRef"] = { current: engine }
-  const [elements, setElements] = createSignal<Map<ElementId, CanvasElement>>(
-    new Map(engine.getElements()),
-  )
-  const [viewport, setViewport] = createSignal<ViewportState>(
-    engine.getViewport(),
-  )
-  const [activeTool, setActiveTool] = createSignal<ToolType>(
-    engine.getActiveTool(),
-  )
-  const [selectedIds, setSelectedIds] = createSignal<Set<ElementId>>(
-    new Set(engine.getSelectedIds()),
-  )
-  const [canUndo, setCanUndo] = createSignal(false)
-  const [canRedo, setCanRedo] = createSignal(false)
-  const [hideWhileTransforming, setHideWhileTransforming] = createSignal(
-    engine.getHideOverlayWhileTransforming(),
-  )
-  const [isReady, setIsReady] = createSignal(false)
-  const [isMounted, setIsMounted] = createSignal(false)
-  let readyNotified = false
 
-  const syncHistory = () => {
-    queueMicrotask(() => {
-      setCanUndo(engine.canUndo())
-      setCanRedo(engine.canRedo())
-    })
-  }
-
-  const handleChange = ({
-    elements: newElements,
-  }: CanvasEventMap["change"]) => {
-    setElements(new Map(newElements))
-    syncHistory()
-  }
-  const handleViewportChange = ({
-    viewport: newViewport,
-  }: CanvasEventMap["viewportChange"]) => {
-    setViewport(newViewport)
-  }
-  const handleToolChange = ({ tool }: CanvasEventMap["toolChange"]) => {
-    setActiveTool(tool)
-  }
-  const handleSelectionChange = ({
-    selectedIds: newSelectedIds,
-  }: CanvasEventMap["selectionChange"]) => {
-    setSelectedIds(new Set(newSelectedIds))
-  }
-
-  engine.on("change", handleChange)
-  engine.on("viewportChange", handleViewportChange)
-  engine.on("toolChange", handleToolChange)
-  engine.on("selectionChange", handleSelectionChange)
-
-  onCleanup(() => {
-    engine.off("change", handleChange)
-    engine.off("viewportChange", handleViewportChange)
-    engine.off("toolChange", handleToolChange)
-    engine.off("selectionChange", handleSelectionChange)
-    engine.destroy()
+  const store = new AdrawStore(engine, { onReady: props.onReady })
+  const [snapshot, setSnapshot] = createSignal(store.getSnapshot())
+  const unsubscribe = store.subscribe(() => {
+    setSnapshot(store.getSnapshot())
   })
 
-  // Flip readiness once <Canvas> has mounted the engine. Subscriptions above
-  // are already active, so onReady sees a fully wired engine.
-  createEffect(() => {
-    if (!isMounted()) {
-      setIsReady(false)
-      return
-    }
+  const canvasRef: CanvasContextValue["canvasRef"] = { current: engine }
+  const elements = () => snapshot().elements
+  const selectedIds = () => snapshot().selectedIds
+  const selectedElements = () => snapshot().selectedElements
+  const viewport = () => snapshot().viewport
+  const activeTool = () => snapshot().tool
+  const canUndo = () => snapshot().canUndo
+  const canRedo = () => snapshot().canRedo
+  const hideWhileTransforming = () => snapshot().hideWhileTransforming
+  const style = () => snapshot().style
+  const isReady = () => snapshot().isReady
 
-    setIsReady(true)
-    if (!readyNotified) {
-      readyNotified = true
-      props.onReady?.(engine)
-    }
+  onCleanup(() => {
+    unsubscribe()
+    store.dispose()
+    engine.destroy()
   })
 
   const value: CanvasContextValue = {
@@ -131,15 +70,11 @@ export function CanvasProvider(props: CanvasProviderProps): JSX.Element {
     get options() {
       return props.options
     },
+    selectedElements,
     selectedIds,
-    setActiveTool,
-    setCanRedo,
-    setCanUndo,
-    setElements,
-    setHideWhileTransforming,
-    setIsMounted,
-    setSelectedIds,
-    setViewport,
+    snapshot,
+    store,
+    style,
     viewport,
   }
 
@@ -161,7 +96,7 @@ export interface CanvasProps {
  * this component only mounts and unmounts its DOM adapter.
  */
 export function Canvas(props: CanvasProps): JSX.Element {
-  const { canvasRef, setIsMounted } = useCanvas()
+  const { canvasRef } = useCanvas()
   let containerRef: HTMLDivElement | undefined
 
   onMount(() => {
@@ -170,11 +105,9 @@ export function Canvas(props: CanvasProps): JSX.Element {
     }
 
     canvasRef.current.mount(containerRef)
-    setIsMounted(true)
   })
 
   onCleanup(() => {
-    setIsMounted(false)
     canvasRef.current.destroy()
   })
 

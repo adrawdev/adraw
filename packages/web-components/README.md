@@ -38,7 +38,7 @@ document
 </div>
 ```
 
-Read the current state from the element's mirrored fields (`elements`, `viewport`, `activeTool`, `selectedIds`), and subscribe to its `adraw:*` events to know when they change:
+Read the current state from the element's mirrored fields (`elements`, `selectedElements`, `viewport`, `activeTool`, `selectedIds`, `style`, …), and subscribe to its `adraw:*` events to know when they change:
 
 ```ts
 canvas.addEventListener("adraw:toolchange", (e) => {
@@ -50,18 +50,25 @@ canvas.addEventListener("adraw:toolchange", (e) => {
 
 ### `<adraw-canvas>`
 
-Mounts the drawing surface. Owns one core `AdrawCanvas`, created on connect and destroyed on disconnect. Fills its parent (`width: 100%; height: 100%`).
+Mounts the drawing surface. Owns one core `AdrawCanvas` and `AdrawStore`, created on first connect and kept across disconnect/reconnect; only the DOM adapter is torn down on disconnect. Fills its parent (`width: 100%; height: 100%`).
 
-| Member        | Type                              | Description                                                |
-| ------------- | --------------------------------- | ---------------------------------------------------------- |
-| `options`     | `CanvasWebComponentsOptions`      | Snapping / viewport / initial document; set before connect |
-| `canvas`      | `AdrawCanvas \| null`             | Underlying core instance (`null` while disconnected)       |
-| `isReady`     | `boolean`                         | `true` while connected and mounted                         |
-| `onReady`     | `((canvas) => void) \| undefined` | Optional callback invoked once after mount                 |
-| `elements`    | `Map<ElementId, CanvasElement>`   | Latest mirrored elements                                   |
-| `viewport`    | `ViewportState`                   | Latest mirrored viewport                                   |
-| `activeTool`  | `ToolType`                        | Latest mirrored active tool                                |
-| `selectedIds` | `Set<ElementId>`                  | Latest mirrored selection                                  |
+| Member                | Type                                    | Description                                                      |
+| --------------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| `options`             | `CanvasWebComponentsOptions`            | Snapping / viewport / initial document; applied on first connect |
+| `canvas`              | `AdrawCanvas \| null`                   | Underlying core instance                                         |
+| `store`               | `AdrawStore \| null`                    | Store backing the mirrored fields                                |
+| `isReady`             | `boolean`                               | `true` while connected and mounted                               |
+| `onReady`             | `((canvas) => void) \| undefined`       | Optional callback invoked on each connect                        |
+| `elements`            | `ReadonlyMap<ElementId, CanvasElement>` | Latest mirrored elements                                         |
+| `selectedElements`    | `readonly CanvasElement[]`              | Latest mirrored selected elements                                |
+| `viewport`            | `ViewportState`                         | Latest mirrored viewport                                         |
+| `activeTool`          | `ToolType`                              | Latest mirrored active tool                                      |
+| `selectedIds`         | `ReadonlySet<ElementId>`                | Latest mirrored selection                                        |
+| `style`               | `StyleOptions`                          | Latest effective style                                           |
+| `snapping`            | `SnappingConfig`                        | Latest snapping config                                           |
+| `isSnapMode`          | `boolean`                               | Latest snap mode                                                 |
+| `isToolLocked`        | `boolean`                               | Latest tool lock                                                 |
+| `canUndo` / `canRedo` | `boolean`                               | Latest history availability                                      |
 
 `options` accepts `initialElements` / `initialDocument` from `@adraw/core`
 (`initialDocument` wins). They are loaded before the first render and become the
@@ -79,15 +86,15 @@ container.appendChild(canvas) // connect → mounts with these options
 
 The element re-dispatches core state changes as `CustomEvent`s:
 
-| Event                   | `event.detail`                    |
-| ----------------------- | --------------------------------- |
-| `adraw:change`          | `{ elements: Map<ElementId, …> }` |
-| `adraw:viewportchange`  | `{ viewport: ViewportState }`     |
-| `adraw:toolchange`      | `{ tool: ToolType }`              |
-| `adraw:selectionchange` | `{ selectedIds: Set<ElementId> }` |
-| `adraw:ready`           | `{ canvas: AdrawCanvas }`         |
+| Event                   | `event.detail`                            |
+| ----------------------- | ----------------------------------------- |
+| `adraw:change`          | `{ elements: ReadonlyMap<ElementId, …> }` |
+| `adraw:viewportchange`  | `{ viewport: ViewportState }`             |
+| `adraw:toolchange`      | `{ tool: ToolType }`                      |
+| `adraw:selectionchange` | `{ selectedIds: ReadonlySet<ElementId> }` |
+| `adraw:ready`           | `{ canvas: AdrawCanvas }`                 |
 
-`adraw:ready` fires once on connect, after the engine is mounted. Use
+`adraw:ready` fires on every connect, after the engine is mounted. Use
 `element.isReady` for synchronous checks or `element.onReady = (canvas) => …`
 for a direct callback.
 

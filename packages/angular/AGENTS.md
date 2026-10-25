@@ -30,7 +30,8 @@ From `src/public-api.ts`:
 - `useTool()` — returns `{ tool: Signal<ToolType>, setTool: (t) => void }`
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }` (viewport is a signal)
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }` (canUndo/canRedo are signals)
-- `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (signals)
+- `useStyle()` — returns `{ style: Signal<StyleOptions>, setStyle }`
+- `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (signals; `elements` are the selected elements)
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }` (signal)
 
 ## Usage
@@ -59,10 +60,11 @@ All hooks return signals for reactive values — read by calling them.
 
 ## How it works
 
-1. `provideCanvas()` creates the `CanvasService` singleton at the component injector level; its constructor creates the headless `AdrawCanvas` and subscribes to core events
-2. `Canvas` mounts the provider-owned engine in `afterNextRender`, sets `isReady`, and calls `onReady` once; it calls `unmount()` on destroy
-3. Hooks call `inject(CanvasService)` and return the signal + method surface
-4. `CanvasService` is scoped to the providing injector — multiple independent canvases possible via different component injectors
+1. `provideCanvas()` creates the `CanvasService` singleton at the component injector level; its constructor creates the headless `AdrawCanvas` and `AdrawStore`
+2. The service subscribes to the store and projects the snapshot into read-only signals; `onReady` fires once when the engine mounts
+3. `Canvas` mounts the provider-owned engine in `afterNextRender` and calls `unmount()` on destroy; the store owns `isReady`
+4. Hooks call `inject(CanvasService)` and return the signal + method surface
+5. `CanvasService` is scoped to the providing injector — multiple independent canvases possible via different component injectors
 
 ## Build
 
@@ -87,4 +89,5 @@ Build produces partial-Ivy output in `dist/`. The `scripts/finalize-dist.mjs` po
 - `experimentalDecorators: false`, `useDefineForClassFields: false` in tsconfig
 - `angularCompilerOptions.compilationMode: "partial"`
 - Signals for reactivity (`WritableSignal`/`Signal`), not RxJS `BehaviorSubject`
+- Read state from the snapshot; do not copy maps or sets in the adapter
 - Override linter rules for `new-cap` and `typescript/no-extraneous-class`

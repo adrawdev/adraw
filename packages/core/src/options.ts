@@ -1,12 +1,6 @@
 import type { SnappingConfig } from "./snapping"
 import type { TextMeasurer } from "./text"
-import type {
-  CanvasDocument,
-  CanvasElement,
-  ElementId,
-  ToolType,
-  ViewportState,
-} from "./types"
+import type { CanvasDocument, CanvasElement, ViewportState } from "./types"
 import type { ViewportConfig } from "./viewport"
 
 /**
@@ -158,19 +152,4 @@ export interface MediaInput {
   y?: number
   width?: number
   height?: number
-}
-
-/**
- * Events emitted by an {@link AdrawCanvas} / {@link CanvasEngine}. Listen
- * with `canvas.on(event, handler)` / `canvas.off(event, handler)`.
- */
-export interface CanvasEventMap {
-  /** Fired after elements change (draw, erase, undo, redo, delete). */
-  change: { elements: Map<ElementId, CanvasElement> }
-  /** Fired after pan/zoom changes. */
-  viewportChange: { viewport: ViewportState }
-  /** Fired after the active tool changes. */
-  toolChange: { tool: ToolType }
-  /** Fired after the selection changes. */
-  selectionChange: { selectedIds: Set<ElementId> }
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { createGroup, createRectangle } from "../elements"
+import { AdrawStore } from "../store"
 import type { RectangleElement } from "../types"
 
 function makeRect(id: string, zIndex: number): RectangleElement {
@@ -106,15 +107,17 @@ describe("bringToFront", () => {
     expect(zIndexes(canvas)).toEqual({ a: 2, b: 1 })
   })
 
-  it("does not emit change when already at the front", () => {
+  it("does not publish change when already at the front", () => {
     const canvas = new AdrawCanvas()
     canvas.addElement([makeRect("a", 0), makeRect("b", 1)])
+    const store = new AdrawStore(canvas)
     const listener = vi.fn()
-    canvas.on("change", listener)
+    store.subscribe(listener)
 
     canvas.bringToFront("b")
 
     expect(listener).not.toHaveBeenCalled()
+    store.dispose()
   })
 })
 
@@ -163,13 +166,15 @@ describe("setZIndex", () => {
   it("is a no-op for a missing id or an unchanged value", () => {
     const canvas = new AdrawCanvas()
     canvas.addElement(makeRect("a", 3))
+    const store = new AdrawStore(canvas)
     const listener = vi.fn()
-    canvas.on("change", listener)
+    store.subscribe(listener)
 
     canvas.setZIndex("missing", 10)
     canvas.setZIndex("a", 3)
 
     expect(listener).not.toHaveBeenCalled()
+    store.dispose()
   })
 
   it("rejects non-finite values", () => {

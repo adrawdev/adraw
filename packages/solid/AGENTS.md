@@ -10,12 +10,13 @@ All from `src/index.ts` (re-exports `src/components.tsx`):
 
 - `CanvasProvider` — context provider; `options?: CanvasSolidOptions`, `onReady?: (engine) => void`; creates the headless engine synchronously
 - `Canvas` — renders mount div, mounts/destroys the provider-owned `AdrawCanvas`; must be inside `CanvasProvider`
-- `useCanvas()` — returns `CanvasContextValue` (includes `isReady`)
+- `useCanvas()` — returns `CanvasContextValue` (includes `isReady`, `store` and `snapshot`)
 - `useCanvasEngine()` — returns `{ engine, isReady }` with a reactive `isReady` accessor
 - `useTool()` — returns `{ tool, setTool }`
 - `useViewport()` — returns `{ viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit }`
 - `useHistory()` — returns `{ undo, redo, canUndo, canRedo }`
-- `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }`
+- `useStyle()` — returns `{ style, setStyle }`
+- `useSelection()` — returns `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (`elements` are the selected elements)
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasSolidOptions` — type extending `CanvasOptions`
 
@@ -47,10 +48,10 @@ function Toolbar() {
 
 ## How it works
 
-1. `CanvasProvider` creates the headless `AdrawCanvas` synchronously, seeds signals from it, and provides context
-2. The provider subscribes to core events and copies payloads into signals
-3. `Canvas` only mounts/unmounts the provider-owned engine and toggles `isMounted`; `onReady` fires once after mount
-4. History sync uses `queueMicrotask` to read undo/redo state after the current handler finishes
+1. `CanvasProvider` creates the headless `AdrawCanvas` and `AdrawStore` synchronously, then provides context
+2. The provider subscribes to the store and mirrors snapshots into a signal
+3. `Canvas` only mounts/unmounts the provider-owned engine; the store owns readiness and `onReady`
+4. The provider cleanup unsubscribes, disposes the store and destroys the engine
 5. Multiple `<CanvasProvider>` instances can coexist
 
 ## Build & test
@@ -70,5 +71,6 @@ pnpm lint                    # from root
 - Solid signals (`createSignal`, `createContext`, `onMount`, `onCleanup`) — no JSX transform needed beyond `rolldown-plugin-solid`
 - Canvas instance stored in a plain `{ current: AdrawCanvas }` ref object created by the provider, not a signal
 - `createComponent` used for context provider (Solid JSX)
+- Read state from the snapshot; do not copy maps or sets in the adapter
 - Engine methods are safe before `<Canvas>` mounts; use `isReady` for DOM-dependent work
 - Same hook shape as React adapter (shared surface)

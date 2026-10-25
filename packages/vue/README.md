@@ -117,18 +117,21 @@ All composables must be called inside a `CanvasProvider` — they throw if no pr
 
 ### `createCanvas(options?, onReady?)`
 
-Low-level factory used internally by `CanvasProvider`. Returns `{ core, isReady, markUnmounted, notifyReady, state, vanilla }`.
+Low-level factory used internally by `CanvasProvider`. Returns `{ core, dispose, isReady, snapshot, state, store, vanilla }`.
 
 - `core` — the `AdrawCanvas` instance, created **headless** immediately
-- `state` — a Vue `reactive` object with `elements`, `viewport`, `activeTool`, and `selectedIds`
+- `store` — the `AdrawStore` backing state
+- `snapshot` — a `shallowRef` of the current `AdrawSnapshot`
+- `state` — a Vue `reactive` object with the snapshot fields
 - `vanilla` — a `ref` to the mounted `AdrawCanvas` instance (set after `core.mount()`)
-- `isReady` — a ref that flips after `notifyReady()` / `markUnmounted()`
+- `isReady` — a computed ref that follows `snapshot.isReady`
+- `dispose` — release the store subscription; call it when managing the lifecycle yourself
 
 Call this directly only if you want to manage mounting/destruction yourself instead of using `CanvasProvider`/`Canvas`.
 
 ### `useCanvas()`
 
-Returns the canvas context (`{ core, isReady, state, vanilla, … }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` is available before the canvas is mounted and carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the canvas context (`{ core, store, snapshot, state, vanilla, dispose, … }`) provided by the nearest `CanvasProvider`. Throws if called outside one. `core` is available before the canvas is mounted and carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useCanvasEngine()`
 
@@ -171,16 +174,15 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
 
-### Styles
+`elements` contains the selected elements, not the whole document.
 
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().core`:
+### `useStyle()`
 
 ```ts
-const { core } = useCanvas()
+const { style, setStyle } = useStyle()
 
-core.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-core.getStyle() // selection style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+// style: getter — selection style, or the global style
 ```
 
 `setStyle` restyles matching selected elements as well as future ones. All tools

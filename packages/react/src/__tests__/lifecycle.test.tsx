@@ -5,7 +5,15 @@ import { act, StrictMode, useEffect, type ReactElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Canvas, CanvasProvider, useCanvas, useCanvasEngine } from "../index"
+import {
+  Canvas,
+  CanvasProvider,
+  useCanvas,
+  useCanvasEngine,
+  useHistory,
+  useSelection,
+  useStyle,
+} from "../index"
 
 type Context = ReturnType<typeof useCanvas>
 
@@ -272,5 +280,48 @@ describe("React canvas lifecycle", () => {
     expect(onReady).toHaveBeenCalledTimes(1)
     expect(store.current!.engine.getElements().has("keep")).toBe(true)
     expect(store.current!.isReady).toBe(true)
+
+    await act(async () => {
+      store.current!.engine.addElement(makeRect("later"))
+    })
+    expect(store.current!.elements.has("later")).toBe(true)
+  })
+
+  it("derives history, selection and style from the store", async () => {
+    const store: { current: Context | null } = { current: null }
+
+    function Probe() {
+      useContextProbe(store)
+      const history = useHistory()
+      const selection = useSelection()
+      const style = useStyle()
+      return (
+        <output
+          data-undo={String(history.canUndo())}
+          data-selected={String(selection.elements.length)}
+          data-stroke={style.style.strokeColor ?? ""}
+        />
+      )
+    }
+
+    const container = await render(
+      <CanvasProvider options={{ initialElements: [makeRect("a")] }}>
+        <Probe />
+      </CanvasProvider>,
+    )
+
+    const output = container.querySelector("output")!
+    expect(output.getAttribute("data-undo")).toBe("false")
+    expect(output.getAttribute("data-selected")).toBe("0")
+
+    await act(async () => {
+      store.current!.engine.selectAll()
+      store.current!.engine.addElement(makeRect("b"))
+      store.current!.engine.setStyle({ strokeColor: "#f00" })
+    })
+
+    expect(output.getAttribute("data-undo")).toBe("true")
+    expect(output.getAttribute("data-selected")).toBe("1")
+    expect(output.getAttribute("data-stroke")).toBe("#f00")
   })
 })

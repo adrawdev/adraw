@@ -1,13 +1,18 @@
 import {
   AdrawCanvas,
+  AdrawStore,
+  type AdrawSnapshot,
   type CanvasElement,
   type CanvasOptions,
   type ElementId,
+  type SnappingConfig,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
 } from "@adraw/core"
 import {
+  computed,
   h,
   inject,
   onMounted,
@@ -15,6 +20,7 @@ import {
   provide,
   reactive,
   ref,
+  shallowRef,
   type InjectionKey,
   type VNode,
 } from "vue"
@@ -30,15 +36,35 @@ export interface CanvasVueOptions extends CanvasOptions {
  * Reactive state synced with an adraw canvas.
  */
 export interface CanvasState {
-  elements: Map<ElementId, CanvasElement>
+  elements: ReadonlyMap<ElementId, CanvasElement>
+  selectedElements: readonly CanvasElement[]
   viewport: ViewportState
   activeTool: ToolType
-  selectedIds: Set<ElementId>
+  selectedIds: ReadonlySet<ElementId>
   hideWhileTransforming: boolean
-  // Bumped on every "change" event (draw, erase, undo, redo, delete). Read by
-  // useHistory() so canUndo/canRedo register a reactive dependency even
-  // though AdrawCanvas's own history stack isn't itself reactive.
-  historyVersion: number
+  style: StyleOptions
+  snapping: SnappingConfig
+  isSnapMode: boolean
+  isToolLocked: boolean
+  canUndo: boolean
+  canRedo: boolean
+}
+
+function stateFromSnapshot(snapshot: AdrawSnapshot): CanvasState {
+  return {
+    activeTool: snapshot.tool,
+    canRedo: snapshot.canRedo,
+    canUndo: snapshot.canUndo,
+    elements: snapshot.elements,
+    hideWhileTransforming: snapshot.hideWhileTransforming,
+    isSnapMode: snapshot.isSnapMode,
+    isToolLocked: snapshot.isToolLocked,
+    selectedElements: snapshot.selectedElements,
+    selectedIds: snapshot.selectedIds,
+    snapping: snapshot.snapping,
+    style: snapshot.style,
+    viewport: snapshot.viewport,
+  }
 }
 
 /**
@@ -55,50 +81,29 @@ export function createCanvas(
   core.setHideOverlayWhileTransforming(
     options?.hideOverlayWhileTransforming ?? true,
   )
+
+  const store = new AdrawStore(core, { onReady })
+  const snapshot = shallowRef(store.getSnapshot())
+  const isReady = computed(() => snapshot.value.isReady)
+  const state = reactive<CanvasState>(stateFromSnapshot(snapshot.value))
   const vanilla = ref<AdrawCanvas | null>(null)
-  const isReady = ref(false)
-  let readyNotified = false
 
-  const state = reactive<CanvasState>({
-    activeTool: core.getActiveTool(),
-    elements: new Map(core.getElements()),
-    hideWhileTransforming: core.getHideOverlayWhileTransforming(),
-    historyVersion: 0,
-    selectedIds: new Set(core.getSelectedIds()),
-    viewport: core.getViewport(),
-  })
-
-  core.on("change", ({ elements: newElements }) => {
-    state.elements = new Map(newElements)
-    state.historyVersion++
-  })
-
-  core.on("viewportChange", ({ viewport: newViewport }) => {
-    state.viewport = newViewport
-  })
-
-  core.on("toolChange", ({ tool }) => {
-    state.activeTool = tool
-  })
-
-  core.on("selectionChange", ({ selectedIds: newSelectedIds }) => {
-    state.selectedIds = new Set(newSelectedIds)
+  const unsubscribe = store.subscribe(() => {
+    const next = store.getSnapshot()
+    snapshot.value = next
+    Object.assign(state, stateFromSnapshot(next))
   })
 
   return {
     core,
+    dispose: () => {
+      unsubscribe()
+      store.dispose()
+    },
     isReady,
-    markUnmounted: () => {
-      isReady.value = false
-    },
-    notifyReady: () => {
-      isReady.value = true
-      if (!readyNotified) {
-        readyNotified = true
-        onReady?.(core)
-      }
-    },
+    snapshot,
     state,
+    store,
     vanilla,
   }
 }
@@ -133,6 +138,7 @@ export const CanvasProvider = {
 
     onUnmounted(() => {
       canvas.vanilla.value?.destroy()
+      canvas.dispose()
     })
 
     return () => slots.default?.()
@@ -178,7 +184,7 @@ export function useCanvasEngine(): CanvasEngineState {
   return {
     engine: canvas.core,
     get isReady() {
-      return canvas.isReady.value
+      return canvas.snapshot.value.isReady
     },
   }
 }
@@ -192,7 +198,7 @@ export function useTool() {
       canvas.core.setActiveTool(tool)
     },
     get tool() {
-      return canvas.state.activeTool
+      return canvas.snapshot.value.tool
     },
   }
 }
@@ -207,7 +213,7 @@ export function useViewport() {
       canvas.core.setViewport(viewport)
     },
     get viewport() {
-      return canvas.state.viewport
+      return canvas.snapshot.value.viewport
     },
     zoomIn: () => canvas.core.zoomIn(),
     zoomOut: () => canvas.core.zoomOut(),
@@ -220,14 +226,8 @@ export function useHistory() {
   const canvas = useCanvas()
 
   return {
-    canRedo: () => {
-      void canvas.state.historyVersion
-      return canvas.core.canRedo()
-    },
-    canUndo: () => {
-      void canvas.state.historyVersion
-      return canvas.core.canUndo()
-    },
+    canRedo: () => canvas.snapshot.value.canRedo,
+    canUndo: () => canvas.snapshot.value.canUndo,
     redo: () => canvas.core.redo(),
     undo: () => canvas.core.undo(),
   }
@@ -239,11 +239,24 @@ export function useTransformOverlay() {
 
   return {
     get hideWhileTransforming() {
-      return canvas.state.hideWhileTransforming
+      return canvas.snapshot.value.hideWhileTransforming
     },
     setHideWhileTransforming: (hide: boolean) => {
       canvas.core.setHideOverlayWhileTransforming(hide)
-      canvas.state.hideWhileTransforming = hide
+    },
+  }
+}
+
+/** Access the current style and update the global/selected style. */
+export function useStyle() {
+  const canvas = useCanvas()
+
+  return {
+    setStyle: (options: StyleOptions) => {
+      canvas.core.setStyle(options)
+    },
+    get style() {
+      return canvas.snapshot.value.style
     },
   }
 }
@@ -256,11 +269,11 @@ export function useSelection() {
     clearSelection: () => canvas.core.clearSelection(),
     deleteSelected: () => canvas.core.deleteSelected(),
     get elements() {
-      return canvas.state.elements
+      return canvas.snapshot.value.selectedElements
     },
     selectAll: () => canvas.core.selectAll(),
     get selectedIds() {
-      return canvas.state.selectedIds
+      return canvas.snapshot.value.selectedIds
     },
   }
 }
@@ -284,11 +297,9 @@ export const Canvas = {
 
       canvas.core.mount(containerRef.value)
       canvas.vanilla.value = canvas.core
-      canvas.notifyReady()
     })
 
     onUnmounted(() => {
-      canvas.markUnmounted()
       canvas.vanilla.value?.destroy()
       canvas.vanilla.value = null
     })

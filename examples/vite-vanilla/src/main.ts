@@ -1,5 +1,10 @@
 import "./index.css"
-import { AdrawCanvas, type ToolType, type MediaInput } from "@adraw/core"
+import {
+  AdrawCanvas,
+  AdrawStore,
+  type ToolType,
+  type MediaInput,
+} from "@adraw/core"
 
 const toolbar = document.querySelector<HTMLDivElement>(".toolbar")!
 const canvasContainer =
@@ -87,7 +92,8 @@ function updateToolbar() {
 
 // Keep the toolbar in sync when the tool changes from anywhere (e.g. keyboard
 // shortcuts), not only when a toolbar button is clicked.
-vanilla.on("toolChange", updateToolbar)
+const store = new AdrawStore(vanilla)
+store.subscribe(updateToolbar)
 
 updateToolbar()
 

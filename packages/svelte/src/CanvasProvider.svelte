@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { AdrawCanvas } from "@adraw/core"
-import type { Snippet } from "svelte"
+import { onDestroy, type Snippet } from "svelte"
 import { createCanvasContext, type CanvasSvelteOptions } from "./context.svelte.ts"
 
 interface Props {
@@ -11,10 +11,12 @@ interface Props {
 
 let { children, onReady, options }: Props = $props()
 
-createCanvasContext(
+const context = createCanvasContext(
   () => options,
   () => onReady,
 )
+
+onDestroy(() => context.dispose())
 </script>
 
 {@render children()}

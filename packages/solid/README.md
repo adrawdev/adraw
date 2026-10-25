@@ -87,7 +87,7 @@ Renders the container element and mounts the `AdrawCanvas` from the nearest `Can
 
 ### `useCanvas()`
 
-Returns the raw context value (`canvasRef`, reactive accessors, `isReady`, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one. `canvasRef.current` is the engine and is available immediately; it carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the raw context value (`canvasRef`, `store`, `snapshot`, reactive accessors, `isReady`, and the resolved `options`) for the nearest `CanvasProvider`. Throws if used outside one. `canvasRef.current` is the engine and is available immediately; it carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useCanvasEngine()`
 
@@ -126,19 +126,16 @@ const { undo, redo, canUndo, canRedo } = useHistory()
 ```ts
 const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
-// selectedIds / elements: reactive getters
+// selectedIds / elements: reactive getters; elements are the selected elements
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().canvasRef.current`:
+### `useStyle()`
 
 ```ts
-const { canvasRef } = useCanvas()
+const { style, setStyle } = useStyle()
 
-canvasRef.current.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-canvasRef.current.getStyle() // selection style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+// style: reactive getter — selection style, or the global style
 ```
 
 `setStyle` restyles matching selected elements as well as future ones. All tools

@@ -1,13 +1,13 @@
 import { screenToCanvas } from "../coordinates"
 import type { Point } from "../types"
 import { panViewport, zoomViewport } from "../viewport"
-import type { EngineInternal } from "./engine"
+import type { CanvasEngine } from "./engine"
 
 // ── Screen/pointer dispatch ──
 
 /** @internal */
 export function toCanvasPoint(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   screenX: number,
   screenY: number,
 ): Point {
@@ -20,7 +20,7 @@ export function toCanvasPoint(
 
 /** @internal */
 export function dispatchPointerDown(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   point: Point,
   event: PointerEvent,
 ): void {
@@ -35,7 +35,7 @@ export function dispatchPointerDown(
 
 /** @internal */
 export function dispatchPointerMove(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   point: Point,
   event: PointerEvent,
 ): void {
@@ -47,7 +47,7 @@ export function dispatchPointerMove(
 
 /** @internal */
 export function dispatchPointerUp(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   point: Point,
   event: PointerEvent,
 ): void {
@@ -63,7 +63,7 @@ export function dispatchPointerUp(
 // editor path needs a container.
 /** @internal */
 export function dispatchPointerDownAt(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   screenX: number,
   screenY: number,
   event: PointerEvent,
@@ -76,7 +76,7 @@ export function dispatchPointerDownAt(
 
 /** @internal */
 export function dispatchPointerMoveAt(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   screenX: number,
   screenY: number,
   event: PointerEvent,
@@ -86,7 +86,7 @@ export function dispatchPointerMoveAt(
 
 /** @internal */
 export function dispatchPointerUpAt(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   screenX: number,
   screenY: number,
   event: PointerEvent,
@@ -99,7 +99,7 @@ export function dispatchPointerUpAt(
 // resolves it against `event.currentTarget`, falling back to page coords).
 /** @internal */
 export function applyWheelTransform(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   event: WheelEvent,
   screenX?: number,
   screenY?: number,
@@ -129,7 +129,7 @@ export function applyWheelTransform(
 // pointer's screen coordinates against the DOM).
 /** @internal */
 export function applyZoomAtScreenPoint(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   x: number,
   y: number,
   deltaY: number,
@@ -147,7 +147,7 @@ export function applyZoomAtScreenPoint(
 
 /** @internal */
 export function applyPan(
-  engine: EngineInternal,
+  engine: CanvasEngine,
   deltaX: number,
   deltaY: number,
 ): void {

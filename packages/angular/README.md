@@ -115,7 +115,7 @@ Standalone component that mounts the drawing surface into its own host element (
 
 ### `CanvasService`
 
-The injectable that wraps the underlying `AdrawCanvas`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It creates the engine headlessly in its constructor, exposes the read-only signals `elements`, `viewport`, `activeTool`, `selectedIds`, `canUndo`, `canRedo`, `hideWhileTransforming`, `isReady`, the imperative methods used by the hooks, and `instance` (the raw `AdrawCanvas`).
+The injectable that wraps the underlying `AdrawCanvas` and `AdrawStore`. `provideCanvas()` registers it; inject it directly with `inject(CanvasService)` (or via `useCanvas()`) for full access. It creates the engine and store headlessly in its constructor, exposes the read-only signals `snapshot`, `elements`, `selectedElements`, `viewport`, `activeTool`, `selectedIds`, `style`, `snapping`, `isSnapMode`, `isToolLocked`, `hideWhileTransforming`, `canUndo`, `canRedo`, `isReady`, the imperative methods used by the hooks, and `instance` (the raw `AdrawCanvas`).
 
 ## Hooks
 
@@ -163,19 +163,16 @@ const { undo, redo, canUndo, canRedo } = useHistory()
 ```ts
 const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
-// selectedIds, elements: Signal
+// selectedIds, elements: Signal; elements are the selected elements
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`CanvasService.instance`:
+### `useStyle()`
 
 ```ts
-const canvas = useCanvas()
+const { style, setStyle } = useStyle()
+// style: Signal<StyleOptions> — selection style, or the global style
 
-canvas.instance.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-canvas.instance.getStyle() // selection style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
 ```
 
 `setStyle` restyles matching selected elements as well as future ones. All tools

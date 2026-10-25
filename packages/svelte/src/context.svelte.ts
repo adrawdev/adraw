@@ -1,8 +1,12 @@
 import {
   AdrawCanvas,
+  AdrawStore,
+  type AdrawSnapshot,
   type CanvasElement,
   type CanvasOptions,
   type ElementId,
+  type SnappingConfig,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
 } from "@adraw/core"
@@ -18,11 +22,18 @@ export interface CanvasSvelteOptions extends CanvasOptions {}
  * Reactive state synced with an adraw canvas.
  */
 export interface CanvasState {
-  elements: Map<ElementId, CanvasElement>
+  elements: ReadonlyMap<ElementId, CanvasElement>
+  selectedElements: readonly CanvasElement[]
   viewport: ViewportState
   activeTool: ToolType
-  selectedIds: Set<ElementId>
+  selectedIds: ReadonlySet<ElementId>
   hideWhileTransforming: boolean
+  style: StyleOptions
+  snapping: SnappingConfig
+  isSnapMode: boolean
+  isToolLocked: boolean
+  canUndo: boolean
+  canRedo: boolean
 }
 
 /**
@@ -30,23 +41,41 @@ export interface CanvasState {
  */
 export interface CanvasContextValue {
   instance: { current: AdrawCanvas }
+  store: AdrawStore
+  /** Current immutable snapshot; reading it in a template or derived value is reactive. */
+  readonly snapshot: AdrawSnapshot
   options?: CanvasSvelteOptions
   state: CanvasState
   /** `true` after `<Canvas>` mounts the engine. */
   readonly isReady: boolean
-  /** @internal Called by `<Canvas>` after mounting the engine. */
-  notifyReady: () => void
-  /** @internal Called by `<Canvas>` when its DOM adapter unmounts. */
-  markUnmounted: () => void
+  /** Release the store subscription; called by `CanvasProvider` on destroy. */
+  dispose: () => void
 }
 
 const CANVAS_CONTEXT_KEY = Symbol("adraw-canvas")
 
+function stateFromSnapshot(snapshot: AdrawSnapshot): CanvasState {
+  return {
+    activeTool: snapshot.tool,
+    canRedo: snapshot.canRedo,
+    canUndo: snapshot.canUndo,
+    elements: snapshot.elements,
+    hideWhileTransforming: snapshot.hideWhileTransforming,
+    isSnapMode: snapshot.isSnapMode,
+    isToolLocked: snapshot.isToolLocked,
+    selectedElements: snapshot.selectedElements,
+    selectedIds: snapshot.selectedIds,
+    snapping: snapshot.snapping,
+    style: snapshot.style,
+    viewport: snapshot.viewport,
+  }
+}
+
 /**
  * Create and provide a canvas context.
  *
- * The engine is created headlessly here, so descendants can use it during
- * setup without waiting for `<Canvas>` to mount.
+ * The engine and store are created headlessly here, so descendants can use
+ * them during setup without waiting for `<Canvas>` to mount.
  *
  * @param getOptions Reactive accessor for options.
  * @param getOnReady Optional accessor for the ready callback.
@@ -62,52 +91,36 @@ export function createCanvasContext(
   engine.setHideOverlayWhileTransforming(
     options?.hideOverlayWhileTransforming ?? true,
   )
-  let isReady = $state(false)
-  let readyNotified = false
 
-  const state = $state<CanvasState>({
-    activeTool: engine.getActiveTool(),
-    elements: new Map(engine.getElements()),
-    hideWhileTransforming: engine.getHideOverlayWhileTransforming(),
-    selectedIds: new Set(engine.getSelectedIds()),
-    viewport: engine.getViewport(),
+  const store = new AdrawStore(engine, {
+    onReady: (readyEngine) => getOnReady?.()?.(readyEngine),
   })
+  let snapshot = $state.raw<AdrawSnapshot>(store.getSnapshot())
+  const state = $state<CanvasState>(stateFromSnapshot(store.getSnapshot()))
 
-  engine.on("change", ({ elements }) => {
-    state.elements = new Map(elements)
-  })
-
-  engine.on("viewportChange", ({ viewport }) => {
-    state.viewport = viewport
-  })
-
-  engine.on("toolChange", ({ tool }) => {
-    state.activeTool = tool
-  })
-
-  engine.on("selectionChange", ({ selectedIds }) => {
-    state.selectedIds = new Set(selectedIds)
+  const unsubscribe = store.subscribe(() => {
+    const next = store.getSnapshot()
+    snapshot = next
+    Object.assign(state, stateFromSnapshot(next))
   })
 
   const value: CanvasContextValue = {
+    dispose: () => {
+      unsubscribe()
+      store.dispose()
+    },
     instance: { current: engine },
     get isReady() {
-      return isReady
-    },
-    markUnmounted: () => {
-      isReady = false
-    },
-    notifyReady: () => {
-      isReady = true
-      if (!readyNotified) {
-        readyNotified = true
-        getOnReady?.()?.(engine)
-      }
+      return snapshot.isReady
     },
     get options() {
       return getOptions?.()
     },
+    get snapshot() {
+      return snapshot
+    },
     state,
+    store,
   }
 
   setContext(CANVAS_CONTEXT_KEY, value)

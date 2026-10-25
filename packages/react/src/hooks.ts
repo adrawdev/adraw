@@ -2,8 +2,11 @@
 
 import {
   type AdrawCanvas,
+  type AdrawSnapshot,
+  type AdrawStore,
   type CanvasElement,
   type ElementId,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
@@ -18,28 +21,31 @@ import type { CanvasReactOptions } from "./components"
 export interface CanvasContextValue {
   /** Underlying engine. Available as soon as the provider renders. */
   engine: AdrawCanvas
+  /** Store owning the snapshot and subscriptions. */
+  store: AdrawStore
+  /** Current immutable snapshot. */
+  snapshot: AdrawSnapshot
   /**
-   * `true` once `<Canvas>` has mounted the engine and the provider has
-   * subscribed to its events.
+   * `true` once `<Canvas>` has mounted the engine.
    */
   isReady: boolean
-  /** @internal Called by `<Canvas>` when its DOM adapter mounts or unmounts. */
-  setIsMounted: React.Dispatch<React.SetStateAction<boolean>>
   /**
    * Ref to the underlying engine, kept for backwards compatibility.
    * Prefer {@link useCanvasEngine}, which is populated synchronously.
    */
   vanillaRef: React.RefObject<AdrawCanvas | null>
-  elements: Map<ElementId, CanvasElement>
-  setElements: React.Dispatch<React.SetStateAction<Map<string, CanvasElement>>>
+  elements: ReadonlyMap<ElementId, CanvasElement>
+  setElements: (elements: Map<ElementId, CanvasElement>) => void
   viewport: ViewportState
-  setViewport: React.Dispatch<React.SetStateAction<ViewportState>>
+  setViewport: (viewport: ViewportState) => void
   activeTool: ToolType
-  setActiveTool: React.Dispatch<React.SetStateAction<ToolType>>
-  selectedIds: Set<ElementId>
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>
+  setActiveTool: (tool: ToolType) => void
+  selectedIds: ReadonlySet<ElementId>
+  setSelectedIds: (ids: Set<ElementId>) => void
   hideWhileTransforming: boolean
-  setHideWhileTransforming: React.Dispatch<React.SetStateAction<boolean>>
+  setHideWhileTransforming: (hide: boolean) => void
+  /** Selection style when there is a selection, otherwise the global style. */
+  style: StyleOptions
   options?: CanvasReactOptions
   setOptions: React.Dispatch<
     React.SetStateAction<CanvasReactOptions | undefined>
@@ -72,9 +78,8 @@ export interface CanvasEngineState {
   /** Engine instance owned by the nearest `CanvasProvider`. */
   engine: AdrawCanvas
   /**
-   * `true` once `<Canvas>` has mounted the engine and the provider has
-   * subscribed to its events. Wait for this before DOM-dependent work such as
-   * `toImage()`.
+   * `true` once `<Canvas>` has mounted the engine. Wait for this before
+   * DOM-dependent work such as `toImage()`.
    */
   isReady: boolean
 }
@@ -115,14 +120,13 @@ export function useCanvasEngine(): CanvasEngineState {
  * @returns `{ tool, setTool }`.
  */
 export function useTool() {
-  const { engine, activeTool, setActiveTool } = useCanvas()
+  const { engine, activeTool } = useCanvas()
 
   const setTool = useCallback(
     (tool: ToolType) => {
       engine.setActiveTool(tool)
-      setActiveTool(tool)
     },
-    [engine, setActiveTool],
+    [engine],
   )
 
   return { setTool, tool: activeTool }
@@ -174,15 +178,15 @@ export function useViewport() {
  * Access undo/redo operations and availability.
  */
 export function useHistory() {
-  const { engine } = useCanvas()
+  const { engine, snapshot } = useCanvas()
 
   const undo = useCallback(() => engine.undo(), [engine])
 
   const redo = useCallback(() => engine.redo(), [engine])
 
-  const canUndo = useCallback(() => engine.canUndo(), [engine])
+  const canUndo = useCallback(() => snapshot.canUndo, [snapshot.canUndo])
 
-  const canRedo = useCallback(() => engine.canRedo(), [engine])
+  const canRedo = useCallback(() => snapshot.canRedo, [snapshot.canRedo])
 
   return { canRedo, canUndo, redo, undo }
 }
@@ -191,7 +195,7 @@ export function useHistory() {
  * Access selection state and selection operations.
  */
 export function useSelection() {
-  const { engine, selectedIds, elements } = useCanvas()
+  const { engine, selectedIds, snapshot } = useCanvas()
 
   const selectAll = useCallback(() => {
     engine.selectAll()
@@ -208,7 +212,7 @@ export function useSelection() {
   return {
     clearSelection,
     deleteSelected,
-    elements,
+    elements: snapshot.selectedElements,
     selectAll,
     selectedIds,
   }
@@ -218,16 +222,30 @@ export function useSelection() {
  * Access and control the transform-overlay visibility.
  */
 export function useTransformOverlay() {
-  const { engine, hideWhileTransforming, setHideWhileTransforming } =
-    useCanvas()
+  const { engine, hideWhileTransforming } = useCanvas()
 
   const setHide = useCallback(
     (hide: boolean) => {
       engine.setHideOverlayWhileTransforming(hide)
-      setHideWhileTransforming(hide)
     },
-    [engine, setHideWhileTransforming],
+    [engine],
   )
 
   return { hideWhileTransforming, setHideWhileTransforming: setHide }
+}
+
+/**
+ * Access the current style and update the global/selected style.
+ */
+export function useStyle() {
+  const { engine, style } = useCanvas()
+
+  const setStyle = useCallback(
+    (options: StyleOptions) => {
+      engine.setStyle(options)
+    },
+    [engine],
+  )
+
+  return { setStyle, style }
 }

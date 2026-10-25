@@ -203,7 +203,7 @@ const { class: className, ...props } = Astro.props;
 </style>
 
 <script>
-  import { AdrawCanvas, type MediaInput, type ToolType } from '@adraw/core'
+  import { AdrawCanvas, AdrawStore, type MediaInput, type ToolType } from '@adraw/core'
 
   const toolbar = document.querySelector<HTMLDivElement>(".toolbar")!
 
@@ -213,11 +213,10 @@ const { class: className, ...props } = Astro.props;
     container: canvasContainer,
   })
 
-  canvas.on("viewportChange", (ev) => {
-    document.querySelector<HTMLButtonElement>(`[data-action="reset"]`)!.textContent = `${Math.floor(ev.viewport.zoom * 100)}%`
-  })
-
-  canvas.on("toolChange", (ev) => {
+  const store = new AdrawStore(canvas)
+  store.subscribe(() => {
+    const snapshot = store.getSnapshot()
+    document.querySelector<HTMLButtonElement>(`[data-action="reset"]`)!.textContent = `${Math.floor(snapshot.viewport.zoom * 100)}%`
     updateToolbar()
   })
 

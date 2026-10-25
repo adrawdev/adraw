@@ -1,36 +1,7 @@
-import { syncArrowBindings } from "../bindings"
 import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
-import {
-  /**
-   * Whether redo is currently possible.
-   */
-  canRedo,
-  /**
-   * Whether undo is currently possible.
-   */
-  canUndo,
-  createHistoryState,
-  pushHistory,
-  type HistoryEntry,
-  /**
-   * Redo the last undone change.
-   * @returns `true` if a redo was applied.
-   */
-  redo,
-  /**
-   * Undo the last change.
-   * @returns `true` if an undo was applied.
-   */
-  undo,
-} from "../history"
 import { getNoteMinHeight } from "../note"
-import type {
-  CanvasEventMap,
-  CanvasOptions,
-  KeyboardScope,
-  MediaInput,
-} from "../options"
+import type { CanvasOptions, KeyboardScope, MediaInput } from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import { DEFAULT_STYLE, type StyleOptions } from "../style"
 import {
@@ -40,11 +11,7 @@ import {
   type TextLayoutOptions,
   type TextMeasurer,
 } from "../text"
-import {
-  findBoundText,
-  isBoundTextContainer,
-  syncTextBindings,
-} from "../text-bindings"
+import { findBoundText, isBoundTextContainer } from "../text-bindings"
 import {
   createArrowTool,
   createDiamondTool,
@@ -87,8 +54,10 @@ import {
   createPastedElements,
 } from "./clipboard"
 import { createMediaElements } from "./media"
+import { Scene, type SceneChange, type SceneDraft } from "./scene"
 import { deleteSelectedElements, selectAllIds } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
+import { notifyState } from "./state-notifier"
 import { applyStyleToElement, getElementStyle } from "./style"
 import {
   bringElementsToFront,
@@ -97,10 +66,6 @@ import {
 } from "./z-order"
 
 const DOCUMENT_VERSION = 1
-
-type EventListener<K extends keyof CanvasEventMap> = (
-  event: CanvasEventMap[K],
-) => void
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -136,69 +101,49 @@ function getCommonStyle(styles: StyleOptions[]): StyleOptions {
   return common as StyleOptions
 }
 
-/**
- * Internal access shape used by adapter and engine hooks.
- * @internal
- */
-export interface EngineInternal {
-  /**
-   * Get the currently active tool.
-   */
-  getActiveTool: () => ToolType
-  getActiveToolInstance: () => Tool
-  getCanvasSize: () => { height: number; width: number }
-  /**
-   * Get the current elements map. Caller should copy before storing.
-   */
-  getElements: () => Map<ElementId, CanvasElement>
-  getPointerPoint: () => Point | null
-  /**
-   * Get the current selection ids.
-   */
-  getSelectedIds: () => Set<ElementId>
-  getToolContext: () => ToolContext
-  /**
-   * Get the current viewport state.
-   */
-  getViewport: () => ViewportState
-  /**
-   * Get the fully resolved viewport configuration.
-   */
-  getViewportConfig: () => ViewportConfig
-  setPointerPoint: (point: Point) => void
-  /**
-   * Get the text measurer currently used to size text elements.
-   */
-  getTextMeasurer: () => TextMeasurer
-  /**
-   * Measure text with the current measurer.
-   */
-  measureText: (text: string, options: TextLayoutOptions) => TextLayout
-  /**
-   * Set the viewport state and emit `viewportChange`.
-   * @param viewport New viewport.
-   */
-  setViewport: (viewport: ViewportState) => void
-  setSelectedIds: (ids: Set<ElementId>) => void
-  setSnapGuides: (guides: SnapGuide[]) => void
-  pushHistory: () => void
-  emit: <K extends keyof CanvasEventMap>(
-    event: K,
-    data: CanvasEventMap[K],
-  ) => void
+// Re-measure every text/note element in place with the active measurer.
+// Returns whether any element box changed.
+function remeasureElements(
+  elements: Map<ElementId, CanvasElement>,
+  measurer: TextMeasurer,
+): boolean {
+  let changed = false
+  for (const [id, element] of elements) {
+    if (element.type === "note") {
+      const minHeight = getNoteMinHeight(element, measurer)
+      if (minHeight > element.height) {
+        elements.set(id, { ...element, height: minHeight })
+        changed = true
+      }
+      continue
+    }
+    if (element.type !== "text") {
+      continue
+    }
+    const layout = measureTextElement(element, measurer)
+    if (layout.width === element.width && layout.height === element.height) {
+      continue
+    }
+    elements.set(id, {
+      ...element,
+      height: layout.height,
+      width: layout.width,
+    })
+    changed = true
+  }
+  return changed
 }
 
 // Headless canvas engine: pure state (elements, selection, viewport, tools,
-// history) plus the event system. No DOM — a DOM adapter (see `dom/`) drives it
-// through the public API and the `/** @internal */` hooks below.
+// history) plus the state notifier. No DOM — a DOM adapter (see `dom/`) drives
+// it through the public API and the `/** @internal */` hooks below.
 /**
  * Headless canvas engine: pure state (elements, selection, viewport, tools,
- * history) plus the event system. No DOM. A DOM adapter drives it via the
- * public API and the `@internal` hooks.
+ * history) plus the internal state notifier. No DOM. A DOM adapter drives it
+ * via the public API and the `@internal` hooks.
  */
 export class CanvasEngine {
-  private elements = new Map<ElementId, CanvasElement>()
-  private selectedIds = new Set<ElementId>()
+  private readonly scene: Scene
   private viewport: ViewportState
   private readonly viewportConfig: ViewportConfig
   // Zoom of the last explicit fit. While `constrainToContent` is enabled it
@@ -227,24 +172,16 @@ export class CanvasEngine {
   private style: StyleOptions = {}
   private hideOverlayWhileTransforming: boolean
   private isToolLocked: boolean
-  private history = createHistoryState()
-  // Depth counter for `withoutHistory`; suppresses checkpoint pushes while > 0.
-  private historySuppressionDepth = 0
   private clipboard: ClipboardManager
   // Last pointer position in canvas space, tracked by the dispatch helpers so
   // keyboard paste can land at the cursor.
   private pointerPoint: Point | null = null
-  private listeners = new Map<keyof CanvasEventMap, Set<EventListener<any>>>()
   private canvasSize: { width: number; height: number } = {
     height: 0,
     width: 0,
   }
   private tools = new Map<ToolType, Tool>()
 
-  // Fired when a render is needed (e.g. the overlay toggle re-renders
-  // immediately). The DOM adapter sets this; null when headless.
-  /** @internal */
-  renderRequested: (() => void) | null = null
   // Fired just before the active tool changes so the adapter can commit any
   // in-progress DOM state (e.g. an open inline text editor).
   /** @internal */
@@ -262,6 +199,7 @@ export class CanvasEngine {
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
     this.isToolLocked = options.isToolLocked ?? false
+    this.scene = new Scene({ getTextMeasurer: () => this.textMeasurer })
 
     this.tools.set("select", createSelectTool())
     this.tools.set("hand", createHandTool())
@@ -284,19 +222,15 @@ export class CanvasEngine {
       ? (options.initialDocument.elements ?? [])
       : options.initialElements
     if (initial?.length) {
-      this.elements = new Map<ElementId, CanvasElement>()
+      const initialElements = new Map<ElementId, CanvasElement>()
       for (const element of initial) {
         const copy = cloneElementDeep(element)
-        this.elements.set(copy.id, copy)
+        initialElements.set(copy.id, copy)
       }
-      this.remeasureTextElements(false)
-      this.syncBindings()
+      remeasureElements(initialElements, this.textMeasurer)
+      this.scene.replace(initialElements, { selection: "clear" })
+      this.scene.clearHistory()
     }
-
-    // Seed the baseline checkpoint so the first edit can be undone back to the
-    // initial canvas. The top of the undo stack always mirrors the current
-    // committed state.
-    this.commitHistory()
   }
 
   private createToolContext(): ToolContext {
@@ -309,121 +243,85 @@ export class CanvasEngine {
         this.setActiveTool("select")
       },
       getCanvasSize: () => this.canvasSize,
-      getElements: () => this.elements,
+      getElements: () => this.scene.getElements(),
       getIsSnapMode: () => this.isSnapMode,
-      getSelectedIds: () => this.selectedIds,
+      getSelectedIds: () => this.scene.getSelectedIds(),
       getSnappingConfig: () => this.snappingConfig,
       getStyle: () => this.style,
       getViewport: () => this.viewport,
       measureText: (text, options) => this.textMeasurer(text, options),
       pushHistory: () => {
-        this.commitHistory()
+        this.publishSceneChange(this.scene.checkpoint())
       },
       setActiveTool: (tool) => this.setActiveTool(tool),
       setElements: (elements) => {
-        this.elements = elements
-        this.syncBindings()
-        this.emit("change", { elements: this.elements })
+        this.publishSceneChange(this.scene.replace(elements))
       },
       setSelectedIds: (ids) => {
-        this.selectedIds = ids
-        this.emit("selectionChange", { selectedIds: this.selectedIds })
+        this.setSelectedIds(ids)
       },
       setSnapGuides: (guides) => {
         this.snapGuides = guides
       },
       setViewport: (viewport) => {
         this.viewport = viewport
-        this.emit("viewportChange", { viewport: this.viewport })
+        notifyState(this, "viewport")
       },
     }
   }
 
-  // Record a checkpoint unless `withoutHistory` is currently suppressing them.
-  private commitHistory(): void {
-    if (this.historySuppressionDepth > 0) {
-      return
+  // Publish the state kinds represented by a scene change.
+  private publishSceneChange(change: SceneChange): void {
+    if (change.elementsChanged) {
+      notifyState(this, "elements")
     }
-    this.history = pushHistory(this.history, this.elements, this.selectedIds)
+    if (change.selectionChanged) {
+      notifyState(this, "selection")
+    }
+    if (change.historyChanged) {
+      notifyState(this, "history")
+    }
   }
 
-  // Recompute derived bindings after elements move: arrow endpoints follow
-  // their targets, then bound text follows its container (and may grow it).
-  // A grown container can move arrow endpoints again, so arrows sync twice.
-  // Removes labels whose container disappeared and drops them from selection.
-  private syncBindings(): boolean {
-    let changed = syncArrowBindings(this.elements)
-    const textChanged = syncTextBindings(this.elements, this.textMeasurer)
-    if (textChanged) {
-      changed = true
-      syncArrowBindings(this.elements)
-      if (this.selectedIds.size > 0) {
-        const next = new Set(
-          [...this.selectedIds].filter((id) => this.elements.has(id)),
-        )
-        if (next.size !== this.selectedIds.size) {
-          this.selectedIds = next
-          this.emit("selectionChange", { selectedIds: this.selectedIds })
-        }
-      }
+  // Public mutations opt into a checkpoint. `{ history: false }` also rebases
+  // the change into existing checkpoints, so undo/redo preserves it.
+  private commitSceneWithHistory(
+    mutator: (draft: SceneDraft) => void,
+    history: boolean | undefined,
+  ): SceneChange {
+    if (history === false) {
+      return this.scene.withoutHistory(() =>
+        this.scene.commit(mutator, { history: false }),
+      )
     }
-    return changed
+    return this.scene.commit(mutator, { history: true })
   }
 
-  // Fold the net change between `before` and the current elements into every
-  // checkpoint. Changes made outside history must survive undo/redo instead of
-  // reappearing/disappearing when an older snapshot is restored.
-  private rebaseHistory(before: Map<ElementId, CanvasElement>): void {
-    const added = new Map<ElementId, CanvasElement>()
-    const changed = new Map<ElementId, CanvasElement>()
-    const removed = new Set<ElementId>()
-
-    for (const [id, element] of this.elements) {
-      const previous = before.get(id)
-      if (previous === undefined) {
-        added.set(id, element)
-      } else if (previous !== element) {
-        changed.set(id, element)
-      }
+  private replaceSceneWithHistory(
+    elements: Map<ElementId, CanvasElement>,
+    history: boolean | undefined,
+    selection?: "clear" | "keep" | Iterable<ElementId>,
+  ): SceneChange {
+    if (history === false) {
+      return this.scene.withoutHistory(() =>
+        this.scene.replace(elements, { history: false, selection }),
+      )
     }
-    for (const id of before.keys()) {
-      if (!this.elements.has(id)) {
-        removed.add(id)
-      }
-    }
+    return this.scene.replace(elements, { history: true, selection })
+  }
 
-    if (added.size === 0 && changed.size === 0 && removed.size === 0) {
-      return
-    }
-
-    const rebaseEntries = (entries: HistoryEntry[]): HistoryEntry[] =>
-      entries.map((entry) => {
-        const elements = new Map(entry.elements)
-        for (const [id, element] of added) {
-          elements.set(id, element)
-        }
-        for (const [id, element] of changed) {
-          if (elements.has(id)) {
-            elements.set(id, element)
-          }
-        }
-        for (const id of removed) {
-          elements.delete(id)
-        }
-
-        const selectedIds = new Set(entry.selectedIds)
-        for (const id of removed) {
-          selectedIds.delete(id)
-        }
-
-        return { elements, selectedIds, timestamp: entry.timestamp }
-      })
-
-    this.history = {
-      ...this.history,
-      redoStack: rebaseEntries(this.history.redoStack),
-      undoStack: rebaseEntries(this.history.undoStack),
-    }
+  /**
+   * Apply a scene commit and publish the resulting state changes.
+   * @internal
+   */
+  commitScene(
+    mutator: (draft: {
+      elements: Map<ElementId, CanvasElement>
+      selectedIds: Set<ElementId>
+    }) => void,
+    options: { history?: boolean } = {},
+  ): void {
+    this.publishSceneChange(this.scene.commit(mutator, options))
   }
 
   /**
@@ -453,7 +351,7 @@ export class CanvasEngine {
     this.activeTool = newTool
     this.snapGuides = []
     this.activeTool.onActivate(this.createToolContext())
-    this.emit("toolChange", { tool: toolType })
+    notifyState(this, "tool")
   }
 
   /**
@@ -478,21 +376,22 @@ export class CanvasEngine {
   }
 
   /**
-   * Set the viewport state and emit `viewportChange`. The zoom is clamped to
+   * Set the viewport state and notify state subscribers. The zoom is clamped to
    * the configured range and, when `constrainToContent` is enabled, the pan is
    * clamped so content stays in view.
    * @param viewport New viewport.
    */
   setViewport(viewport: ViewportState): void {
     this.viewport = this.constrainViewport(viewport)
-    this.emit("viewportChange", { viewport: this.viewport })
+    notifyState(this, "viewport")
   }
 
   // Clamp zoom to the configured range plus the last-fit floor, then keep
   // content in view when requested.
   private constrainViewport(viewport: ViewportState): ViewportState {
     const bounds = this.viewportConfig.constrainToContent
-      ? (this.contentBoundsOverride ?? getElementsBounds(this.elements))
+      ? (this.contentBoundsOverride ??
+        getElementsBounds(this.scene.getElements()))
       : null
     const minZoom =
       bounds && this.contentFitZoom !== null
@@ -513,7 +412,7 @@ export class CanvasEngine {
    * Get the current elements map. Caller should copy before storing.
    */
   getElements(): Map<ElementId, CanvasElement> {
-    return this.elements
+    return this.scene.getElements()
   }
 
   /**
@@ -541,40 +440,30 @@ export class CanvasEngine {
       inputs,
       this.viewport,
       this.canvasSize,
-      options.zIndex ?? getNextZIndex(this.elements.values()),
+      options.zIndex ?? getNextZIndex(this.scene.getElements().values()),
     )
 
-    const insert = () => {
+    const change = this.commitSceneWithHistory((draft) => {
       for (const element of elements) {
-        this.elements.set(element.id, element)
+        draft.elements.set(element.id, element)
       }
-      this.syncBindings()
+      draft.selectedIds = new Set(elements.map((element) => element.id))
+    }, options.history)
 
-      this.selectedIds = new Set(elements.map((elem) => elem.id))
-      if (this.activeTool.type !== "select") {
-        this.setActiveTool("select")
-      }
+    if (this.activeTool.type !== "select") {
+      this.setActiveTool("select")
     }
-
-    if (options.history === false) {
-      this.withoutHistory(insert)
-    } else {
-      insert()
-      this.commitHistory()
-    }
-
-    this.emit("change", { elements: this.elements })
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    this.publishSceneChange(change)
     return elements
   }
 
   // Add one or more elements to the canvas. Unlike mutating the Map returned
   // by `getElements()`, this pushes a history checkpoint (unless `history` is
-  // false) and emits the usual `change` event, so the addition is undoable and
+  // false) and publishes the element change, so the addition is undoable and
   // reactive bindings stay in sync.
   /**
    * Add one or more elements, pushing a history checkpoint (unless disabled)
-   * and emitting `change`.
+   * and publishing the change.
    * @param elements Element or elements to add.
    * @param options `{ history }` to skip the checkpoint.
    * @returns The added elements.
@@ -588,21 +477,13 @@ export class CanvasEngine {
       return []
     }
 
-    const add = () => {
+    const change = this.commitSceneWithHistory((draft) => {
       for (const element of inputs) {
-        this.elements.set(element.id, element)
+        draft.elements.set(element.id, element)
       }
-      this.syncBindings()
-    }
+    }, options.history)
 
-    if (options.history === false) {
-      this.withoutHistory(add)
-    } else {
-      add()
-      this.commitHistory()
-    }
-
-    this.emit("change", { elements: this.elements })
+    this.publishSceneChange(change)
     return inputs
   }
 
@@ -616,26 +497,16 @@ export class CanvasEngine {
    * @param options `{ history }` to skip the checkpoint.
    */
   loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
-    const load = () => {
-      const next = new Map<ElementId, CanvasElement>()
-      for (const element of doc?.elements ?? []) {
-        next.set(element.id, element)
-      }
-      this.elements = next
-      this.remeasureTextElements(false)
-      this.syncBindings()
-      this.selectedIds = new Set()
+    const next = new Map<ElementId, CanvasElement>()
+    for (const element of doc?.elements ?? []) {
+      next.set(element.id, element)
     }
-
-    if (options.history === false) {
-      this.withoutHistory(load)
-    } else {
-      load()
-      this.commitHistory()
+    remeasureElements(next, this.textMeasurer)
+    const change = this.replaceSceneWithHistory(next, options.history, "clear")
+    this.publishSceneChange(change)
+    if (!change.selectionChanged) {
+      notifyState(this, "selection")
     }
-
-    this.emit("change", { elements: this.elements })
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
   // Serialize the current document. `exclude` filters which elements are
@@ -648,7 +519,7 @@ export class CanvasEngine {
     version: number
     elements: CanvasElement[]
   } {
-    const elements = [...this.elements.values()]
+    const elements = [...this.scene.getElements().values()]
       .filter((element) => !options.exclude?.(element))
       .map(cloneElementDeep)
 
@@ -680,26 +551,15 @@ export class CanvasEngine {
     elements: Map<ElementId, CanvasElement> | CanvasElement[],
     options: { history?: boolean } = {},
   ): void {
-    const replace = () => {
-      this.elements =
-        elements instanceof Map
-          ? new Map(elements)
-          : new Map(elements.map((element) => [element.id, element]))
-      this.syncBindings()
-      this.selectedIds = new Set(
-        [...this.selectedIds].filter((id) => this.elements.has(id)),
-      )
+    const next =
+      elements instanceof Map
+        ? new Map(elements)
+        : new Map(elements.map((element) => [element.id, element]))
+    const change = this.replaceSceneWithHistory(next, options.history)
+    this.publishSceneChange(change)
+    if (!change.selectionChanged) {
+      notifyState(this, "selection")
     }
-
-    if (options.history === false) {
-      this.withoutHistory(replace)
-    } else {
-      replace()
-      this.commitHistory()
-    }
-
-    this.emit("change", { elements: this.elements })
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
   }
 
   /**
@@ -755,7 +615,7 @@ export class CanvasEngine {
   }
 
   // Apply a z-order operation: swap in the new element map, record one
-  // checkpoint unless skipped, and emit `change`. A null result means the
+  // checkpoint unless skipped, and publish the change. A null result means the
   // stack is already in the requested order, so nothing is recorded.
   private applyZOrder(
     operation: (
@@ -763,30 +623,20 @@ export class CanvasEngine {
     ) => Map<ElementId, CanvasElement> | null,
     options: { history?: boolean },
   ): void {
-    const next = operation(this.elements)
+    const next = operation(this.scene.getElements())
     if (!next) {
       return
     }
 
-    const apply = () => {
-      this.elements = next
-    }
-
-    if (options.history === false) {
-      this.withoutHistory(apply)
-    } else {
-      apply()
-      this.commitHistory()
-    }
-
-    this.emit("change", { elements: this.elements })
+    const change = this.replaceSceneWithHistory(next, options.history)
+    this.publishSceneChange(change)
   }
 
   /**
    * Get the current selection ids.
    */
   getSelectedIds(): Set<ElementId> {
-    return this.selectedIds
+    return this.scene.getSelectedIds()
   }
 
   /**
@@ -802,6 +652,7 @@ export class CanvasEngine {
    */
   setSnappingConfig(config: Partial<SnappingConfig>): void {
     this.snappingConfig = { ...this.snappingConfig, ...config }
+    notifyState(this, "snapping")
   }
 
   // Snapping stays active without a modifier when `true`; otherwise it is
@@ -819,6 +670,7 @@ export class CanvasEngine {
    */
   setIsSnapMode(isSnapMode: boolean): void {
     this.isSnapMode = isSnapMode
+    notifyState(this, "snapping")
   }
 
   // Guides from the in-progress snap gesture (empty when not snapped); the DOM
@@ -907,39 +759,20 @@ export class CanvasEngine {
   }
 
   // Recompute every text element's box with the active measurer. Silent during
-  // construction/load so callers can emit a single change event.
+  // construction/load so callers can publish a single elements change.
   private remeasureTextElements(emit = true): boolean {
-    let changed = false
-    for (const [id, element] of this.elements) {
-      if (element.type === "note") {
-        const minHeight = getNoteMinHeight(element, this.textMeasurer)
-        if (minHeight > element.height) {
-          this.elements.set(id, { ...element, height: minHeight })
-          changed = true
-        }
-        continue
-      }
-      if (element.type !== "text") {
-        continue
-      }
-      const layout = measureTextElement(element, this.textMeasurer)
-      if (layout.width === element.width && layout.height === element.height) {
-        continue
-      }
-      this.elements.set(id, {
-        ...element,
-        height: layout.height,
-        width: layout.width,
-      })
-      changed = true
-    }
+    const change = this.scene.commit(
+      (draft) => {
+        remeasureElements(draft.elements, this.textMeasurer)
+      },
+      { history: false },
+    )
 
-    if (changed && emit) {
-      this.syncBindings()
-      this.emit("change", { elements: this.elements })
-      this.emit("selectionChange", { selectedIds: this.selectedIds })
+    if (change.elementsChanged && emit) {
+      notifyState(this, "elements")
+      notifyState(this, "selection")
     }
-    return changed
+    return change.elementsChanged
   }
 
   /**
@@ -986,25 +819,38 @@ export class CanvasEngine {
       ...(Object.fromEntries(entries) as StyleOptions),
     }
 
-    if (this.applyStyleToSelection(this.style)) {
-      this.syncBindings()
-      this.emit("change", { elements: this.elements })
-      // Style changes can alter bounds (e.g. a text font size), so refresh
-      // consumers that cache selection geometry.
-      this.emit("selectionChange", { selectedIds: this.selectedIds })
+    if (this.scene.getSelectedIds().size === 0) {
+      notifyState(this, "style")
+      return
     }
+
+    const change = this.scene.commit(
+      (draft) => {
+        this.applyStyleToSelection(
+          draft.elements,
+          draft.selectedIds,
+          this.style,
+        )
+      },
+      { history: false },
+    )
+
+    this.publishSceneChange(change)
+    notifyState(this, "style")
   }
 
   // Style of the current selection, reduced to fields every selected element
   // agrees on. Returns null when nothing usable is selected.
   private getSelectionStyle(): StyleOptions | null {
-    if (this.selectedIds.size === 0) {
+    const selectedIds = this.scene.getSelectedIds()
+    if (selectedIds.size === 0) {
       return null
     }
 
+    const elements = this.scene.getElements()
     const styles: StyleOptions[] = []
-    for (const id of this.selectedIds) {
-      const element = this.elements.get(id)
+    for (const id of selectedIds) {
+      const element = elements.get(id)
       if (element) {
         styles.push(getElementStyle(element))
       }
@@ -1020,18 +866,22 @@ export class CanvasEngine {
 
   // Restyle every selected element that supports the given options. Labels
   // bound to a selected container are included so text styles reach them too.
-  private applyStyleToSelection(options: StyleOptions): boolean {
-    if (this.selectedIds.size === 0) {
+  private applyStyleToSelection(
+    elements: Map<ElementId, CanvasElement>,
+    selectedIds: Set<ElementId>,
+    options: StyleOptions,
+  ): boolean {
+    if (selectedIds.size === 0) {
       return false
     }
 
-    const targets = new Set<ElementId>(this.selectedIds)
-    for (const id of this.selectedIds) {
-      const element = this.elements.get(id)
+    const targets = new Set<ElementId>(selectedIds)
+    for (const id of selectedIds) {
+      const element = elements.get(id)
       if (!isBoundTextContainer(element)) {
         continue
       }
-      const label = findBoundText(this.elements, id)
+      const label = findBoundText(elements, id)
       if (label) {
         targets.add(label.id)
       }
@@ -1039,13 +889,13 @@ export class CanvasEngine {
 
     let changed = false
     for (const id of targets) {
-      const element = this.elements.get(id)
+      const element = elements.get(id)
       if (!element) {
         continue
       }
       const next = applyStyleToElement(element, options, this.textMeasurer)
       if (next !== element) {
-        this.elements.set(id, next)
+        elements.set(id, next)
         changed = true
       }
     }
@@ -1065,9 +915,7 @@ export class CanvasEngine {
    */
   setHideOverlayWhileTransforming(hide: boolean): void {
     this.hideOverlayWhileTransforming = hide
-    // Re-render so the overlay reflects the change immediately (e.g. toggled
-    // mid-gesture).
-    this.renderRequested?.()
+    notifyState(this, "overlay")
   }
 
   /**
@@ -1088,20 +936,21 @@ export class CanvasEngine {
    */
   setIsToolLocked(locked: boolean): void {
     this.isToolLocked = locked
+    notifyState(this, "toolLock")
   }
 
   /**
    * Whether undo is currently possible.
    */
   canUndo(): boolean {
-    return canUndo(this.history)
+    return this.scene.canUndo()
   }
 
   /**
    * Whether redo is currently possible.
    */
   canRedo(): boolean {
-    return canRedo(this.history)
+    return this.scene.canRedo()
   }
 
   /**
@@ -1109,17 +958,12 @@ export class CanvasEngine {
    * @returns `true` if an undo was applied.
    */
   undo(): boolean {
-    const result = undo(this.history, this.elements, this.selectedIds)
-    if (result) {
-      this.elements = result.elements
-      syncArrowBindings(this.elements)
-      this.selectedIds = result.selectedIds
-      this.history = result.state
-      this.emit("change", { elements: this.elements })
-      this.emit("selectionChange", { selectedIds: this.selectedIds })
-      return true
+    const change = this.scene.undo()
+    if (!change.elementsChanged) {
+      return false
     }
-    return false
+    this.publishSceneChange(change)
+    return true
   }
 
   /**
@@ -1127,17 +971,12 @@ export class CanvasEngine {
    * @returns `true` if a redo was applied.
    */
   redo(): boolean {
-    const result = redo(this.history, this.elements, this.selectedIds)
-    if (result) {
-      this.elements = result.elements
-      syncArrowBindings(this.elements)
-      this.selectedIds = result.selectedIds
-      this.history = result.state
-      this.emit("change", { elements: this.elements })
-      this.emit("selectionChange", { selectedIds: this.selectedIds })
-      return true
+    const change = this.scene.redo()
+    if (!change.elementsChanged) {
+      return false
     }
-    return false
+    this.publishSceneChange(change)
+    return true
   }
 
   /**
@@ -1145,21 +984,16 @@ export class CanvasEngine {
    * {@link CanvasEngine.withoutHistory}.
    */
   pushHistory(): void {
-    this.commitHistory()
+    this.publishSceneChange(this.scene.checkpoint())
   }
 
   /**
    * Clear undo and redo history. The current canvas state becomes the new
    * baseline, so later edits are undoable but changes made before this call
-   * are not. Emits `change` so reactive bindings refresh undo availability.
+   * are not.
    */
   clearHistory(): void {
-    this.history = pushHistory(
-      createHistoryState(this.history.maxSize),
-      this.elements,
-      this.selectedIds,
-    )
-    this.emit("change", { elements: this.elements })
+    this.publishSceneChange(this.scene.clearHistory())
   }
 
   /**
@@ -1173,25 +1007,17 @@ export class CanvasEngine {
    * @returns The callback's return value.
    */
   withoutHistory<T>(fn: () => T): T {
-    const before = new Map(this.elements)
-    this.historySuppressionDepth += 1
-
-    const finish = (): void => {
-      this.historySuppressionDepth -= 1
-      if (this.historySuppressionDepth === 0) {
-        this.rebaseHistory(before)
-      }
-    }
-
     try {
-      const result = fn()
+      const result = this.scene.withoutHistory(fn)
       if (isPromiseLike(result)) {
-        return Promise.resolve(result).finally(finish) as T
+        return Promise.resolve(result).finally(() =>
+          notifyState(this, "history"),
+        ) as T
       }
-      finish()
+      notifyState(this, "history")
       return result
     } catch (error) {
-      finish()
+      notifyState(this, "history")
       throw error
     }
   }
@@ -1215,32 +1041,33 @@ export class CanvasEngine {
    * Select all visible elements.
    */
   selectAll(): void {
-    this.selectedIds = selectAllIds(this.elements)
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    const ids = selectAllIds(this.scene.getElements())
+    this.publishSceneChange(this.scene.select(ids))
   }
 
   /**
    * Clear the current selection.
    */
   clearSelection(): void {
-    this.selectedIds = new Set()
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    this.publishSceneChange(this.scene.select(new Set()))
   }
 
   /**
    * Delete the selected elements.
    */
   deleteSelected(): void {
-    const result = deleteSelectedElements(this.elements, this.selectedIds)
+    const result = deleteSelectedElements(
+      this.scene.getElements(),
+      this.scene.getSelectedIds(),
+    )
     if (!result) {
       return
     }
-    this.elements = result.elements
-    this.selectedIds = result.selectedIds
-    this.syncBindings()
-    this.commitHistory()
-    this.emit("change", { elements: this.elements })
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    const change = this.scene.replace(result.elements, {
+      history: true,
+      selection: result.selectedIds,
+    })
+    this.publishSceneChange(change)
   }
 
   // Snapshot the selected elements (plus any grouped children) into the
@@ -1251,7 +1078,10 @@ export class CanvasEngine {
    * @returns Copied elements.
    */
   copy(): CanvasElement[] {
-    const elements = collectClipboardElements(this.elements, this.selectedIds)
+    const elements = collectClipboardElements(
+      this.scene.getElements(),
+      this.scene.getSelectedIds(),
+    )
     if (elements.length > 0) {
       this.clipboard.write(elements)
     }
@@ -1290,20 +1120,20 @@ export class CanvasEngine {
     const pasted = createPastedElements(
       copied,
       point,
-      getNextZIndex(this.elements.values()),
+      getNextZIndex(this.scene.getElements().values()),
     )
 
-    for (const element of pasted) {
-      this.elements.set(element.id, element)
-    }
-    this.syncBindings()
-    this.selectedIds = new Set(pasted.map((element) => element.id))
-    // Push after mutating so the top of the undo stack mirrors the pasted
-    // state (same convention as the tools).
-    this.commitHistory()
+    const change = this.scene.commit(
+      (draft) => {
+        for (const element of pasted) {
+          draft.elements.set(element.id, element)
+        }
+        draft.selectedIds = new Set(pasted.map((element) => element.id))
+      },
+      { history: true },
+    )
 
-    this.emit("change", { elements: this.elements })
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    this.publishSceneChange(change)
     if (this.activeTool.type !== "select") {
       this.setActiveTool("select")
     }
@@ -1365,7 +1195,7 @@ export class CanvasEngine {
    * `constrainToContent` until the next fit.
    */
   zoomToFit(options: ZoomToFitOptions = {}): void {
-    const bounds = options.bounds ?? getElementsBounds(this.elements)
+    const bounds = options.bounds ?? getElementsBounds(this.scene.getElements())
     if (!bounds) {
       return
     }
@@ -1409,44 +1239,15 @@ export class CanvasEngine {
     return this.activeTool.getBindingCandidate?.() ?? null
   }
 
-  /**
-   * Subscribe to a canvas event.
-   * @param event Event name.
-   * @param listener Event handler.
-   */
-  on<K extends keyof CanvasEventMap>(
-    event: K,
-    listener: EventListener<K>,
-  ): void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set())
-    }
-    this.listeners.get(event)!.add(listener)
-  }
-
-  /**
-   * Unsubscribe from a canvas event.
-   * @param event Event name.
-   * @param listener Event handler.
-   */
-  off<K extends keyof CanvasEventMap>(
-    event: K,
-    listener: EventListener<K>,
-  ): void {
-    this.listeners.get(event)?.delete(listener)
-  }
-
-  /** @internal */
-  emit<K extends keyof CanvasEventMap>(
-    event: K,
-    data: CanvasEventMap[K],
-  ): void {
-    this.listeners.get(event)?.forEach((listener) => {
-      listener(data)
-    })
-  }
-
   // ── Adapter-facing internals (`engine/internal.ts` hooks) ──
+
+  /**
+   * Whether the canvas is mounted into a DOM container. Headless engines
+   * return `false`; {@link AdrawCanvas} overrides this.
+   */
+  isMounted(): boolean {
+    return false
+  }
 
   /** @internal */
   getActiveToolInstance(): Tool {
@@ -1470,8 +1271,7 @@ export class CanvasEngine {
 
   /** @internal */
   setSelectedIds(ids: Set<ElementId>): void {
-    this.selectedIds = ids
-    this.emit("selectionChange", { selectedIds: this.selectedIds })
+    this.publishSceneChange(this.scene.select(ids))
   }
 
   /** @internal */

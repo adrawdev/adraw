@@ -134,16 +134,13 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().core`:
+### `useStyle()`
 
 ```ts
-const { core } = useCanvas()
+const { style, setStyle } = useStyle()
 
-core.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-core.getStyle() // selection style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+// style: getter — selection style, or the global style
 ```
 
 `setStyle` restyles matching selected elements as well as future ones. Fields an

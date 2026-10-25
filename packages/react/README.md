@@ -120,7 +120,7 @@ All hooks must be called inside `<CanvasProvider>`.
 
 ### `useCanvas()`
 
-Returns the raw context value, including `elements`, `viewport`, `activeTool`, `selectedIds`, and the underlying `AdrawCanvas` instance (`engine`). `vanillaRef` is still available for backwards compatibility, but new code should use `useCanvasEngine()`.
+Returns the raw context value, including `engine`, `store`, `snapshot`, `elements`, `viewport`, `activeTool`, `selectedIds`, `style` and setters. `vanillaRef` is still available for backwards compatibility, but new code should use `useCanvasEngine()`.
 
 ### `useCanvasEngine()`
 
@@ -137,9 +137,8 @@ useEffect(() => {
 
 `engine` is non-null from the first render, so effects do not depend on the
 child/parent effect order. `isReady` becomes `true` after `<Canvas>` has mounted
-the engine and the provider has subscribed to its events; the state change
-triggers a re-render. Use the engine directly for core-only APIs such as the
-clipboard (`copy()`, `cut()`, `paste()`).
+the engine; the store snapshot triggers a re-render. Use the engine directly for
+core-only APIs such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useTool()`
 
@@ -163,6 +162,8 @@ const { viewport, setViewport, zoomIn, zoomOut, resetZoom, zoomToFit } =
 const { undo, redo, canUndo, canRedo } = useHistory()
 ```
 
+`canUndo()` and `canRedo()` read the store snapshot, so they stay reactive.
+
 ### `useSelection()`
 
 ```ts
@@ -170,16 +171,15 @@ const { selectedIds, elements, selectAll, clearSelection, deleteSelected } =
   useSelection()
 ```
 
-### Styles
+`elements` contains the selected elements, not the whole document.
 
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvasEngine`:
+### `useStyle()`
 
 ```tsx
-const { engine } = useCanvasEngine()
+const { style, setStyle } = useStyle()
 
-engine.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-engine.getStyle() // selected elements' common style, or the global style
+setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+// style is the selected elements' common style, or the global style
 ```
 
 `setStyle` restyles matching elements in the current selection as well as future

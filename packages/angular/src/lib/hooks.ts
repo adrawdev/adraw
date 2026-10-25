@@ -1,5 +1,6 @@
 import {
   type AdrawCanvas,
+  type StyleOptions,
   type ToolType,
   type ViewportState,
   type ZoomToFitOptions,
@@ -92,13 +93,22 @@ export function useTransformOverlay() {
   }
 }
 
+/** Access the current style signal and setter. */
+export function useStyle() {
+  const canvas = inject(CanvasService)
+  return {
+    setStyle: (options: StyleOptions) => canvas.setStyle(options),
+    style: canvas.style,
+  }
+}
+
 /** Access selection state and selection operations. */
 export function useSelection() {
   const canvas = inject(CanvasService)
   return {
     clearSelection: () => canvas.clearSelection(),
     deleteSelected: () => canvas.deleteSelected(),
-    elements: canvas.elements,
+    elements: canvas.selectedElements,
     selectAll: () => canvas.selectAll(),
     selectedIds: canvas.selectedIds,
   }

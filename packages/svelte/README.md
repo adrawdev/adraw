@@ -93,7 +93,7 @@ All composables must be called inside `<CanvasProvider>` (in the top level of a 
 
 ### `useCanvas()`
 
-Returns the raw context value: `state` (reactive `elements`, `viewport`, `activeTool`, `selectedIds`), `isReady`, and `instance` — a `{ current: AdrawCanvas }` ref that is populated as soon as the provider is created. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
+Returns the raw context value: `store`, `snapshot`, `state` (reactive snapshot fields), `isReady`, and `instance` — a `{ current: AdrawCanvas }` ref that is populated as soon as the provider is created. The instance carries core-only APIs too, such as the clipboard (`copy()`, `cut()`, `paste()`).
 
 ### `useCanvasEngine()`
 
@@ -134,29 +134,28 @@ history.canUndo()
 history.canRedo()
 ```
 
+`canUndo()` and `canRedo()` read the store snapshot, so they stay reactive.
+
 ### `useSelection()`
 
 ```ts
 const selection = useSelection()
-// selection.selectedIds, selection.elements
+// selection.selectedIds, selection.elements (selected elements)
 selection.selectAll()
 selection.clearSelection()
 selection.deleteSelected()
 ```
 
-### Styles
-
-Styles are global. Use the engine's `setStyle` / `getStyle` through
-`useCanvas().instance.current`:
+### `useStyle()`
 
 ```svelte
 <script lang="ts">
-  import { useCanvas } from "@adraw/svelte"
+  import { useStyle } from "@adraw/svelte"
 
-  const canvas = useCanvas()
+  const { style, setStyle } = useStyle()
 
-  canvas.instance.current?.setStyle({ strokeColor: "#f00", strokeWidth: 3 })
-  canvas.instance.current?.getStyle() // selection style, or the global style
+  setStyle({ strokeColor: "#f00", strokeWidth: 3 })
+  // style: selection style, or the global style
 </script>
 ```
 
