@@ -9,6 +9,7 @@ import type {
 import {
   calculateShapeBounds,
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -125,7 +126,7 @@ export function createDiamondTool(options: DiamondToolOptions = {}): Tool {
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()
-        context.setActiveTool("select")
+        finishCreationGesture(context)
       }
 
       state.startPoint = null

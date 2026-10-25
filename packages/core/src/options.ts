@@ -93,6 +93,18 @@ export interface CanvasOptions {
   snapping?: Partial<SnappingConfig>
   /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `false` in the core; the framework adapters default to `true`. */
   hideOverlayWhileTransforming?: boolean
+  /**
+   * Lock the active drawing tool so it stays active after creating an element
+   * instead of switching back to the selection tool. Applies to the rectangle,
+   * ellipse, diamond, line, arrow, text and note tools; the draw and eraser
+   * tools always stay active. Defaults to `false`.
+   *
+   * @example
+   * ```ts
+   * const canvas = new AdrawCanvas({ container, isToolLocked: true })
+   * ```
+   */
+  isToolLocked?: boolean
 }
 
 /**

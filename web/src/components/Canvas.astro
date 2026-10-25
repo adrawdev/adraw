@@ -8,6 +8,7 @@ import {
   HandIcon,
   ImageIcon,
   ImageDownIcon,
+  LockIcon,
   MinusIcon,
   MousePointerIcon,
   MoveUpRightIcon,
@@ -62,6 +63,14 @@ const { class: className, ...props } = Astro.props;
     </button>
     <button class="tool-button" data-tool="eraser" title="Eraser (E)">
       <EraserIcon size={16} />
+    </button>
+    <button
+      class="tool-button"
+      data-action="toggle-tool-lock"
+      title="Keep selected tool active after drawing"
+      aria-pressed="false"
+    >
+      <LockIcon size={16} />
     </button>
     <button class="tool-button" data-action="insert-media" title="Insert image">
       <ImageIcon size={16} />
@@ -287,6 +296,12 @@ const { class: className, ...props } = Astro.props;
           canvas.setStyle({ strokeColor: color! })
           break
         }
+        case "toggle-tool-lock": {
+          const locked = !canvas.getIsToolLocked()
+          canvas.setIsToolLocked(locked)
+          btn.ariaPressed = locked ? "true" : null
+          break
+        }
         case "export": {
           exportImage()
           break
@@ -337,6 +352,19 @@ const { class: className, ...props } = Astro.props;
       btn.ariaPressed = btn.dataset.tool === activeTool ? "true" : null
     })
   }
+
+  // Keep the lock button in sync with the Q shortcut.
+  document.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() !== "q") {
+      return
+    }
+    const lockButton = toolbar.querySelector<HTMLButtonElement>(
+      '[data-action="toggle-tool-lock"]',
+    )
+    if (lockButton) {
+      lockButton.ariaPressed = canvas.getIsToolLocked() ? "true" : null
+    }
+  })
 
   async function exportImage() {
     const format = "png";

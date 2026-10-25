@@ -33,9 +33,10 @@ export function startExistingTextEditing(
   state.textEditOriginalElement = element
   state.textEditPoint = { x: element.x, y: element.y }
   engine.setSelectedIds(new Set())
-  // Editing always happens with the select tool active, so the toolbar and the
-  // next click behave like a finished text gesture.
-  if (engine.getActiveTool() === "text") {
+  // Editing normally happens with the select tool active, so the toolbar and
+  // the next click behave like a finished text gesture. With the tool lock on,
+  // leave it alone.
+  if (engine.getActiveTool() === "text" && !engine.getIsToolLocked()) {
     engine.setActiveTool("select")
   }
   openTextEditor(
@@ -104,6 +105,10 @@ function openTextEditor(
     ) {
       event.preventDefault()
       commitTextEditing(state, engine)
+      // The editor lives outside the canvas, so focus would otherwise fall
+      // back to the body. Return it so canvas-scoped shortcuts keep working
+      // (e.g. toggling the tool lock with Q).
+      state.svgElement?.focus({ preventScroll: true })
     }
   })
 
@@ -150,6 +155,12 @@ export function commitTextEditing(
   const editingExisting = state.textEditElementId !== null
   const id = state.textEditElementId
   const point = state.textEditPoint
+  const toolLocked = engine.getIsToolLocked()
+  // A locked creation tool leaves the finished text/note unselected, ready for
+  // the next gesture.
+  const suppressSelection =
+    toolLocked &&
+    (engine.getActiveTool() === "text" || engine.getActiveTool() === "note")
   removeTextEditor(state, engine)
 
   if (editingExisting && id) {
@@ -158,14 +169,20 @@ export function commitTextEditing(
       // Restore a visible selection as the edit ends: the shape for a label,
       // the text itself for free text. An empty free text is deleted below and
       // commitTextEdit drops it from the selection again.
-      engine.setSelectedIds(new Set([before.containerId ?? before.id]))
-    } else if (before?.type === "note") {
+      if (!suppressSelection) {
+        engine.setSelectedIds(new Set([before.containerId ?? before.id]))
+      }
+    } else if (before?.type === "note" && !suppressSelection) {
       engine.setSelectedIds(new Set([before.id]))
     }
     state.textEditElementId = null
     state.textEditOriginalElement = null
     commitTextEdit(engine, id)
-    if (options.switchTool !== false && engine.getActiveTool() === "text") {
+    if (
+      options.switchTool !== false &&
+      engine.getActiveTool() === "text" &&
+      !toolLocked
+    ) {
       engine.setActiveTool("select")
     }
   } else if (point) {

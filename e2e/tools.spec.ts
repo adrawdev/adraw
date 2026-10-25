@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { openCanvas, pickTool, snapshot } from "./helpers"
+import { drag, openCanvas, pickTool, snapshot } from "./helpers"
 
 test.describe("tool selection", () => {
   const tools = [
@@ -44,6 +44,44 @@ test.describe("tool selection", () => {
     ).toHaveClass(/active/)
   })
 
+  test.describe("keeping the tool active", () => {
+    test("switches back to select after drawing by default", async ({
+      page,
+    }) => {
+      const svg = await openCanvas(page)
+
+      await pickTool(page, "rectangle")
+      await drag(page, svg, { x: 100, y: 100 }, { x: 200, y: 200 })
+
+      const state = await snapshot(page)
+      expect(state.elementCount).toBe(1)
+      expect(state.activeTool).toBe("select")
+    })
+
+    test("keeps the drawing tool active when the toggle is on", async ({
+      page,
+    }) => {
+      const svg = await openCanvas(page)
+
+      await page.locator("#tool-lock").check()
+      await pickTool(page, "rectangle")
+      await drag(page, svg, { x: 100, y: 100 }, { x: 200, y: 200 })
+
+      const state = await snapshot(page)
+      expect(state.elementCount).toBe(1)
+      expect(state.activeTool).toBe("rectangle")
+      expect(state.selectedCount).toBe(0)
+
+      // A second shape can be drawn immediately without reselecting the tool.
+      await drag(page, svg, { x: 250, y: 100 }, { x: 320, y: 180 })
+
+      const afterSecond = await snapshot(page)
+      expect(afterSecond.elementCount).toBe(2)
+      expect(afterSecond.activeTool).toBe("rectangle")
+      expect(afterSecond.selectedCount).toBe(0)
+    })
+  })
+
   test.describe("keyboard shortcuts", () => {
     const shortcuts: [string, string][] = [
       ["r", "rectangle"],
@@ -67,6 +105,31 @@ test.describe("tool selection", () => {
         expect(state.activeTool).toBe(tool)
       })
     }
+
+    test('"q" toggles the tool lock', async ({ page }) => {
+      const svg = await openCanvas(page)
+      await svg.focus()
+      await page.keyboard.press("q")
+
+      await expect(page.locator("#tool-lock")).toBeChecked()
+      const lockedByShortcut = await snapshot(page)
+      expect(lockedByShortcut.isToolLocked).toBe(true)
+
+      await pickTool(page, "rectangle")
+      await drag(page, svg, { x: 100, y: 100 }, { x: 200, y: 200 })
+      const locked = await snapshot(page)
+      expect(locked.activeTool).toBe("rectangle")
+
+      // Drawing focuses the canvas, so Q works without refocusing.
+      await page.keyboard.press("q")
+      await expect(page.locator("#tool-lock")).not.toBeChecked()
+      const unlocked = await snapshot(page)
+      expect(unlocked.isToolLocked).toBe(false)
+
+      await drag(page, svg, { x: 250, y: 100 }, { x: 320, y: 180 })
+      const afterSecond = await snapshot(page)
+      expect(afterSecond.activeTool).toBe("select")
+    })
 
     test("the toolbar reflects a keyboard-driven tool change", async ({
       page,

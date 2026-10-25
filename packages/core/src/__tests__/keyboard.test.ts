@@ -57,6 +57,18 @@ describe("keyboard scope and teardown", () => {
     expect(instance.getActiveTool()).toBe("rectangle")
   })
 
+  it("toggles the tool lock with Q", () => {
+    const { canvas: instance, svg } = mount()
+
+    expect(instance.getIsToolLocked()).toBe(false)
+
+    svg.dispatchEvent(keydown({ key: "q" }))
+    expect(instance.getIsToolLocked()).toBe(true)
+
+    svg.dispatchEvent(keydown({ key: "Q" }))
+    expect(instance.getIsToolLocked()).toBe(false)
+  })
+
   it("focuses the canvas on pointer down", () => {
     const { svg } = mount()
     const input = document.createElement("input")

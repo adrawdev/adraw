@@ -141,6 +141,12 @@ function applyLiveOptions(
   if (hide !== previousHide) {
     engine.setHideOverlayWhileTransforming(hide)
   }
+
+  const toolLocked = options?.isToolLocked ?? false
+  const previousToolLocked = previous?.isToolLocked ?? false
+  if (toolLocked !== previousToolLocked) {
+    engine.setIsToolLocked(toolLocked)
+  }
 }
 
 /**

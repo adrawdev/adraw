@@ -226,6 +226,7 @@ export class CanvasEngine {
   // own defaults for future gestures.
   private style: StyleOptions = {}
   private hideOverlayWhileTransforming: boolean
+  private isToolLocked: boolean
   private history = createHistoryState()
   // Depth counter for `withoutHistory`; suppresses checkpoint pushes while > 0.
   private historySuppressionDepth = 0
@@ -260,6 +261,7 @@ export class CanvasEngine {
     this.textMeasurerSource = options.measureText ? "custom" : "default"
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
+    this.isToolLocked = options.isToolLocked ?? false
 
     this.tools.set("select", createSelectTool())
     this.tools.set("hand", createHandTool())
@@ -299,6 +301,13 @@ export class CanvasEngine {
 
   private createToolContext(): ToolContext {
     return {
+      finishCreation: () => {
+        if (this.isToolLocked) {
+          this.setSelectedIds(new Set())
+          return
+        }
+        this.setActiveTool("select")
+      },
       getCanvasSize: () => this.canvasSize,
       getElements: () => this.elements,
       getIsSnapMode: () => this.isSnapMode,
@@ -1059,6 +1068,26 @@ export class CanvasEngine {
     // Re-render so the overlay reflects the change immediately (e.g. toggled
     // mid-gesture).
     this.renderRequested?.()
+  }
+
+  /**
+   * Whether the active drawing tool is locked, i.e. stays active after
+   * creating an element.
+   */
+  getIsToolLocked(): boolean {
+    return this.isToolLocked
+  }
+
+  /**
+   * Lock the active drawing tool so it stays active after creating an element.
+   * Applies to the rectangle, ellipse, diamond, line, arrow, text and note
+   * tools; the draw and eraser tools always stay active.
+   *
+   * @param locked Whether to keep the current tool instead of switching to
+   * `"select"`.
+   */
+  setIsToolLocked(locked: boolean): void {
+    this.isToolLocked = locked
   }
 
   /**

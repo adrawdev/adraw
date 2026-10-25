@@ -170,12 +170,16 @@ describe("React canvas lifecycle", () => {
     const engine = store.current!.engine
 
     await act(async () => {
-      store.current!.setOptions({ hideOverlayWhileTransforming: false })
+      store.current!.setOptions({
+        hideOverlayWhileTransforming: false,
+        isToolLocked: true,
+      })
     })
 
     expect(store.current!.engine).toBe(engine)
     expect(store.current!.engine.getElements().has("keep")).toBe(true)
     expect(store.current!.engine.getHideOverlayWhileTransforming()).toBe(false)
+    expect(store.current!.engine.getIsToolLocked()).toBe(true)
   })
 
   it("does not recreate the engine when options change identity only", async () => {

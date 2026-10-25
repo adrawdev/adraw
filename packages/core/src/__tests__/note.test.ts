@@ -265,4 +265,72 @@ describe("note tool", () => {
     expect(canvas.getElements().has(note.id)).toBe(true)
     expect(canvas.getSelectedIds().has(note.id)).toBe(true)
   })
+
+  it("creates the next note with one click while the tool is locked", () => {
+    const { canvas, svg } = mount()
+    canvas.setIsToolLocked(true)
+    canvas.setActiveTool("note")
+
+    const click = (x: number, y: number): void => {
+      for (const type of ["pointerdown", "pointerup"] as const) {
+        svg.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            clientX: x,
+            clientY: y,
+            pointerId: 1,
+          }),
+        )
+      }
+    }
+
+    click(300, 300)
+    const firstEditor = document.querySelector<HTMLTextAreaElement>("textarea")
+    expect(firstEditor).not.toBeNull()
+    firstEditor!.value = "First"
+    firstEditor!.dispatchEvent(new Event("input", { bubbles: true }))
+
+    click(500, 400)
+
+    const notes = [...canvas.getElements().values()].filter(
+      (element) => element.type === "note",
+    )
+    expect(notes).toHaveLength(2)
+    expect(notes.some((element) => element.text === "First")).toBe(true)
+    expect(document.querySelectorAll("textarea")).toHaveLength(1)
+    expect(canvas.getSelectedIds().size).toBe(0)
+  })
+
+  it("returns focus to the canvas after Escape so shortcuts keep working", () => {
+    const { canvas, svg } = mount()
+    canvas.setIsToolLocked(true)
+    canvas.setActiveTool("note")
+
+    for (const type of ["pointerdown", "pointerup"] as const) {
+      svg.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          clientX: 400,
+          clientY: 300,
+          pointerId: 1,
+        }),
+      )
+    }
+
+    const editor = document.querySelector<HTMLTextAreaElement>("textarea")
+    expect(editor).not.toBeNull()
+    editor!.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }),
+    )
+
+    expect(document.querySelector("textarea")).toBeNull()
+    expect(document.activeElement).toBe(svg)
+    expect(canvas.getSelectedIds().size).toBe(0)
+
+    const active = document.activeElement as Element
+    active.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "q" }),
+    )
+    expect(canvas.getIsToolLocked()).toBe(false)
+  })
 })

@@ -41,6 +41,13 @@ export interface ToolContext {
   getIsSnapMode: () => boolean
   setSnapGuides: (guides: SnapGuide[]) => void
   pushHistory: () => void
+  /**
+   * Complete a successful creation gesture. The engine switches back to the
+   * selection tool unless it is configured to keep the active tool
+   * (`isToolLocked`). Optional so standalone tool factories can
+   * keep using `setActiveTool("select")`.
+   */
+  finishCreation?: () => void
   setActiveTool: (tool: ToolType) => void
 }
 
@@ -123,6 +130,21 @@ export function getStyleForContext<T extends CanvasElementStyle>(
   context: ToolContext,
 ): T {
   return { ...defaults, ...context.getStyle?.() } as T
+}
+
+/**
+ * Finish a creation gesture: return to the selection tool, or keep the current
+ * tool when the engine is configured to keep it active. Tools call this after
+ * committing the element they created.
+ *
+ * @param context Current tool context.
+ */
+export function finishCreationGesture(context: ToolContext): void {
+  if (context.finishCreation) {
+    context.finishCreation()
+    return
+  }
+  context.setActiveTool("select")
 }
 
 /**

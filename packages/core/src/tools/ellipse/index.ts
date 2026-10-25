@@ -9,6 +9,7 @@ import type {
 import {
   calculateShapeBounds,
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -110,7 +111,7 @@ export function createEllipseTool(options: EllipseToolOptions = {}): Tool {
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()
-        context.setActiveTool("select")
+        finishCreationGesture(context)
       }
 
       state.startPoint = null

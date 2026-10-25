@@ -112,6 +112,29 @@ describe("text editor DOM integration", () => {
     expect(canvas.getSelectedIds().has(editingText.id)).toBe(true)
   })
 
+  it("starts the next text edit with one click while the tool is locked", () => {
+    const { canvas, svg } = mount()
+    canvas.setIsToolLocked(true)
+    canvas.setActiveTool("text")
+
+    clickCanvas(svg, 300, 300)
+    const firstEditor = document.querySelector<HTMLTextAreaElement>("textarea")
+    firstEditor!.value = "First"
+    firstEditor!.dispatchEvent(new Event("input", { bubbles: true }))
+
+    clickCanvas(svg, 500, 400)
+
+    const editors = document.querySelectorAll<HTMLTextAreaElement>("textarea")
+    expect(editors).toHaveLength(1)
+    expect(editors[0].value).toBe("")
+    const texts = [...canvas.getElements().values()].filter(
+      (element) => element.type === "text",
+    )
+    expect(texts).toHaveLength(2)
+    expect(texts.some((element) => element.text === "First")).toBe(true)
+    expect(canvas.getSelectedIds().size).toBe(0)
+  })
+
   it("renders explicit newlines as one tspan per line", () => {
     const { canvas, container, svg } = mount()
     canvas.setActiveTool("text")

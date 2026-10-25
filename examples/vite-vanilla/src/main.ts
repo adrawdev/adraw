@@ -9,6 +9,20 @@ const vanilla = new AdrawCanvas({
   container: canvasContainer,
 })
 
+// Keep the selected tool active after drawing (toggle in the toolbar).
+const toolLockToggle = document.getElementById("tool-lock") as HTMLInputElement
+toolLockToggle.checked = vanilla.getIsToolLocked()
+toolLockToggle.addEventListener("change", () => {
+  vanilla.setIsToolLocked(toolLockToggle.checked)
+})
+
+// Reflect the Q shortcut in the toolbar checkbox.
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() === "q") {
+    toolLockToggle.checked = vanilla.getIsToolLocked()
+  }
+})
+
 const buttons = toolbar.querySelectorAll<HTMLButtonElement>("[data-tool]")
 buttons.forEach((btn) => {
   btn.addEventListener("click", () => {

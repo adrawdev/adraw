@@ -16,6 +16,7 @@ import type {
 } from "../../types"
 import {
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -156,7 +157,7 @@ export function createTextTool(options: TextToolOptions = {}): TextTool {
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()
-        context.setActiveTool("select")
+        finishCreationGesture(context)
       }
 
       state.startPoint = null

@@ -19,6 +19,7 @@ import type {
 import {
   calculateShapeBounds,
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -188,7 +189,7 @@ export function createNoteTool(options: NoteToolOptions = {}): Tool {
       context.setSelectedIds(new Set([element.id]))
       context.pushHistory()
       reset()
-      context.setActiveTool("select")
+      finishCreationGesture(context)
     },
     type: "note" as ToolType,
   }

@@ -94,6 +94,7 @@ cycle still runs twice, but the engine instance and its document survive and
 `setOptions` applies live changes without recreating the engine:
 
 - `hideOverlayWhileTransforming` updates the current engine.
+- `isToolLocked` updates the current engine.
 - `keyboard`, `snapping`, `viewport` config, `isSnapMode` and clipboard hooks are
   constructor-only. Changing them recreates the engine while preserving the
   document and viewport (undo history and selection are reset).

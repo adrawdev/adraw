@@ -58,11 +58,16 @@ export function handlePointerDown(
 ): void {
   const point = toCanvasPoint(engine, screenX, screenY)
 
-  // Clicking outside the editor while it's open commits the edit and swallows
-  // the click: the next click starts a new gesture.
+  // Clicking outside the editor while it's open commits the edit. With the
+  // tool lock on, the same click starts the next text/note gesture so elements
+  // can be added back to back; otherwise swallow it.
   if (state.textEditor) {
     commitTextEditing(state, engine)
-    return
+    const tool = engine.getActiveTool()
+    const canContinue = tool === "text" || tool === "note"
+    if (!engine.getIsToolLocked() || !canContinue) {
+      return
+    }
   }
 
   cancelTextGesture(state, engine)
@@ -209,17 +214,21 @@ export function handlePointerUp(
     return
   }
 
-  // The note tool commits and selects the note on pointer-up; open its inline
-  // editor immediately, matching tldraw's sticky-note flow. Cancelled pointers
-  // create nothing and must not reopen an editor.
+  // The note tool commits the note on pointer-up; open its inline editor
+  // immediately, matching tldraw's sticky-note flow. The tool lock clears the
+  // selection, so find the new note by id instead of relying on it. Cancelled
+  // pointers create nothing and must not reopen an editor.
   const creatingNote =
     engine.getActiveTool() === "note" && event.type !== "pointercancel"
+  const idsBefore = creatingNote ? new Set(engine.getElements().keys()) : null
 
   dispatchPointerUp(engine, toCanvasPoint(engine, screenX, screenY), event)
 
-  if (creatingNote) {
-    const [selectedId] = engine.getSelectedIds()
-    const note = selectedId ? engine.getElements().get(selectedId) : null
+  if (creatingNote && idsBefore) {
+    const createdId = [...engine.getElements().keys()].find(
+      (id) => !idsBefore.has(id),
+    )
+    const note = createdId ? engine.getElements().get(createdId) : null
     if (note?.type === "note") {
       startExistingTextEditing(state, engine, note)
     }

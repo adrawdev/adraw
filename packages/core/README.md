@@ -44,6 +44,29 @@ canvas.setActiveTool("draw")
 canvas.getActiveTool() // "draw"
 ```
 
+### Keeping the tool active
+
+By default, the rectangle, ellipse, diamond, line, arrow, text and note tools
+switch back to `select` after creating an element. Set `isToolLocked: true` to
+stay in the tool and keep drawing:
+
+```ts
+const canvas = new AdrawCanvas({ container, isToolLocked: true })
+
+// Toggle at runtime, e.g. from a toolbar lock button.
+canvas.setIsToolLocked(false)
+canvas.getIsToolLocked() // false
+```
+
+Press `Q` while the canvas has focus to toggle the lock.
+
+While the lock is on, clicking outside an open text or note editor commits it
+and starts the next element in the same click. Created elements are not left
+selected, so no transform handles appear while the tool stays active.
+
+The draw and eraser tools always stay active, so the option does not affect
+them.
+
 ### Tool styles
 
 Styles are global: `setStyle` merges partial options into every drawing tool and

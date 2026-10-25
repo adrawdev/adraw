@@ -68,6 +68,29 @@ canvas.getActiveTool() // "draw"
 While drawing a `rectangle`, `ellipse` or `diamond`, hold `Shift` to constrain
 it to a square/circle, or `Alt` to size it outward from the center point.
 
+### Keeping the tool active
+
+By default, the rectangle, ellipse, diamond, line, arrow, text and note tools
+switch back to `select` after creating an element. Set `isToolLocked: true` to
+stay in the tool and keep drawing:
+
+```ts
+const canvas = new AdrawCanvas({ container, isToolLocked: true })
+
+// Toggle at runtime, e.g. from a toolbar lock button.
+canvas.setIsToolLocked(false)
+canvas.getIsToolLocked() // false
+```
+
+Press `Q` while the canvas has focus to toggle the lock.
+
+While the lock is on, clicking outside an open text or note editor commits it
+and starts the next element in the same click. Created elements are not left
+selected, so no transform handles appear while the tool stays active.
+
+The draw and eraser tools always stay active, so the option does not affect
+them.
+
 ### Tool styles
 
 Styles are global. `setStyle` merges partial options into every drawing tool and
@@ -128,12 +151,13 @@ switches a text element to fixed width; dragging a corner scales its font size.
 
 Editing happens inline: double-click a text element (or press `Enter`/`F2` with
 it selected) to edit it, `Enter` inserts a newline, and `Escape` or
-`Ctrl`/`Cmd+Enter` commits. Starting an edit switches the active tool to
-`select` (the text tool's drag-to-create gesture still finishes as select), and
-the element is cleared from the selection while the editor is open so no resize
-handles compete with the caret; the text (or its shape, for a label) is selected
-again when editing ends. While mounted, `AdrawCanvas` measures text with the
-2D canvas API so boxes match the rendered glyphs. Pass `measureText` to
+`Ctrl`/`Cmd+Enter` commits. Starting an edit normally switches the active tool
+to `select` (the text tool's drag-to-create gesture also finishes as select);
+with `isToolLocked` on, the text tool stays active instead. The element is
+cleared from the selection while the editor is open so no resize handles
+compete with the caret; the text (or its shape, for a label) is selected again
+when editing ends. While mounted, `AdrawCanvas` measures text with the 2D
+canvas API so boxes match the rendered glyphs. Pass `measureText` to
 `AdrawCanvas` to supply your own measurer (for example to use loaded web fonts).
 
 ```ts

@@ -8,6 +8,7 @@ export interface CanvasSnapshot {
   activeTool: string
   elementCount: number
   elementTypes: string[]
+  isToolLocked: boolean
   selectedCount: number
   zoom: number
   canUndo: boolean
@@ -36,6 +37,7 @@ export function snapshot(page: Page): Promise<CanvasSnapshot> {
       canUndo: canvas.canUndo(),
       elementCount: elements.length,
       elementTypes: elements.map((element: any) => element.type),
+      isToolLocked: canvas.getIsToolLocked(),
       selectedCount: canvas.getSelectedIds().size,
       zoom: canvas.getViewport().zoom,
     }

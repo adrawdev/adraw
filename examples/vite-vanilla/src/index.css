@@ -37,3 +37,11 @@ body {
   background-color: light-dark(#ddd, #222);
   margin: 0 8px;
 }
+.toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  font-size: 14px;
+  cursor: pointer;
+}

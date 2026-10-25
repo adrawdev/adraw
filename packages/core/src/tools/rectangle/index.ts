@@ -9,6 +9,7 @@ import type {
 import {
   calculateShapeBounds,
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -114,7 +115,7 @@ export function createRectangleTool(options: RectangleToolOptions = {}): Tool {
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()
-        context.setActiveTool("select")
+        finishCreationGesture(context)
       }
 
       state.startPoint = null

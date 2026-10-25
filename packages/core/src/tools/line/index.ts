@@ -8,6 +8,7 @@ import type {
 } from "../../types"
 import {
   createBaseToolState,
+  finishCreationGesture,
   getDefaultToolOptions,
   getStyleForContext,
   type Tool,
@@ -112,7 +113,7 @@ export function createLineTool(options: CanvasElementStyle = {}): Tool {
         context.setElements(elements)
         context.setSelectedIds(new Set([element.id]))
         context.pushHistory()
-        context.setActiveTool("select")
+        finishCreationGesture(context)
       }
 
       state.startPoint = null

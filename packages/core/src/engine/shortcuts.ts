@@ -5,10 +5,12 @@ export interface ShortcutActions {
   copy: () => void
   cut: () => void
   deleteSelected: () => void
+  getIsToolLocked: () => boolean
   paste: () => void
   redo: () => boolean
   selectAll: () => void
   setActiveTool: (tool: ToolType) => void
+  setIsToolLocked: (locked: boolean) => void
   undo: () => boolean
 }
 
@@ -96,6 +98,10 @@ export function handleShortcutKey(
       }
       case "n": {
         actions.setActiveTool("note")
+        break
+      }
+      case "q": {
+        actions.setIsToolLocked(!actions.getIsToolLocked())
         break
       }
       case "delete":

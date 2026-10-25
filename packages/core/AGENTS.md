@@ -105,6 +105,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `setStyle(partial)`                                     | Merge global styles; restyles selected elements           |
 | `getHideOverlayWhileTransforming()`                     | Transform overlay visibility                              |
 | `setHideOverlayWhileTransforming(bool)`                 | Control transform overlay                                 |
+| `getIsToolLocked()`                                     | Whether tools stay active after creating an element       |
+| `setIsToolLocked(bool)`                                 | Control the post-creation tool switch                     |
 
 ### Events
 
@@ -127,6 +129,7 @@ Passed to constructor as `CanvasOptions`:
 - `initialViewport?: ViewportState`
 - `viewport?: Partial<ViewportConfig>` — `{ minZoom, maxZoom, zoomSensitivity, fitPadding, constrainToContent }`; applies to wheel zoom, `zoomIn`/`zoomOut`, `resetZoom`, `setViewport` and `zoomToFit`. `constrainToContent` clamps panning to the content and floors zoom at the last `zoomToFit()` level
 - `hideOverlayWhileTransforming?: boolean`
+- `isToolLocked?: boolean` — lock the rectangle/ellipse/diamond/line/arrow/text/note tool so it stays active after creating an element instead of switching to `select`; created elements are left unselected. Toggle at runtime with `setIsToolLocked()` / read with `getIsToolLocked()`, or press `Q` while the canvas is focused
 - `snapping?: SnappingConfig` (`{ threshold }`)
 - `isSnapMode?: boolean` — snap by default; when false/omitted, snapping needs Ctrl/Cmd held
 - `keyboard?: "canvas" | "document" | "none"` — shortcut scope; defaults to `"canvas"` (SVG is focusable and focuses on pointer down), `"document"` handles shortcuts page-wide, `"none"` disables them
@@ -143,7 +146,7 @@ Passed to constructor as `CanvasOptions`:
 
 `AdrawCanvas.mount()` calls `setAdapterTextMeasurer(createCanvasTextMeasurer(document))`, which re-measures existing text; `destroy()` restores the approximation. `setTextMeasurer(fn)` also re-measures every text element without adding a history entry.
 
-Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` commits. Opening an editor clears the selection and switches the active tool to `select`; committing selects the edited text (or its container for a label). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
+Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` commits. Opening an editor clears the selection and normally switches the active tool to `select`; with `isToolLocked` on, the text or note tool stays active, and clicking outside the editor commits it and starts the next element in the same click. Committing selects the edited text (or its container for a label). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
 
 `src/text-bindings.ts` handles labels bound to a rectangle, ellipse, diamond or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, mirrors the container's rotation/visibility and grows the container vertically when the label no longer fits. Arrows use `labelPosition` (0–1) and auto-size labels; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the label box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes labels whose container disappeared. The DOM creates labels through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
 
