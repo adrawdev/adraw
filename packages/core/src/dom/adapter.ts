@@ -7,6 +7,7 @@ import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
 import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
+import { planStateRender } from "./render/plan"
 import { createDomState, type DomState } from "./state"
 import {
   elementsGroupClass,
@@ -39,28 +40,34 @@ export function mountDom(
     renderAll(state, engine)
   }
 
-  const handleStateChange = (kind: StateChangeKind): void => {
-    if (kind === "elements") {
-      if (engine.getActiveTool() === "select") {
-        renderSelectElements(state, engine)
+  const handleStateChange = (kinds: ReadonlySet<StateChangeKind>): void => {
+    for (const action of planStateRender(kinds)) {
+      switch (action) {
+        case "reconcileElements": {
+          reconcileElements(state, engine)
+          break
+        }
+        case "renderSelectElements": {
+          renderSelectElements(state, engine)
+          break
+        }
+        case "renderGuides": {
+          renderGuides(state, engine)
+          break
+        }
+        case "renderTransformOverlay": {
+          renderTransformOverlay(state, engine)
+          break
+        }
+        case "renderAll": {
+          renderAll(state, engine)
+          break
+        }
+        case "updateCursor": {
+          updateCursor(state, engine.getActiveTool())
+          break
+        }
       }
-      reconcileElements(state, engine)
-      renderGuides(state, engine)
-      return
-    }
-    if (kind === "selection") {
-      renderSelectElements(state, engine)
-      renderTransformOverlay(state, engine)
-      return
-    }
-    if (kind === "viewport" || kind === "overlay") {
-      renderAll(state, engine)
-      return
-    }
-    if (kind === "tool") {
-      renderGuides(state, engine)
-      renderTransformOverlay(state, engine)
-      updateCursor(state, engine.getActiveTool())
     }
   }
 

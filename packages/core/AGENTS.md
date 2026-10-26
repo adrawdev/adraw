@@ -40,7 +40,7 @@ src/
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, notifier, getToolContext, public API, @internal accessors
     scene.ts         Scene: elements, selection, history, binding sync, atomic commits
-    state-notifier.ts internal kind-carrying state notifications
+    state-notifier.ts internal operation-scoped state publications
     style.ts        applyStyleToElement/getElementStyle: style write-back and read-back
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
@@ -129,11 +129,13 @@ unsubscribe()
 store.dispose()
 ```
 
-The engine has no public `on`/`off`/`emit`; the DOM adapter and the store share one internal kind-carrying notifier. Snapshot maps and sets are copies, and unchanged slices are reused.
+The engine has no public `on`/`off`/`emit`; the DOM adapter and the store share one internal state notifier. Each completed canvas operation publishes at most one deduplicated set of changed kinds. Nested calls fold into the outer operation; async `withoutHistory` publishes at its synchronous boundaries, including the final history update. Snapshot maps and sets are copies, unchanged slices are reused, and no-op operations do not publish.
+
+Listener collections are captured at publication start. Listener errors do not prevent later delivery; the operation error wins, otherwise the first listener error is rethrown after dispatch. Failed operations publish the state that remains before rethrowing, without adding operation rollback.
 
 ### Scene
 
-`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine publishes as internal state changes. Commits and replacements sync arrow and bound-text bindings and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
+`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine composes with non-Scene changes into one operation-scoped State publication. Commits and replacements sync arrow and bound-text bindings and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
 
 ### Config
 
@@ -279,8 +281,9 @@ The DOM adapter renders to an `<svg>` with three `<g>` child layers: `.adraw-ele
 - `src/dom/render/guides.ts` — `renderGuides()` (pooled guide lines, viewport-spanning)
 - `src/dom/render/overlay.ts` — `renderTransformOverlay()`
 - `src/dom/render/overlay-nodes.ts` — `ensureOverlayNodes()`, `renderSelectionBox()` (persistent nodes, updated in place)
+- `src/dom/render/plan.ts` — `planStateRender()` maps one State publication's changed kinds to a deduplicated, fixed-order render plan
 
-The adapter subscribes to the internal state notifier and renders on change; the mount layer owns the `onToolWillChange` callback the engine invokes.
+The adapter subscribes to the internal state notifier and renders at most one plan per State publication; the mount layer owns the `onToolWillChange` callback the engine invokes. Direct `renderAll()` calls from DOM gesture handlers remain a separate transient-invalidation path.
 
 Styling via CSS custom properties: `--adraw-stroke`, `--adraw-fill`, `--adraw-background`, `--adraw-selection`. Defaults in `src/constants.ts`.
 
@@ -296,6 +299,10 @@ elements.test.ts               — factory functions, clone, move, resize, rotat
 history.test.ts                — undo/redo stack
 scene.test.ts                  — atomic scene commits, history, binding sync, selection clamping
 store.test.ts                  — AdrawStore snapshots, slice reuse, readiness and disposal
+state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
+operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
+operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry
+dom-render-plan.test.ts        — deduplicated DOM work per State publication
 line.test.ts                   — line tool
 select-brush.test.ts           — marquee selection
 select-deactivate.test.ts      — select deactivation

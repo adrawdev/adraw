@@ -24,13 +24,12 @@ export interface SceneDraft {
 }
 
 /**
- * What a scene operation changed. The engine turns these flags into its public
- * events; the phase-2 store will use the revision to refresh its snapshot.
+ * What a scene operation changed. The engine composes these flags with any
+ * other state changes into one operation-scoped publication.
  */
 export interface SceneChange {
   readonly elementsChanged: boolean
   readonly historyChanged: boolean
-  readonly revision: number
   readonly selectionChanged: boolean
 }
 
@@ -142,7 +141,6 @@ export class Scene {
   private elements = new Map<ElementId, CanvasElement>()
   private selectedIds = new Set<ElementId>()
   private history: HistoryState
-  private revision = 0
   private historySuppressionDepth = 0
   private committing = false
   private readonly getTextMeasurer: () => TextMeasurer
@@ -225,11 +223,9 @@ export class Scene {
       this.elements = draft.elements
       this.selectedIds = draft.selectedIds
       const historyChanged = this.maybeCheckpoint(options.history)
-      this.revision += 1
       return {
         elementsChanged,
         historyChanged,
-        revision: this.revision,
         selectionChanged,
       }
     } finally {
@@ -260,11 +256,9 @@ export class Scene {
       this.elements = nextElements
       this.selectedIds = nextSelection
       const historyChanged = this.maybeCheckpoint(options.history)
-      this.revision += 1
       return {
         elementsChanged: true,
         historyChanged,
-        revision: this.revision,
         selectionChanged,
       }
     } finally {
@@ -280,11 +274,9 @@ export class Scene {
     const next = new Set(ids)
     clampSelection(next, this.elements)
     this.selectedIds = next
-    this.revision += 1
     return {
       elementsChanged: false,
       historyChanged: false,
-      revision: this.revision,
       selectionChanged: true,
     }
   }
@@ -303,11 +295,9 @@ export class Scene {
       this.elements,
       this.selectedIds,
     )
-    this.revision += 1
     return {
       elementsChanged: false,
       historyChanged: true,
-      revision: this.revision,
       selectionChanged: false,
     }
   }
@@ -327,11 +317,9 @@ export class Scene {
     this.selectedIds = result.selectedIds
     clampSelection(this.selectedIds, this.elements)
     this.history = result.state
-    this.revision += 1
     return {
       elementsChanged: true,
       historyChanged: true,
-      revision: this.revision,
       selectionChanged: true,
     }
   }
@@ -352,11 +340,9 @@ export class Scene {
     this.selectedIds = result.selectedIds
     clampSelection(this.selectedIds, this.elements)
     this.history = result.state
-    this.revision += 1
     return {
       elementsChanged: true,
       historyChanged: true,
-      revision: this.revision,
       selectionChanged: true,
     }
   }
@@ -379,11 +365,9 @@ export class Scene {
       this.elements,
       this.selectedIds,
     )
-    this.revision += 1
     return {
       elementsChanged: false,
       historyChanged: true,
-      revision: this.revision,
       selectionChanged: false,
     }
   }
@@ -400,8 +384,8 @@ export class Scene {
 
     const finish = (): void => {
       this.historySuppressionDepth -= 1
-      if (this.historySuppressionDepth === 0 && this.rebaseHistory(before)) {
-        this.revision += 1
+      if (this.historySuppressionDepth === 0) {
+        this.rebaseHistory(before)
       }
     }
 
@@ -510,7 +494,6 @@ export class Scene {
     return {
       elementsChanged: false,
       historyChanged: false,
-      revision: this.revision,
       selectionChanged: false,
     }
   }

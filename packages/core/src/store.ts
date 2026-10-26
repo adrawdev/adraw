@@ -11,7 +11,10 @@ import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
  * later revisions through {@link AdrawStore.subscribe}.
  */
 export interface AdrawSnapshot {
-  /** Monotonic revision. Increments only when the snapshot changes. */
+  /**
+   * Monotonic revision. Increments once per changed operation snapshot; stays
+   * unchanged when an operation produces no observable change.
+   */
   readonly revision: number
   /** Elements keyed by id. The map is copied when elements change. */
   readonly elements: ReadonlyMap<ElementId, CanvasElement>
@@ -58,6 +61,24 @@ function selectElements(
   return selected
 }
 
+function sameElements(
+  left: ReadonlyMap<ElementId, CanvasElement>,
+  right: ReadonlyMap<ElementId, CanvasElement>,
+): boolean {
+  if (left === right) {
+    return true
+  }
+  if (left.size !== right.size) {
+    return false
+  }
+  for (const [id, element] of left) {
+    if (right.get(id) !== element) {
+      return false
+    }
+  }
+  return true
+}
+
 function sameSet(
   left: ReadonlySet<ElementId>,
   right: ReadonlySet<ElementId>,
@@ -101,6 +122,11 @@ function sameSnapping(left: SnappingConfig, right: SnappingConfig): boolean {
  * Adapter-facing state module. It mirrors an engine into an {@link AdrawSnapshot},
  * copies changed slices, suppresses no-op changes and notifies framework
  * adapters through {@link AdrawStore.subscribe}.
+ *
+ * One completed canvas operation publishes at most one snapshot. Every
+ * snapshot is internally coherent: selected ids resolve against `elements`,
+ * `selectedElements` follows selection order, and unchanged slices keep their
+ * previous references.
  *
  * Each adapter owns one store per engine and calls {@link AdrawStore.dispose}
  * when the provider or service is torn down.
@@ -146,8 +172,8 @@ export class AdrawStore {
       viewport: { ...engine.getViewport() },
     }
 
-    this.unsubscribeFromEngine = subscribeState(engine, (kind) => {
-      this.handleStateChange(kind)
+    this.unsubscribeFromEngine = subscribeState(engine, (kinds) => {
+      this.handleStateChange(kinds)
     })
 
     if (this.snapshot.isReady) {
@@ -162,6 +188,10 @@ export class AdrawStore {
 
   /**
    * Subscribe to snapshot changes. Returns an unsubscribe function.
+   *
+   * The listener runs synchronously, at most once per completed canvas
+   * operation, after a new snapshot is available. No-op operations do not
+   * notify.
    *
    * @param listener Called after a new snapshot is available.
    */
@@ -187,21 +217,41 @@ export class AdrawStore {
     this.listeners.clear()
   }
 
-  private handleStateChange(kind: StateChangeKind): void {
+  private handleStateChange(kinds: ReadonlySet<StateChangeKind>): void {
     if (this.disposed) {
       return
     }
-    const next = this.updateSnapshot(kind)
+    const next = this.updateSnapshot(kinds)
     if (!next) {
       return
     }
 
     this.snapshot = next
-    for (const listener of this.listeners) {
-      listener()
+    let failed = false
+    let failure: unknown
+    const currentListeners = new Set(this.listeners)
+    for (const listener of currentListeners) {
+      try {
+        listener()
+      } catch (error) {
+        if (!failed) {
+          failed = true
+          failure = error
+        }
+      }
     }
     if (next.isReady && !this.readyNotified) {
-      this.notifyReady()
+      try {
+        this.notifyReady()
+      } catch (error) {
+        if (!failed) {
+          failed = true
+          failure = error
+        }
+      }
+    }
+    if (failed) {
+      throw failure
     }
   }
 
@@ -213,106 +263,126 @@ export class AdrawStore {
     this.onReady?.(this.engine as AdrawCanvas)
   }
 
-  private updateSnapshot(kind: StateChangeKind): AdrawSnapshot | null {
+  private updateSnapshot(
+    kinds: ReadonlySet<StateChangeKind>,
+  ): AdrawSnapshot | null {
     const previous = this.snapshot
+    const elementsChanged = kinds.has("elements")
+    const selectionTouched = elementsChanged || kinds.has("selection")
 
-    switch (kind) {
-      case "elements": {
-        const elements = new Map(this.engine.getElements())
-        return this.next(previous, {
-          canRedo: this.engine.canRedo(),
-          canUndo: this.engine.canUndo(),
-          elements,
-          selectedElements: selectElements(elements, previous.selectedIds),
-          style: this.engine.getStyle(),
-        })
-      }
-      case "selection": {
-        const selectedIds = new Set(this.engine.getSelectedIds())
-        if (sameSet(previous.selectedIds, selectedIds)) {
-          return null
-        }
-        return this.next(previous, {
-          canRedo: this.engine.canRedo(),
-          canUndo: this.engine.canUndo(),
-          selectedElements: selectElements(previous.elements, selectedIds),
-          selectedIds,
-          style: this.engine.getStyle(),
-        })
-      }
-      case "viewport": {
-        const viewport = { ...this.engine.getViewport() }
-        if (sameViewport(previous.viewport, viewport)) {
-          return null
-        }
-        return this.next(previous, { viewport })
-      }
-      case "tool": {
-        const tool = this.engine.getActiveTool()
-        if (tool === previous.tool) {
-          return null
-        }
-        return this.next(previous, { tool })
-      }
-      case "style": {
-        const style = this.engine.getStyle()
-        if (sameStyle(previous.style, style)) {
-          return null
-        }
-        return this.next(previous, { style })
-      }
-      case "snapping": {
-        const snapping = { ...this.engine.getSnappingConfig() }
-        const isSnapMode = this.engine.getIsSnapMode()
-        if (
-          sameSnapping(previous.snapping, snapping) &&
-          isSnapMode === previous.isSnapMode
-        ) {
-          return null
-        }
-        return this.next(previous, { isSnapMode, snapping })
-      }
-      case "toolLock": {
-        const isToolLocked = this.engine.getIsToolLocked()
-        if (isToolLocked === previous.isToolLocked) {
-          return null
-        }
-        return this.next(previous, { isToolLocked })
-      }
-      case "overlay": {
-        const hideWhileTransforming =
-          this.engine.getHideOverlayWhileTransforming()
-        if (hideWhileTransforming === previous.hideWhileTransforming) {
-          return null
-        }
-        return this.next(previous, { hideWhileTransforming })
-      }
-      case "history": {
-        const canUndo = this.engine.canUndo()
-        const canRedo = this.engine.canRedo()
-        if (canUndo === previous.canUndo && canRedo === previous.canRedo) {
-          return null
-        }
-        return this.next(previous, { canRedo, canUndo })
-      }
-      case "mount": {
-        const isReady = this.engine.isMounted()
-        if (isReady === previous.isReady) {
-          return null
-        }
-        return this.next(previous, { isReady })
+    let elements = previous.elements
+    if (elementsChanged) {
+      const currentElements = this.engine.getElements()
+      if (!sameElements(previous.elements, currentElements)) {
+        elements = new Map(currentElements)
       }
     }
-  }
 
-  private next(
-    previous: AdrawSnapshot,
-    patch: Partial<AdrawSnapshot>,
-  ): AdrawSnapshot {
+    let selectedIds = previous.selectedIds
+    if (selectionTouched) {
+      const currentSelectedIds = this.engine.getSelectedIds()
+      if (!sameSet(previous.selectedIds, currentSelectedIds)) {
+        selectedIds = new Set(currentSelectedIds)
+      }
+    }
+
+    let selectedElements = previous.selectedElements
+    if (
+      selectionTouched &&
+      (elements !== previous.elements || selectedIds !== previous.selectedIds)
+    ) {
+      selectedElements = selectElements(elements, selectedIds)
+    }
+
+    let style = previous.style
+    if (selectionTouched || kinds.has("style")) {
+      const currentStyle = this.engine.getStyle()
+      if (!sameStyle(previous.style, currentStyle)) {
+        style = currentStyle
+      }
+    }
+
+    let canUndo = previous.canUndo
+    let canRedo = previous.canRedo
+    if (elementsChanged || kinds.has("history")) {
+      canUndo = this.engine.canUndo()
+      canRedo = this.engine.canRedo()
+    }
+
+    let viewport = previous.viewport
+    if (kinds.has("viewport")) {
+      const currentViewport = { ...this.engine.getViewport() }
+      if (!sameViewport(previous.viewport, currentViewport)) {
+        viewport = currentViewport
+      }
+    }
+
+    let tool = previous.tool
+    if (kinds.has("tool")) {
+      tool = this.engine.getActiveTool()
+    }
+
+    let snapping = previous.snapping
+    let isSnapMode = previous.isSnapMode
+    if (kinds.has("snapping")) {
+      const currentSnapping = { ...this.engine.getSnappingConfig() }
+      const currentSnapMode = this.engine.getIsSnapMode()
+      if (!sameSnapping(previous.snapping, currentSnapping)) {
+        snapping = currentSnapping
+      }
+      isSnapMode = currentSnapMode
+    }
+
+    let isToolLocked = previous.isToolLocked
+    if (kinds.has("toolLock")) {
+      isToolLocked = this.engine.getIsToolLocked()
+    }
+
+    let hideWhileTransforming = previous.hideWhileTransforming
+    if (kinds.has("overlay")) {
+      hideWhileTransforming = this.engine.getHideOverlayWhileTransforming()
+    }
+
+    let isReady = previous.isReady
+    if (kinds.has("mount")) {
+      isReady = this.engine.isMounted()
+    }
+
+    const changed =
+      elements !== previous.elements ||
+      selectedIds !== previous.selectedIds ||
+      selectedElements !== previous.selectedElements ||
+      style !== previous.style ||
+      canUndo !== previous.canUndo ||
+      canRedo !== previous.canRedo ||
+      viewport !== previous.viewport ||
+      tool !== previous.tool ||
+      snapping !== previous.snapping ||
+      isSnapMode !== previous.isSnapMode ||
+      isToolLocked !== previous.isToolLocked ||
+      hideWhileTransforming !== previous.hideWhileTransforming ||
+      isReady !== previous.isReady
+
+    if (!changed) {
+      return null
+    }
+
     return {
       ...previous,
-      ...patch,
+      canRedo,
+      canUndo,
+      elements,
+      hideWhileTransforming,
+      isReady,
+      isSnapMode,
+      isToolLocked,
       revision: previous.revision + 1,
+      selectedElements,
+      selectedIds,
+      snapping,
+      style,
+      tool,
+      viewport,
     }
   }
 }

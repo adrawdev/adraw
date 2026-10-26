@@ -57,7 +57,7 @@ import { createMediaElements } from "./media"
 import { Scene, type SceneChange, type SceneDraft } from "./scene"
 import { deleteSelectedElements, selectAllIds } from "./selection"
 import { handleShortcutKey } from "./shortcuts"
-import { notifyState } from "./state-notifier"
+import { notifyState, runStateOperation } from "./state-notifier"
 import { applyStyleToElement, getElementStyle } from "./style"
 import {
   bringElementsToFront,
@@ -251,11 +251,13 @@ export class CanvasEngine {
       getViewport: () => this.viewport,
       measureText: (text, options) => this.textMeasurer(text, options),
       pushHistory: () => {
-        this.publishSceneChange(this.scene.checkpoint())
+        this.pushHistory()
       },
       setActiveTool: (tool) => this.setActiveTool(tool),
       setElements: (elements) => {
-        this.publishSceneChange(this.scene.replace(elements))
+        runStateOperation(this, () => {
+          this.publishSceneChange(this.scene.replace(elements))
+        })
       },
       setSelectedIds: (ids) => {
         this.setSelectedIds(ids)
@@ -264,8 +266,10 @@ export class CanvasEngine {
         this.snapGuides = guides
       },
       setViewport: (viewport) => {
-        this.viewport = viewport
-        notifyState(this, "viewport")
+        runStateOperation(this, () => {
+          this.viewport = viewport
+          notifyState(this, "viewport")
+        })
       },
     }
   }
@@ -321,7 +325,9 @@ export class CanvasEngine {
     }) => void,
     options: { history?: boolean } = {},
   ): void {
-    this.publishSceneChange(this.scene.commit(mutator, options))
+    runStateOperation(this, () => {
+      this.publishSceneChange(this.scene.commit(mutator, options))
+    })
   }
 
   /**
@@ -338,20 +344,22 @@ export class CanvasEngine {
    * @param toolType Tool to activate.
    */
   setActiveTool(toolType: ToolType): void {
-    const newTool = this.tools.get(toolType)
-    if (!newTool || newTool === this.activeTool) {
-      return
-    }
+    runStateOperation(this, () => {
+      const newTool = this.tools.get(toolType)
+      if (!newTool || newTool === this.activeTool) {
+        return
+      }
 
-    // A toolbar click or keyboard shortcut switching tools mid-edit must not
-    // leave the editor orphaned; commit whatever was typed.
-    this.onToolWillChange?.()
+      // A toolbar click or keyboard shortcut switching tools mid-edit must not
+      // leave the editor orphaned; commit whatever was typed.
+      this.onToolWillChange?.()
 
-    this.activeTool.onDeactivate(this.createToolContext())
-    this.activeTool = newTool
-    this.snapGuides = []
-    this.activeTool.onActivate(this.createToolContext())
-    notifyState(this, "tool")
+      this.activeTool.onDeactivate(this.createToolContext())
+      this.activeTool = newTool
+      this.snapGuides = []
+      this.activeTool.onActivate(this.createToolContext())
+      notifyState(this, "tool")
+    })
   }
 
   /**
@@ -382,8 +390,10 @@ export class CanvasEngine {
    * @param viewport New viewport.
    */
   setViewport(viewport: ViewportState): void {
-    this.viewport = this.constrainViewport(viewport)
-    notifyState(this, "viewport")
+    runStateOperation(this, () => {
+      this.viewport = this.constrainViewport(viewport)
+      notifyState(this, "viewport")
+    })
   }
 
   // Clamp zoom to the configured range plus the last-fit floor, then keep
@@ -428,33 +438,35 @@ export class CanvasEngine {
     descriptors: MediaInput | MediaInput[],
     options: { history?: boolean; zIndex?: number } = {},
   ): MediaElement[] {
-    const inputs = Array.isArray(descriptors) ? descriptors : [descriptors]
-    if (inputs.length === 0) {
-      return []
-    }
-    if (options.zIndex !== undefined && !Number.isFinite(options.zIndex)) {
-      throw new RangeError("insertMedia: zIndex must be a finite number")
-    }
-
-    const elements = createMediaElements(
-      inputs,
-      this.viewport,
-      this.canvasSize,
-      options.zIndex ?? getNextZIndex(this.scene.getElements().values()),
-    )
-
-    const change = this.commitSceneWithHistory((draft) => {
-      for (const element of elements) {
-        draft.elements.set(element.id, element)
+    return runStateOperation(this, () => {
+      const inputs = Array.isArray(descriptors) ? descriptors : [descriptors]
+      if (inputs.length === 0) {
+        return []
       }
-      draft.selectedIds = new Set(elements.map((element) => element.id))
-    }, options.history)
+      if (options.zIndex !== undefined && !Number.isFinite(options.zIndex)) {
+        throw new RangeError("insertMedia: zIndex must be a finite number")
+      }
 
-    if (this.activeTool.type !== "select") {
-      this.setActiveTool("select")
-    }
-    this.publishSceneChange(change)
-    return elements
+      const elements = createMediaElements(
+        inputs,
+        this.viewport,
+        this.canvasSize,
+        options.zIndex ?? getNextZIndex(this.scene.getElements().values()),
+      )
+
+      const change = this.commitSceneWithHistory((draft) => {
+        for (const element of elements) {
+          draft.elements.set(element.id, element)
+        }
+        draft.selectedIds = new Set(elements.map((element) => element.id))
+      }, options.history)
+
+      if (this.activeTool.type !== "select") {
+        this.setActiveTool("select")
+      }
+      this.publishSceneChange(change)
+      return elements
+    })
   }
 
   // Add one or more elements to the canvas. Unlike mutating the Map returned
@@ -472,19 +484,21 @@ export class CanvasEngine {
     elements: CanvasElement | CanvasElement[],
     options: { history?: boolean } = {},
   ): CanvasElement[] {
-    const inputs = Array.isArray(elements) ? elements : [elements]
-    if (inputs.length === 0) {
-      return []
-    }
-
-    const change = this.commitSceneWithHistory((draft) => {
-      for (const element of inputs) {
-        draft.elements.set(element.id, element)
+    return runStateOperation(this, () => {
+      const inputs = Array.isArray(elements) ? elements : [elements]
+      if (inputs.length === 0) {
+        return []
       }
-    }, options.history)
 
-    this.publishSceneChange(change)
-    return inputs
+      const change = this.commitSceneWithHistory((draft) => {
+        for (const element of inputs) {
+          draft.elements.set(element.id, element)
+        }
+      }, options.history)
+
+      this.publishSceneChange(change)
+      return inputs
+    })
   }
 
   // Replace the entire element set with the elements from a document. Emits
@@ -497,16 +511,22 @@ export class CanvasEngine {
    * @param options `{ history }` to skip the checkpoint.
    */
   loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
-    const next = new Map<ElementId, CanvasElement>()
-    for (const element of doc?.elements ?? []) {
-      next.set(element.id, element)
-    }
-    remeasureElements(next, this.textMeasurer)
-    const change = this.replaceSceneWithHistory(next, options.history, "clear")
-    this.publishSceneChange(change)
-    if (!change.selectionChanged) {
-      notifyState(this, "selection")
-    }
+    runStateOperation(this, () => {
+      const next = new Map<ElementId, CanvasElement>()
+      for (const element of doc?.elements ?? []) {
+        next.set(element.id, element)
+      }
+      remeasureElements(next, this.textMeasurer)
+      const change = this.replaceSceneWithHistory(
+        next,
+        options.history,
+        "clear",
+      )
+      this.publishSceneChange(change)
+      if (!change.selectionChanged) {
+        notifyState(this, "selection")
+      }
+    })
   }
 
   // Serialize the current document. `exclude` filters which elements are
@@ -551,15 +571,17 @@ export class CanvasEngine {
     elements: Map<ElementId, CanvasElement> | CanvasElement[],
     options: { history?: boolean } = {},
   ): void {
-    const next =
-      elements instanceof Map
-        ? new Map(elements)
-        : new Map(elements.map((element) => [element.id, element]))
-    const change = this.replaceSceneWithHistory(next, options.history)
-    this.publishSceneChange(change)
-    if (!change.selectionChanged) {
-      notifyState(this, "selection")
-    }
+    runStateOperation(this, () => {
+      const next =
+        elements instanceof Map
+          ? new Map(elements)
+          : new Map(elements.map((element) => [element.id, element]))
+      const change = this.replaceSceneWithHistory(next, options.history)
+      this.publishSceneChange(change)
+      if (!change.selectionChanged) {
+        notifyState(this, "selection")
+      }
+    })
   }
 
   /**
@@ -573,10 +595,12 @@ export class CanvasEngine {
     ids: ElementId | Iterable<ElementId>,
     options: { history?: boolean } = {},
   ): void {
-    this.applyZOrder(
-      (elements) => bringElementsToFront(elements, normalizeIds(ids)),
-      options,
-    )
+    runStateOperation(this, () => {
+      this.applyZOrder(
+        (elements) => bringElementsToFront(elements, normalizeIds(ids)),
+        options,
+      )
+    })
   }
 
   /**
@@ -590,10 +614,12 @@ export class CanvasEngine {
     ids: ElementId | Iterable<ElementId>,
     options: { history?: boolean } = {},
   ): void {
-    this.applyZOrder(
-      (elements) => sendElementsToBack(elements, normalizeIds(ids)),
-      options,
-    )
+    runStateOperation(this, () => {
+      this.applyZOrder(
+        (elements) => sendElementsToBack(elements, normalizeIds(ids)),
+        options,
+      )
+    })
   }
 
   /**
@@ -608,10 +634,12 @@ export class CanvasEngine {
     zIndex: number,
     options: { history?: boolean } = {},
   ): void {
-    this.applyZOrder(
-      (elements) => setElementZIndex(elements, id, zIndex),
-      options,
-    )
+    runStateOperation(this, () => {
+      this.applyZOrder(
+        (elements) => setElementZIndex(elements, id, zIndex),
+        options,
+      )
+    })
   }
 
   // Apply a z-order operation: swap in the new element map, record one
@@ -651,8 +679,10 @@ export class CanvasEngine {
    * @param config Partial configuration.
    */
   setSnappingConfig(config: Partial<SnappingConfig>): void {
-    this.snappingConfig = { ...this.snappingConfig, ...config }
-    notifyState(this, "snapping")
+    runStateOperation(this, () => {
+      this.snappingConfig = { ...this.snappingConfig, ...config }
+      notifyState(this, "snapping")
+    })
   }
 
   // Snapping stays active without a modifier when `true`; otherwise it is
@@ -669,8 +699,10 @@ export class CanvasEngine {
    * @param isSnapMode Whether snapping is always active.
    */
   setIsSnapMode(isSnapMode: boolean): void {
-    this.isSnapMode = isSnapMode
-    notifyState(this, "snapping")
+    runStateOperation(this, () => {
+      this.isSnapMode = isSnapMode
+      notifyState(this, "snapping")
+    })
   }
 
   // Guides from the in-progress snap gesture (empty when not snapped); the DOM
@@ -714,9 +746,11 @@ export class CanvasEngine {
    * ```
    */
   setTextMeasurer(measurer: TextMeasurer | null): void {
-    this.textMeasurer = measurer ?? approximateTextMeasurer
-    this.textMeasurerSource = measurer ? "custom" : "default"
-    this.remeasureTextElements()
+    runStateOperation(this, () => {
+      this.textMeasurer = measurer ?? approximateTextMeasurer
+      this.textMeasurerSource = measurer ? "custom" : "default"
+      this.remeasureTextElements()
+    })
   }
 
   /**
@@ -724,7 +758,9 @@ export class CanvasEngine {
    * custom web fonts finish loading so text boxes track the new metrics.
    */
   refreshTextMetrics(): void {
-    this.remeasureTextElements()
+    runStateOperation(this, () => {
+      this.remeasureTextElements()
+    })
   }
 
   /**
@@ -740,9 +776,11 @@ export class CanvasEngine {
    * @internal
    */
   setAdapterTextMeasurer(measurer: TextMeasurer): void {
-    this.textMeasurer = measurer
-    this.textMeasurerSource = "adapter"
-    this.remeasureTextElements()
+    runStateOperation(this, () => {
+      this.textMeasurer = measurer
+      this.textMeasurerSource = "adapter"
+      this.remeasureTextElements()
+    })
   }
 
   /**
@@ -750,12 +788,14 @@ export class CanvasEngine {
    * @internal
    */
   resetTextMeasurer(): void {
-    if (this.textMeasurerSource !== "adapter") {
-      return
-    }
-    this.textMeasurer = approximateTextMeasurer
-    this.textMeasurerSource = "default"
-    this.remeasureTextElements()
+    runStateOperation(this, () => {
+      if (this.textMeasurerSource !== "adapter") {
+        return
+      }
+      this.textMeasurer = approximateTextMeasurer
+      this.textMeasurerSource = "default"
+      this.remeasureTextElements()
+    })
   }
 
   // Recompute every text element's box with the active measurer. Silent during
@@ -811,32 +851,34 @@ export class CanvasEngine {
    * ```
    */
   setStyle(options: StyleOptions): void {
-    const entries = Object.entries(options).filter(
-      ([, value]) => value !== undefined,
-    )
-    this.style = {
-      ...this.style,
-      ...(Object.fromEntries(entries) as StyleOptions),
-    }
+    runStateOperation(this, () => {
+      const entries = Object.entries(options).filter(
+        ([, value]) => value !== undefined,
+      )
+      this.style = {
+        ...this.style,
+        ...(Object.fromEntries(entries) as StyleOptions),
+      }
 
-    if (this.scene.getSelectedIds().size === 0) {
+      if (this.scene.getSelectedIds().size === 0) {
+        notifyState(this, "style")
+        return
+      }
+
+      const change = this.scene.commit(
+        (draft) => {
+          this.applyStyleToSelection(
+            draft.elements,
+            draft.selectedIds,
+            this.style,
+          )
+        },
+        { history: false },
+      )
+
+      this.publishSceneChange(change)
       notifyState(this, "style")
-      return
-    }
-
-    const change = this.scene.commit(
-      (draft) => {
-        this.applyStyleToSelection(
-          draft.elements,
-          draft.selectedIds,
-          this.style,
-        )
-      },
-      { history: false },
-    )
-
-    this.publishSceneChange(change)
-    notifyState(this, "style")
+    })
   }
 
   // Style of the current selection, reduced to fields every selected element
@@ -914,8 +956,10 @@ export class CanvasEngine {
    * @param hide Hide flag.
    */
   setHideOverlayWhileTransforming(hide: boolean): void {
-    this.hideOverlayWhileTransforming = hide
-    notifyState(this, "overlay")
+    runStateOperation(this, () => {
+      this.hideOverlayWhileTransforming = hide
+      notifyState(this, "overlay")
+    })
   }
 
   /**
@@ -935,8 +979,10 @@ export class CanvasEngine {
    * `"select"`.
    */
   setIsToolLocked(locked: boolean): void {
-    this.isToolLocked = locked
-    notifyState(this, "toolLock")
+    runStateOperation(this, () => {
+      this.isToolLocked = locked
+      notifyState(this, "toolLock")
+    })
   }
 
   /**
@@ -958,12 +1004,14 @@ export class CanvasEngine {
    * @returns `true` if an undo was applied.
    */
   undo(): boolean {
-    const change = this.scene.undo()
-    if (!change.elementsChanged) {
-      return false
-    }
-    this.publishSceneChange(change)
-    return true
+    return runStateOperation(this, () => {
+      const change = this.scene.undo()
+      if (!change.elementsChanged) {
+        return false
+      }
+      this.publishSceneChange(change)
+      return true
+    })
   }
 
   /**
@@ -971,12 +1019,14 @@ export class CanvasEngine {
    * @returns `true` if a redo was applied.
    */
   redo(): boolean {
-    const change = this.scene.redo()
-    if (!change.elementsChanged) {
-      return false
-    }
-    this.publishSceneChange(change)
-    return true
+    return runStateOperation(this, () => {
+      const change = this.scene.redo()
+      if (!change.elementsChanged) {
+        return false
+      }
+      this.publishSceneChange(change)
+      return true
+    })
   }
 
   /**
@@ -984,7 +1034,9 @@ export class CanvasEngine {
    * {@link CanvasEngine.withoutHistory}.
    */
   pushHistory(): void {
-    this.publishSceneChange(this.scene.checkpoint())
+    runStateOperation(this, () => {
+      this.publishSceneChange(this.scene.checkpoint())
+    })
   }
 
   /**
@@ -993,7 +1045,9 @@ export class CanvasEngine {
    * are not.
    */
   clearHistory(): void {
-    this.publishSceneChange(this.scene.clearHistory())
+    runStateOperation(this, () => {
+      this.publishSceneChange(this.scene.clearHistory())
+    })
   }
 
   /**
@@ -1007,19 +1061,39 @@ export class CanvasEngine {
    * @returns The callback's return value.
    */
   withoutHistory<T>(fn: () => T): T {
-    try {
-      const result = this.scene.withoutHistory(fn)
+    return runStateOperation(this, () => {
+      let result: T
+      try {
+        result = this.scene.withoutHistory(fn)
+      } catch (error) {
+        notifyState(this, "history")
+        throw error
+      }
+
       if (isPromiseLike(result)) {
-        return Promise.resolve(result).finally(() =>
-          notifyState(this, "history"),
+        return Promise.resolve(result).then(
+          (value) => {
+            runStateOperation(this, () => {
+              notifyState(this, "history")
+            })
+            return value
+          },
+          (error: unknown) => {
+            try {
+              runStateOperation(this, () => {
+                notifyState(this, "history")
+              })
+            } catch {
+              // Preserve the operation rejection over a listener failure.
+            }
+            throw error
+          },
         ) as T
       }
+
       notifyState(this, "history")
       return result
-    } catch (error) {
-      notifyState(this, "history")
-      throw error
-    }
+    })
   }
 
   /**
@@ -1034,40 +1108,48 @@ export class CanvasEngine {
    * @param event Keyboard event.
    */
   handleKeyDown(event: KeyboardEvent): void {
-    handleShortcutKey(event, this)
+    runStateOperation(this, () => {
+      handleShortcutKey(event, this)
+    })
   }
 
   /**
    * Select all visible elements.
    */
   selectAll(): void {
-    const ids = selectAllIds(this.scene.getElements())
-    this.publishSceneChange(this.scene.select(ids))
+    runStateOperation(this, () => {
+      const ids = selectAllIds(this.scene.getElements())
+      this.publishSceneChange(this.scene.select(ids))
+    })
   }
 
   /**
    * Clear the current selection.
    */
   clearSelection(): void {
-    this.publishSceneChange(this.scene.select(new Set()))
+    runStateOperation(this, () => {
+      this.publishSceneChange(this.scene.select(new Set()))
+    })
   }
 
   /**
    * Delete the selected elements.
    */
   deleteSelected(): void {
-    const result = deleteSelectedElements(
-      this.scene.getElements(),
-      this.scene.getSelectedIds(),
-    )
-    if (!result) {
-      return
-    }
-    const change = this.scene.replace(result.elements, {
-      history: true,
-      selection: result.selectedIds,
+    runStateOperation(this, () => {
+      const result = deleteSelectedElements(
+        this.scene.getElements(),
+        this.scene.getSelectedIds(),
+      )
+      if (!result) {
+        return
+      }
+      const change = this.scene.replace(result.elements, {
+        history: true,
+        selection: result.selectedIds,
+      })
+      this.publishSceneChange(change)
     })
-    this.publishSceneChange(change)
   }
 
   // Snapshot the selected elements (plus any grouped children) into the
@@ -1094,11 +1176,13 @@ export class CanvasEngine {
    * @returns Copied elements.
    */
   cut(): CanvasElement[] {
-    const copied = this.copy()
-    if (copied.length > 0) {
-      this.deleteSelected()
-    }
-    return copied
+    return runStateOperation(this, () => {
+      const copied = this.copy()
+      if (copied.length > 0) {
+        this.deleteSelected()
+      }
+      return copied
+    })
   }
 
   // Paste the clipboard centered on `at`, defaulting to the last pointer
@@ -1110,34 +1194,36 @@ export class CanvasEngine {
    * @returns Pasted elements.
    */
   paste(at?: Point): CanvasElement[] {
-    const copied = this.clipboard.read()
-    if (copied.length === 0) {
-      return []
-    }
+    return runStateOperation(this, () => {
+      const copied = this.clipboard.read()
+      if (copied.length === 0) {
+        return []
+      }
 
-    const point = at ??
-      this.pointerPoint ?? { x: this.viewport.x, y: this.viewport.y }
-    const pasted = createPastedElements(
-      copied,
-      point,
-      getNextZIndex(this.scene.getElements().values()),
-    )
+      const point = at ??
+        this.pointerPoint ?? { x: this.viewport.x, y: this.viewport.y }
+      const pasted = createPastedElements(
+        copied,
+        point,
+        getNextZIndex(this.scene.getElements().values()),
+      )
 
-    const change = this.scene.commit(
-      (draft) => {
-        for (const element of pasted) {
-          draft.elements.set(element.id, element)
-        }
-        draft.selectedIds = new Set(pasted.map((element) => element.id))
-      },
-      { history: true },
-    )
+      const change = this.scene.commit(
+        (draft) => {
+          for (const element of pasted) {
+            draft.elements.set(element.id, element)
+          }
+          draft.selectedIds = new Set(pasted.map((element) => element.id))
+        },
+        { history: true },
+      )
 
-    this.publishSceneChange(change)
-    if (this.activeTool.type !== "select") {
-      this.setActiveTool("select")
-    }
-    return pasted
+      this.publishSceneChange(change)
+      if (this.activeTool.type !== "select") {
+        this.setActiveTool("select")
+      }
+      return pasted
+    })
   }
 
   // Serialize the clipboard for the system clipboard; null when empty.
@@ -1162,20 +1248,24 @@ export class CanvasEngine {
    * Zoom in by one step around the viewport center.
    */
   zoomIn(): void {
-    const center = { x: this.viewport.x, y: this.viewport.y }
-    this.setViewport(
-      zoomViewport(this.viewport, -100, center, this.viewportConfig),
-    )
+    runStateOperation(this, () => {
+      const center = { x: this.viewport.x, y: this.viewport.y }
+      this.setViewport(
+        zoomViewport(this.viewport, -100, center, this.viewportConfig),
+      )
+    })
   }
 
   /**
    * Zoom out by one step around the viewport center.
    */
   zoomOut(): void {
-    const center = { x: this.viewport.x, y: this.viewport.y }
-    this.setViewport(
-      zoomViewport(this.viewport, 100, center, this.viewportConfig),
-    )
+    runStateOperation(this, () => {
+      const center = { x: this.viewport.x, y: this.viewport.y }
+      this.setViewport(
+        zoomViewport(this.viewport, 100, center, this.viewportConfig),
+      )
+    })
   }
 
   /**
@@ -1183,7 +1273,9 @@ export class CanvasEngine {
    * zoom floor and pan constraint still apply.
    */
   resetZoom(): void {
-    this.setViewport(resetViewport())
+    runStateOperation(this, () => {
+      this.setViewport(resetViewport())
+    })
   }
 
   /**
@@ -1195,33 +1287,36 @@ export class CanvasEngine {
    * `constrainToContent` until the next fit.
    */
   zoomToFit(options: ZoomToFitOptions = {}): void {
-    const bounds = options.bounds ?? getElementsBounds(this.scene.getElements())
-    if (!bounds) {
-      return
-    }
+    runStateOperation(this, () => {
+      const bounds =
+        options.bounds ?? getElementsBounds(this.scene.getElements())
+      if (!bounds) {
+        return
+      }
 
-    const padding = Math.max(
-      0,
-      options.padding ?? this.viewportConfig.fitPadding,
-    )
-    const viewport = fitViewport(
-      this.viewport,
-      bounds,
-      this.canvasSize,
-      padding,
-      this.viewportConfig,
-    )
-    if (viewport === this.viewport) {
-      return
-    }
+      const padding = Math.max(
+        0,
+        options.padding ?? this.viewportConfig.fitPadding,
+      )
+      const viewport = fitViewport(
+        this.viewport,
+        bounds,
+        this.canvasSize,
+        padding,
+        this.viewportConfig,
+      )
+      if (viewport === this.viewport) {
+        return
+      }
 
-    // Record the fit bounds and zoom before applying them so the constraint
-    // accepts the fit and later pan/zoom-outs use the same content region.
-    this.contentBoundsOverride = options.bounds
-      ? normalizeViewportBounds(options.bounds)
-      : null
-    this.contentFitZoom = viewport.zoom
-    this.setViewport(viewport)
+      // Record the fit bounds and zoom before applying them so the constraint
+      // accepts the fit and later pan/zoom-outs use the same content region.
+      this.contentBoundsOverride = options.bounds
+        ? normalizeViewportBounds(options.bounds)
+        : null
+      this.contentFitZoom = viewport.zoom
+      this.setViewport(viewport)
+    })
   }
 
   /**
@@ -1271,7 +1366,9 @@ export class CanvasEngine {
 
   /** @internal */
   setSelectedIds(ids: Set<ElementId>): void {
-    this.publishSceneChange(this.scene.select(ids))
+    runStateOperation(this, () => {
+      this.publishSceneChange(this.scene.select(ids))
+    })
   }
 
   /** @internal */

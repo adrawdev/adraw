@@ -1,6 +1,7 @@
 import { getElementAtPoint } from "../elements"
 import type { CanvasEngine } from "../engine/engine"
 import { applyWheelTransform, toCanvasPoint } from "../engine/internal"
+import { runStateOperation } from "../engine/state-notifier"
 import { isBoundTextContainer } from "../text-bindings"
 import type { ToolType } from "../types"
 import {
@@ -64,60 +65,70 @@ export function setupEventListeners(
   }
 
   svgElement.addEventListener("pointerdown", (event) => {
-    const { x, y } = getRelativePoint(state, event)
-    handlePointerDown(state, engine, x, y, event)
-    // Capture the pointer so pointermove/pointerup keep firing while the
-    // cursor leaves the container — or the browser window — mid-drag.
-    try {
-      svgElement.setPointerCapture(event.pointerId)
-    } catch {
-      // Capture unavailable (e.g. synthetic events in tests) — ignore.
-    }
-    if (keyboardScope === "canvas") {
-      svgElement.focus({ preventScroll: true })
-    }
-    renderAll(state, engine)
+    runStateOperation(engine, () => {
+      const { x, y } = getRelativePoint(state, event)
+      handlePointerDown(state, engine, x, y, event)
+      // Capture the pointer so pointermove/pointerup keep firing while the
+      // cursor leaves the container — or the browser window — mid-drag.
+      try {
+        svgElement.setPointerCapture(event.pointerId)
+      } catch {
+        // Capture unavailable (e.g. synthetic events in tests) — ignore.
+      }
+      if (keyboardScope === "canvas") {
+        svgElement.focus({ preventScroll: true })
+      }
+      renderAll(state, engine)
+    })
   })
 
   state.svgElement.addEventListener("pointermove", (event) => {
-    const { x, y } = getRelativePoint(state, event)
-    handlePointerMove(state, engine, x, y, event)
-    renderAll(state, engine)
+    runStateOperation(engine, () => {
+      const { x, y } = getRelativePoint(state, event)
+      handlePointerMove(state, engine, x, y, event)
+      renderAll(state, engine)
+    })
   })
 
   state.svgElement.addEventListener("pointerup", (event) => {
-    const { x, y } = getRelativePoint(state, event)
-    handlePointerUp(state, engine, x, y, event)
-    renderAll(state, engine)
+    runStateOperation(engine, () => {
+      const { x, y } = getRelativePoint(state, event)
+      handlePointerUp(state, engine, x, y, event)
+      renderAll(state, engine)
+    })
   })
 
   // A cancelled pointer (e.g. the OS takes over the drag) still needs the
   // tool's gesture finalized the same way a pointerup would.
   state.svgElement.addEventListener("pointercancel", (event) => {
-    const { x, y } = getRelativePoint(state, event)
-    handlePointerUp(state, engine, x, y, event)
-    renderAll(state, engine)
+    runStateOperation(engine, () => {
+      const { x, y } = getRelativePoint(state, event)
+      handlePointerUp(state, engine, x, y, event)
+      renderAll(state, engine)
+    })
   })
 
   // Double-clicking a text element opens the inline editor for it. On empty
   // canvas it creates free text; on a shape or arrow it creates (or edits) the
   // container's centered label.
   state.svgElement.addEventListener("dblclick", (event) => {
-    if (state.textEditor || engine.getActiveTool() !== "select") {
-      return
-    }
-    const { x, y } = getRelativePoint(state, event)
-    const point = toCanvasPoint(engine, x, y)
-    const element = getElementAtPoint(engine.getElements(), point)
-    if (element?.type === "text" || element?.type === "note") {
-      startExistingTextEditing(state, engine, element)
-      return
-    }
-    if (isBoundTextContainer(element)) {
-      startBoundTextEditing(state, engine, element)
-      return
-    }
-    startFreeTextEditing(state, engine, point)
+    runStateOperation(engine, () => {
+      if (state.textEditor || engine.getActiveTool() !== "select") {
+        return
+      }
+      const { x, y } = getRelativePoint(state, event)
+      const point = toCanvasPoint(engine, x, y)
+      const element = getElementAtPoint(engine.getElements(), point)
+      if (element?.type === "text" || element?.type === "note") {
+        startExistingTextEditing(state, engine, element)
+        return
+      }
+      if (isBoundTextContainer(element)) {
+        startBoundTextEditing(state, engine, element)
+        return
+      }
+      startFreeTextEditing(state, engine, point)
+    })
   })
 
   // Set cursor based on hovered handle. Skipped mid-drag: with pointer capture,
@@ -152,46 +163,50 @@ export function setupEventListeners(
   state.svgElement.addEventListener(
     "wheel",
     (event) => {
-      const { x, y } = getRelativePoint(state, event)
-      applyWheelTransform(engine, event, x, y)
-      renderAll(state, engine)
+      runStateOperation(engine, () => {
+        const { x, y } = getRelativePoint(state, event)
+        applyWheelTransform(engine, event, x, y)
+        renderAll(state, engine)
+      })
     },
     { passive: false },
   )
 
   const handleKeyDown = (event: KeyboardEvent): void => {
-    const target = event.target
-    const isEditable =
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement ||
-      (target instanceof HTMLElement && target.isContentEditable)
+    runStateOperation(engine, () => {
+      const target = event.target
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
 
-    // Enter / F2 on a selected text element opens the inline editor, matching
-    // Excalidraw and tldraw.
-    if (
-      !isEditable &&
-      !state.textEditor &&
-      engine.getActiveTool() === "select" &&
-      (event.key === "Enter" || event.key === "F2")
-    ) {
-      const selectedIds = engine.getSelectedIds()
-      if (selectedIds.size === 1) {
-        const [id] = selectedIds
-        const element = engine.getElements().get(id)
-        if (
-          (element?.type === "text" || element?.type === "note") &&
-          !element.locked
-        ) {
-          event.preventDefault()
-          startExistingTextEditing(state, engine, element)
-          return
+      // Enter / F2 on a selected text element opens the inline editor, matching
+      // Excalidraw and tldraw.
+      if (
+        !isEditable &&
+        !state.textEditor &&
+        engine.getActiveTool() === "select" &&
+        (event.key === "Enter" || event.key === "F2")
+      ) {
+        const selectedIds = engine.getSelectedIds()
+        if (selectedIds.size === 1) {
+          const [id] = selectedIds
+          const element = engine.getElements().get(id)
+          if (
+            (element?.type === "text" || element?.type === "note") &&
+            !element.locked
+          ) {
+            event.preventDefault()
+            startExistingTextEditing(state, engine, element)
+            return
+          }
         }
       }
-    }
 
-    engine.handleKeyDown(event)
-    renderAll(state, engine)
+      engine.handleKeyDown(event)
+      renderAll(state, engine)
+    })
   }
 
   if (keyboardScope === "document") {

@@ -1,4 +1,5 @@
 import type { CanvasEngine } from "../engine/engine"
+import { runStateOperation } from "../engine/state-notifier"
 import { getRelativePoint, handlePointerUp } from "./pointer"
 import { renderAll } from "./render"
 import type { DomState } from "./state"
@@ -107,18 +108,26 @@ export function setupTouchListeners(
     return
   }
   state.svgElement.addEventListener("touchstart", (event) => {
-    handleTouchStart(state, engine, event)
+    runStateOperation(engine, () => {
+      handleTouchStart(state, engine, event)
+    })
   })
 
   state.svgElement.addEventListener("touchmove", (event) => {
-    handleTouchMove(state, engine, event)
+    runStateOperation(engine, () => {
+      handleTouchMove(state, engine, event)
+    })
   })
 
   state.svgElement.addEventListener("touchend", (event) => {
-    handleTouchEnd(state, engine, event)
+    runStateOperation(engine, () => {
+      handleTouchEnd(state, engine, event)
+    })
   })
 
   state.svgElement.addEventListener("touchcancel", (event) => {
-    handleTouchEnd(state, engine, event)
+    runStateOperation(engine, () => {
+      handleTouchEnd(state, engine, event)
+    })
   })
 }

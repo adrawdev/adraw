@@ -80,7 +80,7 @@ Every publicly exported function, class, type, interface, and constant must have
 | `snapping` / `isSnapMode` / `isToolLocked` | Tool configuration                      |
 | `hideWhileTransforming` / `isReady`        | Overlay visibility and mount readiness  |
 
-The engine has no public `on`/`off`/`emit`; adapters and consumers read snapshots and subscribe through the store. Snapshots copy changed slices and reuse unchanged ones.
+The engine has no public `on`/`off`/`emit`; adapters and consumers read snapshots and subscribe through the store. One completed canvas operation publishes at most one coherent snapshot. Snapshots copy changed slices, reuse unchanged ones, and increment `revision` only when something observable changed. Nested calls fold into the outer operation; listener errors do not block later listeners.
 
 Styles are global: `engine.setStyle(partial)` merges the same style into every tool, applying each field only where the tool supports it, and restyles matching selected elements. `engine.getStyle()` returns the selected elements' common style, then the global style. (The style hooks were removed; toolbars call `setStyle`/`getStyle` through the engine.)
 

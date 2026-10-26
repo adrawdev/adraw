@@ -23,6 +23,7 @@ Do the work in two phases.
 - Adapters become thin reactivity adapters. `useHistory` keeps its function signatures but reads the snapshot, fixing Svelte without an API break. `useCanvas()` gains `store` and `snapshot`; `useStyle()` is added to all six adapters.
 - Web Components keeps its engine and document across reconnect, matching the other adapters.
 - The store is the only public observation seam. The four events are removed, not deprecated.
+- [ADR-0002](0002-operation-scoped-state-publication.md) later scopes that seam to one publication per canvas operation so every observed snapshot is coherent.
 
 ## Considered options
 

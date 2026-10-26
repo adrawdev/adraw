@@ -324,6 +324,10 @@ store.dispose()
 
 The snapshot also includes `selectedElements`, `canUndo`, `canRedo`, `style`,
 `snapping`, `isSnapMode`, `isToolLocked`, `hideWhileTransforming` and `isReady`.
+Listeners run synchronously and receive at most one coherent snapshot per
+completed canvas operation; no-op operations do not notify. A listener error
+does not prevent later listeners from receiving the same snapshot.
+
 Pass `onReady` to `new AdrawStore(canvas, { onReady })` to run DOM-dependent
 setup once the canvas is mounted.
 

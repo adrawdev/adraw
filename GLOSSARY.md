@@ -12,6 +12,14 @@ _Avoid_: binding, mirror
 The immutable state value read from an AdrawStore at one revision.
 _Avoid_: state, view state
 
+**Canvas operation**:
+One synchronous public mutation of the canvas engine or mounted adapter, including every nested call made while it runs.
+_Avoid_: transaction, command
+
+**State publication**:
+The single internal notification emitted when the outermost Canvas operation completes, carrying the deduplicated state kinds that changed. AdrawStore turns at most one State publication into an AdrawSnapshot revision.
+_Avoid_: event, change event
+
 **Scene**:
 The elements and selection that make up the canvas content, together with their undo history.
 _Avoid_: document, canvas state

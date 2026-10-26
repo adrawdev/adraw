@@ -8,6 +8,7 @@ import {
   setActiveToolText,
   updateTextElement,
 } from "../engine/internal"
+import { runStateOperation } from "../engine/state-notifier"
 import type { EditableTextElement } from "../types"
 import {
   positionTextEditor,
@@ -83,40 +84,46 @@ function openTextEditor(
   textarea.style.zIndex = "10"
 
   textarea.addEventListener("input", () => {
-    const next = textarea.value
-    if (state.textEditElementId) {
-      updateTextElement(engine, state.textEditElementId, next)
-    } else {
-      setActiveToolText(engine, next)
-    }
-    positionTextEditor(state, engine)
-    renderAll(state, engine)
+    runStateOperation(engine, () => {
+      const next = textarea.value
+      if (state.textEditElementId) {
+        updateTextElement(engine, state.textEditElementId, next)
+      } else {
+        setActiveToolText(engine, next)
+      }
+      positionTextEditor(state, engine)
+      renderAll(state, engine)
+    })
   })
 
   textarea.addEventListener("keydown", (event) => {
-    if (event.isComposing) {
-      return
-    }
-    // Excalidraw/tldraw semantics: Enter inserts a newline, while Escape and
-    // Ctrl/Cmd+Enter finish editing.
-    if (
-      event.key === "Escape" ||
-      (event.key === "Enter" && (event.ctrlKey || event.metaKey))
-    ) {
-      event.preventDefault()
-      commitTextEditing(state, engine)
-      // The editor lives outside the canvas, so focus would otherwise fall
-      // back to the body. Return it so canvas-scoped shortcuts keep working
-      // (e.g. toggling the tool lock with Q).
-      state.svgElement?.focus({ preventScroll: true })
-    }
+    runStateOperation(engine, () => {
+      if (event.isComposing) {
+        return
+      }
+      // Excalidraw/tldraw semantics: Enter inserts a newline, while Escape and
+      // Ctrl/Cmd+Enter finish editing.
+      if (
+        event.key === "Escape" ||
+        (event.key === "Enter" && (event.ctrlKey || event.metaKey))
+      ) {
+        event.preventDefault()
+        commitTextEditing(state, engine)
+        // The editor lives outside the canvas, so focus would otherwise fall
+        // back to the body. Return it so canvas-scoped shortcuts keep working
+        // (e.g. toggling the tool lock with Q).
+        state.svgElement?.focus({ preventScroll: true })
+      }
+    })
   })
 
   // Blur commits (clicking elsewhere). Pointerdown on the canvas commits first
   // via `handlePointerDown`, so this is only the fallback for clicks outside
   // the canvas.
   textarea.addEventListener("blur", () => {
-    commitTextEditing(state, engine)
+    runStateOperation(engine, () => {
+      commitTextEditing(state, engine)
+    })
   })
 
   // Keep the editor outside the canvas container so it cannot change the

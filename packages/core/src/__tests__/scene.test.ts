@@ -116,7 +116,6 @@ describe("Scene commits", () => {
   it("discards a throwing mutator and stays usable", () => {
     const scene = makeScene([makeRect("a")])
     const before = scene.getElements()
-    const revision = scene.commit(() => {}).revision
 
     expect(() =>
       scene.commit((draft) => {
@@ -127,7 +126,7 @@ describe("Scene commits", () => {
 
     expect(scene.getElements()).toBe(before)
     expect(scene.getElements().has("b")).toBe(false)
-    expect(scene.commit(() => {}).revision).toBe(revision)
+    expect(scene.commit(() => {}).elementsChanged).toBe(false)
   })
 
   it("rejects reentrant and async mutators", () => {
@@ -157,17 +156,17 @@ describe("Scene commits", () => {
     ).toThrow(/live scene/)
   })
 
-  it("does not advance the revision for a no-op commit", () => {
+  it("reports no change for a no-op commit", () => {
     const scene = makeScene()
     const rect = makeRect("a")
-    const first = scene.commit((draft) => {
+    scene.commit((draft) => {
       draft.elements.set(rect.id, rect)
     })
-    const second = scene.commit(() => {})
+    const change = scene.commit(() => {})
 
-    expect(second.elementsChanged).toBe(false)
-    expect(second.selectionChanged).toBe(false)
-    expect(second.revision).toBe(first.revision)
+    expect(change.elementsChanged).toBe(false)
+    expect(change.historyChanged).toBe(false)
+    expect(change.selectionChanged).toBe(false)
   })
 
   it("syncs derived bindings before committing", () => {
@@ -220,7 +219,6 @@ describe("Scene replace and select", () => {
     expect(change.elementsChanged).toBe(false)
     expect(change.selectionChanged).toBe(true)
     expect(again.selectionChanged).toBe(true)
-    expect(again.revision).toBe(change.revision + 1)
   })
 })
 

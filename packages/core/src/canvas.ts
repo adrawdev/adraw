@@ -16,7 +16,7 @@ import {
   dispatchPointerMoveAt,
   dispatchPointerUpAt,
 } from "./engine/internal"
-import { notifyState } from "./engine/state-notifier"
+import { notifyState, runStateOperation } from "./engine/state-notifier"
 import type { AdrawCanvasOptions, ToImageOptions } from "./options"
 
 export type {
@@ -62,11 +62,13 @@ export class AdrawCanvas extends CanvasEngine {
     screenY: number,
     event: PointerEvent,
   ): void {
-    if (this.mounted) {
-      handlePointerDown(this.mounted.state, this, screenX, screenY, event)
-      return
-    }
-    dispatchPointerDownAt(this, screenX, screenY, event)
+    runStateOperation(this, () => {
+      if (this.mounted) {
+        handlePointerDown(this.mounted.state, this, screenX, screenY, event)
+        return
+      }
+      dispatchPointerDownAt(this, screenX, screenY, event)
+    })
   }
 
   /**
@@ -80,11 +82,13 @@ export class AdrawCanvas extends CanvasEngine {
     screenY: number,
     event: PointerEvent,
   ): void {
-    if (this.mounted) {
-      handlePointerMove(this.mounted.state, this, screenX, screenY, event)
-      return
-    }
-    dispatchPointerMoveAt(this, screenX, screenY, event)
+    runStateOperation(this, () => {
+      if (this.mounted) {
+        handlePointerMove(this.mounted.state, this, screenX, screenY, event)
+        return
+      }
+      dispatchPointerMoveAt(this, screenX, screenY, event)
+    })
   }
 
   /**
@@ -94,11 +98,13 @@ export class AdrawCanvas extends CanvasEngine {
    * @param event Underlying pointer event.
    */
   handlePointerUp(screenX: number, screenY: number, event: PointerEvent): void {
-    if (this.mounted) {
-      handlePointerUp(this.mounted.state, this, screenX, screenY, event)
-      return
-    }
-    dispatchPointerUpAt(this, screenX, screenY, event)
+    runStateOperation(this, () => {
+      if (this.mounted) {
+        handlePointerUp(this.mounted.state, this, screenX, screenY, event)
+        return
+      }
+      dispatchPointerUpAt(this, screenX, screenY, event)
+    })
   }
 
   /**
@@ -109,7 +115,9 @@ export class AdrawCanvas extends CanvasEngine {
    * @param screenY Optional screen y of the cursor.
    */
   handleWheel(event: WheelEvent, screenX?: number, screenY?: number): void {
-    applyWheelTransform(this, event, screenX, screenY)
+    runStateOperation(this, () => {
+      applyWheelTransform(this, event, screenX, screenY)
+    })
   }
 
   // ── DOM adapter ──
@@ -127,29 +135,31 @@ export class AdrawCanvas extends CanvasEngine {
     if (this.mounted) {
       return
     }
-    if (this.usesDefaultTextMeasurer()) {
-      this.setAdapterTextMeasurer(
-        createCanvasTextMeasurer(container.ownerDocument),
-      )
-    }
-    this.mounted = mountDom(this, container)
-    // Initial content lives in the engine before the adapter exists; build its
-    // nodes before the full render so a mounted canvas with `initialElements`
-    // or `initialDocument` is not blank until the first change.
-    reconcileElements(this.mounted.state, this)
-    renderAll(this.mounted.state, this)
+    runStateOperation(this, () => {
+      if (this.usesDefaultTextMeasurer()) {
+        this.setAdapterTextMeasurer(
+          createCanvasTextMeasurer(container.ownerDocument),
+        )
+      }
+      this.mounted = mountDom(this, container)
+      // Initial content lives in the engine before the adapter exists; build its
+      // nodes before the full render so a mounted canvas with `initialElements`
+      // or `initialDocument` is not blank until the first change.
+      reconcileElements(this.mounted.state, this)
+      renderAll(this.mounted.state, this)
 
-    // Web fonts can change text metrics after the first paint. Re-measure once
-    // they are ready so boxes and wrapping match the glyphs.
-    const fonts = container.ownerDocument.fonts
-    if (fonts) {
-      void fonts.ready.then(() => {
-        if (this.mounted) {
-          this.refreshTextMetrics()
-        }
-      })
-    }
-    notifyState(this, "mount")
+      // Web fonts can change text metrics after the first paint. Re-measure once
+      // they are ready so boxes and wrapping match the glyphs.
+      const fonts = container.ownerDocument.fonts
+      if (fonts) {
+        void fonts.ready.then(() => {
+          if (this.mounted) {
+            this.refreshTextMetrics()
+          }
+        })
+      }
+      notifyState(this, "mount")
+    })
   }
 
   /**
@@ -172,13 +182,15 @@ export class AdrawCanvas extends CanvasEngine {
    * Tear down the DOM adapter, removing the SVG and event listeners.
    */
   destroy(): void {
-    const wasMounted = this.mounted !== null
-    this.mounted?.destroy()
-    this.mounted = null
-    if (wasMounted) {
-      notifyState(this, "mount")
-    }
-    this.resetTextMeasurer()
+    runStateOperation(this, () => {
+      const wasMounted = this.mounted !== null
+      this.mounted?.destroy()
+      this.mounted = null
+      if (wasMounted) {
+        notifyState(this, "mount")
+      }
+      this.resetTextMeasurer()
+    })
   }
 
   /**
