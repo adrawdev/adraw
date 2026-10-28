@@ -27,6 +27,7 @@
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "(oxlint --fix || true) && oxfmt",
     "lint:github": "oxlint --format=github",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "core:release": "pnpm --filter core publish --access public --no-git-checks && git tag \"@adraw/core@$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"packages/core/package.json\", \"utf8\")).version')\"",
     "test": "vitest",
     "test:e2e": "playwright test",

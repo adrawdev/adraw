@@ -417,7 +417,7 @@ const operations: OperationCase[] = [
     expectedKinds: ["tool"],
     expectedSnapshots: 1,
     name: "ToolContext.finishCreation",
-    run: (canvas) => canvas.getToolContext().finishCreation(),
+    run: (canvas) => canvas.getToolContext().finishCreation?.(),
     setup: (canvas) => canvas.setActiveTool("rectangle"),
   },
   {
@@ -531,7 +531,7 @@ describe("mount lifecycle publication", () => {
   it("publishes mount and destroy once each", () => {
     const canvas = new AdrawCanvas()
     const store = new AdrawStore(canvas)
-    const snapshots = []
+    const snapshots: AdrawSnapshot[] = []
     store.subscribe(() => snapshots.push(store.getSnapshot()))
     const container = document.createElement("div")
     document.body.appendChild(container)

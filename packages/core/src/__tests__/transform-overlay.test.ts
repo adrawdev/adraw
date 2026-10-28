@@ -10,7 +10,7 @@ function getMultiSelectionBoxes(canvas: AdrawCanvas): SVGRectElement[] {
   if (!svg) {
     return []
   }
-  return [...svg.querySelectorAll(".adraw-multi-selection-box")]
+  return [...svg.querySelectorAll<SVGRectElement>(".adraw-multi-selection-box")]
 }
 
 function makeRect(

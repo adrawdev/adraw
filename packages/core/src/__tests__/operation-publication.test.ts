@@ -99,7 +99,10 @@ describe("operation-scoped publication", () => {
 
     expect(snapshots).toHaveLength(1)
     expect(snapshots[0].style.fillColor).toBe("#ff0000")
-    expect(snapshots[0].selectedElements[0]?.fillColor).toBe("#ff0000")
+    expect(snapshots[0].selectedElements[0]).toMatchObject({
+      fillColor: "#ff0000",
+      type: "rectangle",
+    })
     store.dispose()
   })
 

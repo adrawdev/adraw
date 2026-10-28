@@ -37,9 +37,12 @@ pnpm web:dev    # Astro docs site
 
 pnpm lint       # oxlint + oxfmt --check
 pnpm lint:fix   # auto-fix
+pnpm typecheck  # tsc --noEmit for packages/core
 
 pnpm test run               # one-off Vitest run over packages/**/*.{test,spec}.{ts,tsx}
 pnpm test run packages/core/src/__tests__/coordinates.test.ts   # one test file
+
+Run `pnpm build` and `pnpm test run` sequentially: the build cleans `packages/core/dist`, and adapter tests resolve `@adraw/core` from that output.
 
 pnpm test:e2e:install       # one-time Playwright browser install
 pnpm test:e2e               # Playwright; builds core, starts vite-vanilla on :5173

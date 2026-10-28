@@ -210,7 +210,7 @@ describe("arrow tool", () => {
     // Bound endpoints are clipped to the target borders, not left at centers.
     expect(temp.startX).toBeGreaterThan(100)
     expect(temp.endX).toBeLessThan(300)
-    expect(tool.getBindingCandidate()).toBe("end")
+    expect(tool.getBindingCandidate?.()).toBe("end")
 
     tool.onPointerUp(ctx, { x: 350, y: 25 }, event)
     const arrow = [...ctx.getElements().values()].find(
