@@ -1,4 +1,5 @@
 import { syncArrowBindings } from "../bindings"
+import { syncGroupState } from "../groups"
 import {
   canRedo as canRedoHistory,
   canUndo as canUndoHistory,
@@ -209,6 +210,7 @@ export class Scene {
       }
 
       this.syncBindings(draft.elements, draft.selectedIds)
+      syncGroupState(draft.elements)
       clampSelection(draft.selectedIds, draft.elements)
 
       const elementsChanged = !sameElements(beforeElements, draft.elements)
@@ -250,6 +252,7 @@ export class Scene {
       const nextSelection = resolveSelection(options.selection, beforeSelection)
 
       this.syncBindings(nextElements, nextSelection)
+      syncGroupState(nextElements)
       clampSelection(nextSelection, nextElements)
 
       const selectionChanged = !sameSelection(beforeSelection, nextSelection)
@@ -314,6 +317,7 @@ export class Scene {
 
     this.elements = result.elements
     syncArrowBindings(this.elements)
+    syncGroupState(this.elements)
     this.selectedIds = result.selectedIds
     clampSelection(this.selectedIds, this.elements)
     this.history = result.state
@@ -337,6 +341,7 @@ export class Scene {
 
     this.elements = result.elements
     syncArrowBindings(this.elements)
+    syncGroupState(this.elements)
     this.selectedIds = result.selectedIds
     clampSelection(this.selectedIds, this.elements)
     this.history = result.state

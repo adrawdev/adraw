@@ -7,6 +7,7 @@ import {
 } from "../constants"
 import { createText, getElementAtPoint, getNextZIndex } from "../elements"
 import type { CanvasEngine } from "../engine/engine"
+import { createGroupIndex, getParentGroupId } from "../groups"
 import {
   findBoundText,
   getBoundTextMaxWidth,
@@ -135,6 +136,31 @@ export function startBoundTextEditing(
     return false
   }
 
+  // A label belongs to the same parent group as its container so it inherits
+  // the group's visibility/lock and transforms with it.
+  const addLabelToContainerGroup = (labelId: ElementId): void => {
+    const parentId = getParentGroupId(createGroupIndex(elements), live.id)
+    if (!parentId) {
+      return
+    }
+    const parent = elements.get(parentId)
+    if (parent?.type !== "group" || parent.children.includes(labelId)) {
+      return
+    }
+    engine.commitScene(
+      (draft) => {
+        const current = draft.elements.get(parentId)
+        if (current?.type === "group" && !current.children.includes(labelId)) {
+          draft.elements.set(parentId, {
+            ...current,
+            children: [...current.children, labelId],
+          })
+        }
+      },
+      { history: false },
+    )
+  }
+
   const existing = findBoundText(elements, live.id)
   if (existing) {
     startExistingTextEditing(state, engine, existing)
@@ -169,6 +195,7 @@ export function startBoundTextEditing(
   })
 
   engine.addElement(text, { history: false })
+  addLabelToContainerGroup(text.id)
   const positioned = engine.getElements().get(text.id)
   if (positioned?.type !== "text") {
     return false

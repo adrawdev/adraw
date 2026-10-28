@@ -17,10 +17,10 @@ export function moveSelection(
   }
 
   const elements = context.getElements()
-  const selectedIds = context.getSelectedIds()
   // A direct move detaches arrows from targets outside the moving selection;
-  // arrows whose targets move along stay bound.
-  detachArrowsOutsideSelection(elements, selectedIds)
+  // arrows whose targets move along stay bound. Selected groups carry their
+  // whole subtree, so the affected set includes descendants and ancestors.
+  detachArrowsOutsideSelection(elements, state.affectedIds)
   let delta = {
     x: point.x - state.dragStartPoint.x,
     y: point.y - state.dragStartPoint.y,
@@ -37,7 +37,7 @@ export function moveSelection(
         y: bounds.y + delta.y,
       },
       elements,
-      selectedIds,
+      state.affectedIds,
       context.getSnappingConfig().threshold,
     )
     delta = { x: snapped.x - bounds.x, y: snapped.y - bounds.y }
@@ -45,7 +45,7 @@ export function moveSelection(
   }
   context.setSnapGuides(guides)
 
-  for (const id of selectedIds) {
+  for (const id of state.transformIds) {
     const original = state.originalPositions.get(id)
     if (original) {
       const element = elements.get(id)

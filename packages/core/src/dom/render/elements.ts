@@ -1,4 +1,9 @@
 import type { CanvasEngine } from "../../engine/engine"
+import {
+  createGroupIndex,
+  isEffectivelyVisible,
+  type GroupIndex,
+} from "../../groups"
 import { getBoundTextBounds } from "../../text-bindings"
 import type { CanvasElement, ElementId, Point } from "../../types"
 import { updateElementGeometry } from "../render"
@@ -88,6 +93,7 @@ function syncElementNode(
   state: DomState,
   engine: CanvasEngine,
   element: CanvasElement,
+  index: GroupIndex,
 ): SVGGElement | null {
   let group = state.nodeById.get(element.id) ?? null
 
@@ -100,7 +106,7 @@ function syncElementNode(
     state.nodeById.set(element.id, group)
   }
 
-  if (!element.visible) {
+  if (!isEffectivelyVisible(index, element.id)) {
     if (group) {
       forgetNode(state, element.id)
       group.remove()
@@ -154,6 +160,7 @@ export function reconcileElements(state: DomState, engine: CanvasEngine): void {
   }
 
   const elements = engine.getElements()
+  const index = createGroupIndex(elements)
 
   // Drop nodes for elements that no longer exist, leaving the temporary node
   // (which has no matching entry in `elements`) untouched. Iterate backwards:
@@ -178,7 +185,7 @@ export function reconcileElements(state: DomState, engine: CanvasEngine): void {
   for (const element of [...elements.values()].toSorted(
     (a, b) => a.zIndex - b.zIndex,
   )) {
-    const node = syncElementNode(state, engine, element)
+    const node = syncElementNode(state, engine, element, index)
     if (node) {
       orderedNodes.push(node)
     }
@@ -225,24 +232,26 @@ export function renderSelectElements(
 
   const elements = engine.getElements()
   const selectedIds = engine.getSelectedIds()
+  const index = createGroupIndex(elements)
 
   // This is the incremental path (used while the select tool is active), so it
   // updates existing nodes in place rather than rebuilding. It must still drop
-  // DOM nodes for elements that no longer exist — e.g. when a selected element
-  // is deleted, the "change" handler routes here instead of reconcileElements().
-  // Iterate backwards: `children` is a live collection and removing during a
-  // forward loop would skip nodes.
+  // DOM nodes for elements that no longer exist or became hidden by a group —
+  // e.g. when a selected element is deleted, the "change" handler routes here
+  // instead of reconcileElements(). Iterate backwards: `children` is a live
+  // collection and removing during a forward loop would skip nodes.
   const children = state.elementsGroup.children
   for (let i = children.length - 1; i >= 0; i--) {
     const child = children[i]
-    if (!elements.has(child.id)) {
+    const element = elements.get(child.id)
+    if (!element || !isEffectivelyVisible(index, element.id)) {
       forgetNode(state, child.id)
       child.remove()
     }
   }
 
-  for (const [, element] of elements) {
-    if (!element.visible) {
+  for (const [id, element] of elements) {
+    if (!isEffectivelyVisible(index, id)) {
       continue
     }
 

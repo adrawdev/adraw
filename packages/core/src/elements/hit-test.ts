@@ -1,3 +1,8 @@
+import {
+  createGroupIndex,
+  isEffectivelyLocked,
+  isEffectivelyVisible,
+} from "../groups"
 import type {
   ArrowElement,
   CanvasElement,
@@ -19,10 +24,16 @@ export function getElementsBounds(
   width: number
   height: number
 } | null {
-  let elementArray = [...elements.values()].filter((el) => el.visible)
-  if (ids) {
-    elementArray = elementArray.filter((el) => ids.has(el.id))
-  }
+  const index = createGroupIndex(elements)
+  // Without an explicit id set this is a content fit, so group records are
+  // skipped (their children already contribute bounds). With ids, a selected
+  // group contributes its derived bounds.
+  const elementArray = [...elements.values()].filter((el) => {
+    if (ids) {
+      return ids.has(el.id) && isEffectivelyVisible(index, el.id)
+    }
+    return el.type !== "group" && isEffectivelyVisible(index, el.id)
+  })
 
   if (elementArray.length === 0) {
     return null
@@ -56,8 +67,16 @@ export function getElementAtPoint(
   elements: Map<ElementId, CanvasElement>,
   point: Point,
 ): CanvasElement | null {
+  const index = createGroupIndex(elements)
+  // Groups are invisible containers: clicks resolve to their visible children
+  // and the select tool maps that hit to the group at the current drill level.
   const elementArray = [...elements.values()]
-    .filter((el) => el.visible && !el.locked)
+    .filter(
+      (el) =>
+        el.type !== "group" &&
+        isEffectivelyVisible(index, el.id) &&
+        !isEffectivelyLocked(index, el.id),
+    )
     .toSorted((a, b) => b.zIndex - a.zIndex)
 
   for (const element of elementArray) {

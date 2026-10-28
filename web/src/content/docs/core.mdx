@@ -134,7 +134,7 @@ Each element on the canvas has a type:
 - `text` — label, free or bound to a shape/arrow
 - `note` — sticky note with wrapping text and a folded corner
 - `media` — raster image
-- `group` — container for other elements
+- `group` — container for other elements; its bounds and z-index follow its descendants
 
 Rectangles, ellipses and diamonds accept `fillColor`; every element accepts
 `opacity`
@@ -259,8 +259,9 @@ canvas.clearHistory() // current state becomes the new baseline
 
 Keyboard shortcuts are scoped to the canvas by default: the SVG is focusable and
 takes focus on pointer down, so shortcuts never leak into forms, dialogs or
-other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo
-while the canvas has focus.
+other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo,
+`Ctrl/Cmd+G` groups the selection, `Ctrl/Cmd+Shift+G` ungroups it, and `Escape`
+steps out of an entered group before clearing the selection.
 
 ```ts
 new AdrawCanvas({ container, keyboard: "canvas" }) // default: only while focused
@@ -294,14 +295,38 @@ to become the undo baseline and discard everything before it.
 ## Selection
 
 ```ts
-canvas.selectAll() // select every element
-canvas.clearSelection() // deselect all
+canvas.selectAll() // select every top-level object
+canvas.clearSelection() // deselect all and leave any entered group
 canvas.deleteSelected() // remove selected elements
 canvas.getSelectedIds() // Set<ElementId>
+canvas.group() // group the selection; returns the new group or null
+canvas.ungroup() // ungroup selected groups; returns the released child ids
 ```
 
 Hold `Shift` while dragging a resize handle to preserve the selection's
 original proportions.
+
+### Groups
+
+Grouping requires at least two top-level objects and includes any bound text
+labels of the selected containers. Groups may nest, and ungrouping removes one
+level while leaving nested groups intact.
+
+A group is a container, not a drawn element. Its `x`, `y`, `width` and `height`
+are derived from its visible descendants and kept in sync; moving, resizing or
+rotating a selected group transforms every descendant. Style changes on a group
+reach its descendants, and a hidden or locked group hides or locks its children.
+
+Clicking a child selects the outermost group. Double-click enters one level,
+after which clicks, marquee selection and `selectAll()` act on that group's
+direct children. `Escape` steps out one level, clicking outside the group leaves
+it, and the entered group gets a subtle dashed outline. New drawings and pastes
+stay top-level until they are explicitly grouped.
+
+Deleting a selected group removes its whole subtree; deleting an individual
+child prunes it from the group, and empty groups disappear. Arrows bind to child
+shapes rather than a group's union box, while the eraser removes the outermost
+group when it touches any descendant.
 
 ## Z-order
 
@@ -314,7 +339,8 @@ canvas.sendToBack([id]) // below everything
 canvas.setZIndex(id, 10) // exact value
 ```
 
-Group elements carry their children, and all three methods accept
+Group elements carry their children, and a group's z-index follows its topmost
+child. `setZIndex` on a group shifts its whole subtree. All three methods accept
 `{ history: false }`. To place a base image underneath existing annotations,
 restack it after insertion:
 

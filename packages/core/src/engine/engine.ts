@@ -1,5 +1,16 @@
 import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
+import {
+  createGroupIndex,
+  getContextChain,
+  getLeafDescendantIds,
+  groupSelection,
+  isEffectivelyLocked,
+  isEffectivelyVisible,
+  resolveContextChain,
+  syncGroupState,
+  ungroupSelection,
+} from "../groups"
 import { getNoteMinHeight } from "../note"
 import type { CanvasOptions, KeyboardScope, MediaInput } from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
@@ -30,6 +41,7 @@ import type {
   CanvasDocument,
   CanvasElement,
   ElementId,
+  GroupElement,
   MediaElement,
   Point,
   SnapGuide,
@@ -172,6 +184,9 @@ export class CanvasEngine {
   private style: StyleOptions = {}
   private hideOverlayWhileTransforming: boolean
   private isToolLocked: boolean
+  // Group the select tool is currently inside. Transient interaction state, not
+  // part of the document or the store snapshot.
+  private groupContextId: ElementId | null = null
   private clipboard: ClipboardManager
   // Last pointer position in canvas space, tracked by the dispatch helpers so
   // keyboard paste can land at the cursor.
@@ -244,6 +259,7 @@ export class CanvasEngine {
       },
       getCanvasSize: () => this.canvasSize,
       getElements: () => this.scene.getElements(),
+      getGroupContext: () => this.groupContextId,
       getIsSnapMode: () => this.isSnapMode,
       getSelectedIds: () => this.scene.getSelectedIds(),
       getSnappingConfig: () => this.snappingConfig,
@@ -258,6 +274,9 @@ export class CanvasEngine {
         runStateOperation(this, () => {
           this.publishSceneChange(this.scene.replace(elements))
         })
+      },
+      setGroupContext: (id) => {
+        this.setGroupContext(id)
       },
       setSelectedIds: (ids) => {
         this.setSelectedIds(ids)
@@ -277,6 +296,7 @@ export class CanvasEngine {
   // Publish the state kinds represented by a scene change.
   private publishSceneChange(change: SceneChange): void {
     if (change.elementsChanged) {
+      this.reconcileGroupContext()
       notifyState(this, "elements")
     }
     if (change.selectionChanged) {
@@ -285,6 +305,92 @@ export class CanvasEngine {
     if (change.historyChanged) {
       notifyState(this, "history")
     }
+  }
+
+  // Drop the entered-group context when its group disappears, hides, or locks.
+  private reconcileGroupContext(): void {
+    const contextId = this.groupContextId
+    if (!contextId) {
+      return
+    }
+
+    const elements = this.scene.getElements()
+    const group = elements.get(contextId)
+    if (group?.type !== "group") {
+      this.groupContextId = null
+      return
+    }
+
+    const index = createGroupIndex(elements)
+    if (
+      !isEffectivelyVisible(index, contextId) ||
+      isEffectivelyLocked(index, contextId)
+    ) {
+      this.groupContextId = null
+    }
+  }
+
+  // Rebuild the entered-group context from the selection after undo/redo. Keep
+  // the current context when the selection is empty and it is still valid.
+  private reconstructGroupContext(): void {
+    const elements = this.scene.getElements()
+    const selectedIds = this.scene.getSelectedIds()
+    const index = createGroupIndex(elements)
+
+    if (selectedIds.size > 0) {
+      const parents = new Set<ElementId | null>()
+      for (const id of selectedIds) {
+        if (elements.has(id)) {
+          parents.add(index.parentById.get(id) ?? null)
+        }
+      }
+      this.groupContextId =
+        parents.size === 1 ? ([...parents][0] ?? null) : null
+      return
+    }
+
+    const contextId = this.groupContextId
+    if (
+      contextId &&
+      elements.get(contextId)?.type === "group" &&
+      isEffectivelyVisible(index, contextId) &&
+      !isEffectivelyLocked(index, contextId)
+    ) {
+      return
+    }
+    this.groupContextId = null
+  }
+
+  /**
+   * The group the select tool is currently inside.
+   * @internal
+   */
+  getGroupContext(): ElementId | null {
+    return this.groupContextId
+  }
+
+  /**
+   * Set or clear the entered group. Invalid ids clear the context.
+   * @internal
+   */
+  setGroupContext(id: ElementId | null): void {
+    if (!id) {
+      this.groupContextId = null
+      return
+    }
+
+    const elements = this.scene.getElements()
+    const group = elements.get(id)
+    if (group?.type !== "group") {
+      this.groupContextId = null
+      return
+    }
+
+    const index = createGroupIndex(elements)
+    this.groupContextId =
+      isEffectivelyVisible(index, id) && !isEffectivelyLocked(index, id)
+        ? id
+        : null
   }
 
   // Public mutations opt into a checkpoint. `{ history: false }` also rebases
@@ -349,6 +455,10 @@ export class CanvasEngine {
       if (!newTool || newTool === this.activeTool) {
         return
       }
+
+      // Entering a group is a select-tool interaction; leaving the tool exits
+      // the context.
+      this.groupContextId = null
 
       // A toolbar click or keyboard shortcut switching tools mid-edit must not
       // leave the editor orphaned; commit whatever was typed.
@@ -522,6 +632,7 @@ export class CanvasEngine {
         options.history,
         "clear",
       )
+      this.groupContextId = null
       this.publishSceneChange(change)
       if (!change.selectionChanged) {
         notifyState(this, "selection")
@@ -539,12 +650,18 @@ export class CanvasEngine {
     version: number
     elements: CanvasElement[]
   } {
-    const elements = [...this.scene.getElements().values()]
-      .filter((element) => !options.exclude?.(element))
-      .map(cloneElementDeep)
+    const elements = new Map<ElementId, CanvasElement>()
+    for (const element of this.scene.getElements().values()) {
+      if (!options.exclude?.(element)) {
+        elements.set(element.id, cloneElementDeep(element))
+      }
+    }
+    // Excluding a group child must not leave a dangling reference in the saved
+    // document, so prune the cloned copy before returning it.
+    syncGroupState(elements)
 
     return {
-      elements,
+      elements: [...elements.values()],
       version: DOCUMENT_VERSION,
     }
   }
@@ -577,6 +694,7 @@ export class CanvasEngine {
           ? new Map(elements)
           : new Map(elements.map((element) => [element.id, element]))
       const change = this.replaceSceneWithHistory(next, options.history)
+      this.groupContextId = null
       this.publishSceneChange(change)
       if (!change.selectionChanged) {
         notifyState(this, "selection")
@@ -623,8 +741,10 @@ export class CanvasEngine {
   }
 
   /**
-   * Set one element's z-index to an exact value. Emits `change` and pushes a
-   * history checkpoint unless `{ history: false }` is passed.
+   * Set one element's z-index to an exact value. A group is stacked as a unit:
+   * its descendants shift so the topmost child lands on the requested index.
+   * Emits `change` and pushes a history checkpoint unless `{ history: false }`
+   * is passed.
    * @param id Element id.
    * @param zIndex New stacking index.
    * @param options `{ history }` to skip the checkpoint.
@@ -890,8 +1010,9 @@ export class CanvasEngine {
     }
 
     const elements = this.scene.getElements()
+    const index = createGroupIndex(elements)
     const styles: StyleOptions[] = []
-    for (const id of selectedIds) {
+    for (const id of getLeafDescendantIds(index, selectedIds)) {
       const element = elements.get(id)
       if (element) {
         styles.push(getElementStyle(element))
@@ -917,16 +1038,21 @@ export class CanvasEngine {
       return false
     }
 
-    const targets = new Set<ElementId>(selectedIds)
-    for (const id of selectedIds) {
+    const index = createGroupIndex(elements)
+    const targets = getLeafDescendantIds(index, selectedIds)
+    const labelAdditions: ElementId[] = []
+    for (const id of targets) {
       const element = elements.get(id)
       if (!isBoundTextContainer(element)) {
         continue
       }
       const label = findBoundText(elements, id)
       if (label) {
-        targets.add(label.id)
+        labelAdditions.push(label.id)
       }
+    }
+    for (const id of labelAdditions) {
+      targets.add(id)
     }
 
     let changed = false
@@ -1009,6 +1135,7 @@ export class CanvasEngine {
       if (!change.elementsChanged) {
         return false
       }
+      this.reconstructGroupContext()
       this.publishSceneChange(change)
       return true
     })
@@ -1024,6 +1151,7 @@ export class CanvasEngine {
       if (!change.elementsChanged) {
         return false
       }
+      this.reconstructGroupContext()
       this.publishSceneChange(change)
       return true
     })
@@ -1114,31 +1242,66 @@ export class CanvasEngine {
   }
 
   /**
-   * Select all visible elements.
+   * Select all visible elements. At the top level this selects top-level
+   * groups, not their children; inside an entered group it selects that
+   * group's direct children.
    */
   selectAll(): void {
     runStateOperation(this, () => {
-      const ids = selectAllIds(this.scene.getElements())
+      const ids = selectAllIds(this.scene.getElements(), this.groupContextId)
       this.publishSceneChange(this.scene.select(ids))
     })
   }
 
   /**
-   * Clear the current selection.
+   * Clear the current selection and leave any entered group.
    */
   clearSelection(): void {
     runStateOperation(this, () => {
+      this.groupContextId = null
       this.publishSceneChange(this.scene.select(new Set()))
     })
   }
 
   /**
-   * Delete the selected elements.
+   * Leave the entered group one level, selecting the group that was left, or
+   * clear the selection at the top level.
+   * @internal
+   */
+  escapeSelection(): void {
+    runStateOperation(this, () => {
+      const contextId = this.groupContextId
+      if (contextId) {
+        const elements = this.scene.getElements()
+        const index = createGroupIndex(elements)
+        const group = elements.get(contextId)
+        if (
+          group?.type === "group" &&
+          isEffectivelyVisible(index, contextId) &&
+          !isEffectivelyLocked(index, contextId)
+        ) {
+          this.groupContextId = index.parentById.get(contextId) ?? null
+          this.publishSceneChange(this.scene.select(new Set([contextId])))
+          return
+        }
+      }
+
+      this.groupContextId = null
+      this.publishSceneChange(this.scene.select(new Set()))
+    })
+  }
+
+  /**
+   * Delete the selected elements. A selected group deletes its whole subtree;
+   * a selected child inside a group removes only that child.
    */
   deleteSelected(): void {
     runStateOperation(this, () => {
+      const elements = this.scene.getElements()
+      const index = createGroupIndex(elements)
+      const contextChain = getContextChain(index, this.groupContextId)
       const result = deleteSelectedElements(
-        this.scene.getElements(),
+        elements,
         this.scene.getSelectedIds(),
       )
       if (!result) {
@@ -1148,7 +1311,83 @@ export class CanvasEngine {
         history: true,
         selection: result.selectedIds,
       })
+      this.groupContextId = resolveContextChain(
+        this.scene.getElements(),
+        contextChain,
+      )
       this.publishSceneChange(change)
+    })
+  }
+
+  /**
+   * Group the current selection. Requires at least two top-level objects;
+   * returns the created group, or null when nothing changed. The new group is
+   * selected and the selection's shared parent becomes the entered context.
+   *
+   * @returns The created group, or null.
+   * @example
+   * ```ts
+   * canvas.setSelectedIds(new Set([rect.id, ellipse.id]))
+   * const group = canvas.group()
+   * ```
+   */
+  group(): GroupElement | null {
+    return runStateOperation(this, () => {
+      const result = groupSelection(
+        this.scene.getElements(),
+        this.scene.getSelectedIds(),
+      )
+      if (!result.group) {
+        return null
+      }
+
+      const groupId = result.group.id
+      const change = this.scene.replace(result.elements, {
+        history: true,
+        selection: new Set([groupId]),
+      })
+      this.groupContextId = result.parentId
+      this.publishSceneChange(change)
+
+      const group = this.scene.getElements().get(groupId)
+      return group?.type === "group" ? group : null
+    })
+  }
+
+  /**
+   * Ungroup the selected groups, one level. The released children are selected
+   * and nested groups stay intact.
+   *
+   * @returns The released child ids, or an empty array when nothing changed.
+   * @example
+   * ```ts
+   * canvas.setSelectedIds(new Set([groupId]))
+   * canvas.ungroup()
+   * ```
+   */
+  ungroup(): ElementId[] {
+    return runStateOperation(this, () => {
+      const elements = this.scene.getElements()
+      const selectedIds = this.scene.getSelectedIds()
+      const index = createGroupIndex(elements)
+      const contextChain = getContextChain(index, this.groupContextId)
+      const result = ungroupSelection(elements, selectedIds)
+      if (result.removedGroupIds.length === 0) {
+        return []
+      }
+
+      const change = this.scene.replace(result.elements, {
+        history: true,
+        selection: new Set(result.releasedIds),
+      })
+      this.groupContextId = resolveContextChain(
+        this.scene.getElements(),
+        contextChain,
+      )
+      this.publishSceneChange(change)
+
+      const next = this.scene.getElements()
+      return result.releasedIds.filter((id) => next.has(id))
     })
   }
 
@@ -1218,6 +1457,8 @@ export class CanvasEngine {
         { history: true },
       )
 
+      // Pasted elements are top-level until explicitly grouped.
+      this.groupContextId = null
       this.publishSceneChange(change)
       if (this.activeTool.type !== "select") {
         this.setActiveTool("select")

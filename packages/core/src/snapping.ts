@@ -1,3 +1,8 @@
+import {
+  createGroupIndex,
+  isEffectivelyLocked,
+  isEffectivelyVisible,
+} from "./groups"
 import type {
   CanvasElement,
   ElementId,
@@ -91,9 +96,15 @@ export function getAllSnapPoints(
   excludeIds = new Set<ElementId>(),
 ): SnapPoint[] {
   const snapPoints: SnapPoint[] = []
+  const index = createGroupIndex(elements)
 
   for (const [id, element] of elements) {
-    if (excludeIds.has(id) || !element.visible || element.locked) {
+    if (
+      excludeIds.has(id) ||
+      element.type === "group" ||
+      !isEffectivelyVisible(index, id) ||
+      isEffectivelyLocked(index, id)
+    ) {
       continue
     }
     snapPoints.push(...getElementSnapPoints(element))

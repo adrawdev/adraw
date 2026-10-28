@@ -47,6 +47,7 @@ export const resizeHandleClass = "adraw-resize-handle"
 export const resizeEdgeClass = "adraw-resize-edge"
 export const selectionBoxClass = "adraw-selection-box"
 export const multiSelectionBoxClass = "adraw-multi-selection-box"
+export const groupContextBoxClass = "adraw-group-context-box"
 export const snapGuideClass = "adraw-snap-guide"
 export const textEditorClass = "adraw-text-editor"
 

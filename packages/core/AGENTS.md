@@ -35,6 +35,7 @@ src/
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, ToImageOptions
   text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
   text-bindings.ts   bound text: max width/height, centering, container growth, sync
+  groups.ts          group hierarchy, bounds sync, selection levels, group/ungroup math
   style.ts           style types and global defaults
   store.ts           AdrawStore / AdrawSnapshot: state snapshots for adapters
   engine/            headless core (no DOM imports)
@@ -94,6 +95,7 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `resetZoom()`                                           | Reset zoom to 1, center to 0,0                            |
 | `zoomToFit(options?)`                                   | Fit all elements (or explicit bounds/padding) in viewport |
 | `selectAll()` / `clearSelection()` / `deleteSelected()` | Selection operations                                      |
+| `group()` / `ungroup()`                                 | Group the selection / remove one group level              |
 | `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)            |
 | `setZIndex(id, z)`                                      | Set one element's exact stacking index                    |
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
@@ -135,7 +137,11 @@ Listener collections are captured at publication start. Listener errors do not p
 
 ### Scene
 
-`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine composes with non-Scene changes into one operation-scoped State publication. Commits and replacements sync arrow and bound-text bindings and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
+`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine composes with non-Scene changes into one operation-scoped State publication. Commits and replacements sync arrow and bound-text bindings, keep group bounds/z-index in sync and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
+
+### Groups
+
+`src/groups.ts` owns the group hierarchy: parent lookups, effective visibility/lock, selection-level normalization, derived bounds/z-index sync, group/ungroup math and context fallback. A group is a container, not a rendered element; its bounds come from visible descendants. The select tool keeps an entered-group context (`ToolContext.getGroupContext` / `setGroupContext`), and the DOM adapter renders a dashed outline around it. `Ctrl/Cmd+G` groups the current selection, `Ctrl/Cmd+Shift+G` ungroups one level, and `Escape` steps out of an entered group. The eraser resolves the hit to the outermost group and deletes its whole subtree.
 
 ### Config
 
@@ -183,7 +189,7 @@ All extend `BaseElement` (id, type, x, y, width, height, rotation, zIndex, locke
 | `"arrow"`     | `ArrowElement`     | `startX/Y`, `endX/Y`, `strokeWidth`, `strokeColor`, `startArrowhead?`, `endArrowhead?`, `startBinding?`, `endBinding?`       |
 | `"path"`      | `PathElement`      | `points[]`, `strokeWidth`, `strokeColor`, `smoothing?` (paths are never filled)                                              |
 | `"media"`     | `MediaElement`     | `src`, `mimeType`, `naturalWidth/Height`                                                                                     |
-| `"group"`     | `GroupElement`     | `children: ElementId[]`                                                                                                      |
+| `"group"`     | `GroupElement`     | `children: ElementId[]` (bounds and z-index are derived and kept in sync)                                                    |
 | `"text"`      | `TextElement`      | `text`, `fontSize`, `strokeColor`, `fontFamily?`, `textAlign?`, `lineHeight?`, `autoSize?`, `containerId?`, `labelPosition?` |
 | `"note"`      | `NoteElement`      | `text`, `fontSize`, `fillColor`, `strokeColor` (ink), `fontFamily?`, `textAlign?`, `lineHeight?`, `padding`, `cornerRadius`  |
 
@@ -294,6 +300,7 @@ Unit tests are in `src/__tests__/`:
 ```
 clipboard.test.ts              — copy/cut/paste, pointer placement, serialization hooks
 arrow.test.ts                  — arrow tool, bindings, endpoint drag, clipboard remap
+groups.test.ts                 — group/ungroup, drill-down, transforms, eraser, inherited flags
 coordinates.test.ts            — screenToCanvas, canvasToScreen, bounds, hit-test
 elements.test.ts               — factory functions, clone, move, resize, rotate
 history.test.ts                — undo/redo stack

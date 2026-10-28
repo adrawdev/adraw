@@ -66,6 +66,7 @@ Every publicly exported function, class, type, interface, and constant must have
 - `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
 - `src/bindings.ts` — arrow-to-shape binding/synchronization math.
+- `src/groups.ts` — group hierarchy, derived group bounds, selection levels and group/ungroup math. Grouping is exposed through `group()` / `ungroup()` and `Ctrl/Cmd+G` / `Ctrl/Cmd+Shift+G`.
 
 `AdrawStore` is the adapter contract. It exposes an immutable `AdrawSnapshot` through `getSnapshot()` / `subscribe()`:
 

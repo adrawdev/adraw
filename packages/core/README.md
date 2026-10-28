@@ -105,7 +105,7 @@ Each element on the canvas has a type:
 - `line` — line
 - `arrow` — line with optional arrowheads; either endpoint can bind to a shape
 - `media` — raster image
-- `group` — container for other elements
+- `group` — container for other elements; its bounds and z-index follow its descendants
 
 Rectangles, ellipses and diamonds accept `fillColor`; every element accepts `opacity`
 (`0`–`1`). A translucent highlighter background is just a rectangle with
@@ -117,7 +117,8 @@ The `arrow` tool draws a straight arrow with a filled head (`startArrowhead` and
 `endArrowhead` are optional booleans; the tool enables the end head). Press `A`
 or `canvas.setActiveTool("arrow")` to activate it.
 
-Drop an endpoint on a rectangle, ellipse, diamond, text, media, or group to bind it. A
+Drop an endpoint on a rectangle, ellipse, diamond, text, or media to bind it.
+Shapes inside a group bind individually rather than to the group's union box. A
 bound endpoint aims at the target's center, is clipped just outside the target's
 border (with a `max(4, strokeWidth)` gap), and follows the target through moves,
 resizes, and rotations. Bound arrows are re-resolved automatically on every
@@ -197,8 +198,9 @@ canvas.clearHistory() // make the loaded state the undo baseline
 
 Keyboard shortcuts are scoped to the canvas by default: the SVG is focusable and
 takes focus on pointer down, so shortcuts never leak into forms, dialogs or
-other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo
-while the canvas has focus.
+other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo,
+`Ctrl/Cmd+G` groups the selection, `Ctrl/Cmd+Shift+G` ungroups it, and `Escape`
+steps out of an entered group before clearing the selection.
 
 ```ts
 new AdrawCanvas({ container, keyboard: "canvas" }) // default: only while focused
@@ -209,11 +211,32 @@ new AdrawCanvas({ container, keyboard: "none" }) // call canvas.handleKeyDown yo
 ## Selection
 
 ```ts
-canvas.selectAll() // select every element
-canvas.clearSelection() // deselect all
+canvas.selectAll() // select every top-level object
+canvas.clearSelection() // deselect all and leave any entered group
 canvas.deleteSelected() // remove selected elements
 canvas.getSelectedIds() // Set<ElementId>
+canvas.group() // group the selection; returns the new group or null
+canvas.ungroup() // ungroup selected groups; returns the released child ids
 ```
+
+Grouping requires at least two top-level objects and includes bound labels of
+selected containers. Groups may nest; ungrouping removes one level and leaves
+nested groups intact.
+
+A group is a container, not a drawn element. Its bounds are derived from its
+visible descendants and kept in sync; moving, resizing or rotating a selected
+group transforms every descendant. Style changes reach descendants, and a
+hidden or locked group hides or locks its children.
+
+Clicking a child selects the outermost group. Double-click enters one level,
+after which clicks, marquee selection and `selectAll()` act on that group's
+direct children. `Escape` steps out one level, clicking outside the group leaves
+it, and the entered group gets a subtle dashed outline. New drawings and pastes
+stay top-level until explicitly grouped.
+
+Deleting a selected group removes its whole subtree; deleting an individual
+child prunes it from the group, and empty groups disappear. The eraser removes
+the outermost group when it touches any descendant.
 
 ## Z-order
 
@@ -226,7 +249,8 @@ canvas.sendToBack([id]) // below everything
 canvas.setZIndex(id, 10) // exact value
 ```
 
-Group elements carry their children, and all three methods accept
+Group elements carry their children, and a group's z-index follows its topmost
+child. `setZIndex` on a group shifts its whole subtree. All three methods accept
 `{ history: false }`. To place a base image underneath existing annotations,
 restack it after insertion:
 

@@ -295,6 +295,29 @@ const operations: OperationCase[] = [
     setup: addSelectedRect,
   },
   {
+    expectedKinds: ["elements", "history", "selection"],
+    expectedSnapshots: 1,
+    name: "group",
+    run: (canvas) => canvas.group(),
+    setup: (canvas) => {
+      addRect(canvas, "a")
+      addRect(canvas, "b")
+      canvas.setSelectedIds(new Set(["a", "b"]))
+    },
+  },
+  {
+    expectedKinds: ["elements", "history", "selection"],
+    expectedSnapshots: 1,
+    name: "ungroup",
+    run: (canvas) => canvas.ungroup(),
+    setup: (canvas) => {
+      addRect(canvas, "a")
+      addRect(canvas, "b")
+      canvas.setSelectedIds(new Set(["a", "b"]))
+      canvas.group()
+    },
+  },
+  {
     expectedKinds: [],
     expectedSnapshots: 0,
     name: "copy",

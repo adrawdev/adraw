@@ -102,7 +102,9 @@ export function resizeSelection(
 
   const [singleId] = selectedIds
   const singleOriginal =
-    selectedIds.size === 1 ? state.originalPositions.get(singleId) : undefined
+    selectedIds.size === 1 && !state.isGroupSelection
+      ? state.originalPositions.get(singleId)
+      : undefined
   const rotated = Boolean(singleOriginal && singleOriginal.rotation % 360 !== 0)
   const { changesHeight, changesWidth, movesLeft, movesTop } =
     getResizeAxes(dragHandle)
@@ -112,7 +114,9 @@ export function resizeSelection(
   // where axis-aligned guides don't apply; guides for axes the handle doesn't
   // drive are dropped so they never show without an effect.
   const snapped =
-    event && !rotated ? snapToolPoint(context, point, event, selectedIds) : null
+    event && !rotated
+      ? snapToolPoint(context, point, event, state.affectedIds)
+      : null
   const dragPoint = snapped?.point ?? point
   context.setSnapGuides(
     snapped
@@ -129,7 +133,7 @@ export function resizeSelection(
 
   // Any other direct resize of an arrow detaches bindings whose target isn't
   // part of the same selection (endpoint drags above rebind instead).
-  detachArrowsOutsideSelection(context.getElements(), selectedIds)
+  detachArrowsOutsideSelection(context.getElements(), state.affectedIds)
 
   if (rotated) {
     resizeRotatedElement(
@@ -182,7 +186,7 @@ export function resizeSelection(
       ? bounds.y + bounds.height / 2
       : anchor.y
 
-  for (const id of selectedIds) {
+  for (const id of state.transformIds) {
     const original = state.originalPositions.get(id)
     if (original) {
       const element = elements.get(id)

@@ -178,7 +178,11 @@ export interface MediaElement extends BaseElement {
 }
 
 /**
- * A container element grouping other elements by id.
+ * A container element grouping other elements by id. Group `x`, `y`, `width`
+ * and `height` are a derived bounding box kept in sync from the visible
+ * descendants, and the group's own `rotation` stays `0`; the group itself is
+ * not rendered. Moving, resizing or rotating a selected group transforms its
+ * descendants.
  */
 export interface GroupElement extends BaseElement {
   type: "group"

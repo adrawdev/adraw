@@ -1,5 +1,12 @@
 import { getElementAtPoint } from "../../elements"
-import type { Point, ToolType } from "../../types"
+import {
+  collectSubtreeIds,
+  createGroupIndex,
+  getContextChain,
+  getTopLevelId,
+  resolveContextChain,
+} from "../../groups"
+import type { ElementId, Point, ToolType } from "../../types"
 import {
   createBaseToolState,
   type Tool,
@@ -9,7 +16,49 @@ import {
 
 export function createEraserTool(): Tool {
   const state: ToolState = createBaseToolState()
-  let deletedElements: string[] = []
+  let deletedIds = new Set<ElementId>()
+
+  const eraseAt = (context: ToolContext, point: Point): void => {
+    const elements = context.getElements()
+    const hit = getElementAtPoint(elements, point)
+    if (!hit) {
+      return
+    }
+
+    const index = createGroupIndex(elements)
+    // The eraser always removes the outermost group that owns the hit, even
+    // when the pointer is over a nested child.
+    const topId = getTopLevelId(index, hit.id)
+    if (deletedIds.has(topId)) {
+      return
+    }
+    const topElement = elements.get(topId)
+    if (!topElement) {
+      return
+    }
+
+    const removed =
+      topElement.type === "group"
+        ? collectSubtreeIds(index, [topId])
+        : new Set([topId])
+    const next = new Map(elements)
+    for (const id of removed) {
+      next.delete(id)
+    }
+
+    // If the entered group was inside the erased subtree, fall back to the
+    // nearest surviving ancestor before publishing the new elements.
+    const contextChain = getContextChain(
+      index,
+      context.getGroupContext?.() ?? null,
+    )
+    context.setGroupContext?.(resolveContextChain(next, contextChain))
+    context.setElements(next)
+
+    for (const id of removed) {
+      deletedIds.add(id)
+    }
+  }
 
   return {
     cursor: "crosshair",
@@ -23,46 +72,29 @@ export function createEraserTool(): Tool {
       state.isActive = false
       state.startPoint = null
       state.currentPoint = null
-      deletedElements = []
+      deletedIds = new Set()
     },
     onPointerDown(context: ToolContext, point: Point, _event: PointerEvent) {
       state.startPoint = point
       state.currentPoint = point
-      deletedElements = []
-
-      const element = getElementAtPoint(context.getElements(), point)
-
-      if (element) {
-        const elements = context.getElements()
-        elements.delete(element.id)
-        context.setElements(elements)
-        deletedElements.push(element.id)
-      }
+      deletedIds = new Set()
+      eraseAt(context, point)
     },
     onPointerMove(context: ToolContext, point: Point, _event: PointerEvent) {
       if (!state.startPoint) {
         return
       }
-
       state.currentPoint = point
-
-      const element = getElementAtPoint(context.getElements(), point)
-
-      if (element && !deletedElements.includes(element.id)) {
-        const elements = context.getElements()
-        elements.delete(element.id)
-        context.setElements(elements)
-        deletedElements.push(element.id)
-      }
+      eraseAt(context, point)
     },
     onPointerUp(context: ToolContext, _point: Point, _event: PointerEvent) {
-      if (deletedElements.length > 0) {
+      if (deletedIds.size > 0) {
         context.pushHistory()
       }
 
       state.startPoint = null
       state.currentPoint = null
-      deletedElements = []
+      deletedIds = new Set()
     },
     type: "eraser" as ToolType,
   }

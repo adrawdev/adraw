@@ -2,6 +2,12 @@ import { getElementAtPoint } from "../elements"
 import type { CanvasEngine } from "../engine/engine"
 import { applyWheelTransform, toCanvasPoint } from "../engine/internal"
 import { runStateOperation } from "../engine/state-notifier"
+import {
+  createGroupIndex,
+  getDirectChildId,
+  getTopLevelId,
+  resolveSelectionTargetId,
+} from "../groups"
 import { isBoundTextContainer } from "../text-bindings"
 import type { ToolType } from "../types"
 import {
@@ -108,9 +114,9 @@ export function setupEventListeners(
     })
   })
 
-  // Double-clicking a text element opens the inline editor for it. On empty
-  // canvas it creates free text; on a shape or arrow it creates (or edits) the
-  // container's centered label.
+  // Double-click resolves the target at the current drill level. A group is
+  // entered; any other target keeps the existing text/note editor, container
+  // label or free-text behavior. On empty canvas it creates free text.
   state.svgElement.addEventListener("dblclick", (event) => {
     runStateOperation(engine, () => {
       if (state.textEditor || engine.getActiveTool() !== "select") {
@@ -118,13 +124,46 @@ export function setupEventListeners(
       }
       const { x, y } = getRelativePoint(state, event)
       const point = toCanvasPoint(engine, x, y)
-      const element = getElementAtPoint(engine.getElements(), point)
-      if (element?.type === "text" || element?.type === "note") {
-        startExistingTextEditing(state, engine, element)
+
+      const elements = engine.getElements()
+      const index = createGroupIndex(elements)
+      const contextId = engine.getGroupContext()
+      let hit = getElementAtPoint(elements, point)
+      // Clicking a bound label resolves to its container, like a single click.
+      if (hit?.type === "text" && hit.containerId) {
+        hit = elements.get(hit.containerId) ?? hit
+      }
+
+      if (!hit) {
+        if (contextId) {
+          engine.setGroupContext(null)
+        }
+        startFreeTextEditing(state, engine, point)
         return
       }
-      if (isBoundTextContainer(element)) {
-        startBoundTextEditing(state, engine, element)
+
+      const targetId = resolveSelectionTargetId(index, hit.id, contextId)
+      let target = targetId ? elements.get(targetId) : null
+      if (!target) {
+        // The hit is outside the entered group: leave it and act on the
+        // top-level object under the pointer.
+        engine.setGroupContext(null)
+        target = elements.get(getTopLevelId(index, hit.id)) ?? hit
+      }
+
+      if (target.type === "group") {
+        const childId = getDirectChildId(index, target.id, hit.id) ?? target.id
+        engine.setGroupContext(target.id)
+        engine.setSelectedIds(new Set([childId]))
+        return
+      }
+
+      if (target.type === "text" || target.type === "note") {
+        startExistingTextEditing(state, engine, target)
+        return
+      }
+      if (isBoundTextContainer(target)) {
+        startBoundTextEditing(state, engine, target)
         return
       }
       startFreeTextEditing(state, engine, point)

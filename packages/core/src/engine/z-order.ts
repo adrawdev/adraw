@@ -144,7 +144,9 @@ export function sendElementsToBack(
 }
 
 /**
- * Set one element's z-index to an exact value.
+ * Set one element's z-index to an exact value. A group is stacked as a unit:
+ * its descendants shift together so the group's topmost child lands on the
+ * requested index, and the group's derived z-index follows.
  * @returns A new element map, or null when the element is missing or already
  * has that z-index.
  */
@@ -158,11 +160,45 @@ export function setElementZIndex(
   }
 
   const element = elements.get(id)
-  if (!element || element.zIndex === zIndex) {
+  if (!element) {
+    return null
+  }
+
+  if (element.type !== "group") {
+    if (element.zIndex === zIndex) {
+      return null
+    }
+    const next = new Map(elements)
+    next.set(id, { ...element, zIndex })
+    return next
+  }
+
+  const groupIds = collectIds(elements, [id])
+  let top = -Infinity
+  for (const groupId of groupIds) {
+    if (groupId === id) {
+      continue
+    }
+    const child = elements.get(groupId)
+    if (child) {
+      top = Math.max(top, child.zIndex)
+    }
+  }
+  if (!Number.isFinite(top)) {
+    return null
+  }
+
+  const delta = zIndex - top
+  if (delta === 0) {
     return null
   }
 
   const next = new Map(elements)
-  next.set(id, { ...element, zIndex })
+  for (const groupId of groupIds) {
+    const child = elements.get(groupId)
+    if (child) {
+      next.set(groupId, { ...child, zIndex: child.zIndex + delta })
+    }
+  }
   return next
 }

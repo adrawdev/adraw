@@ -1,3 +1,4 @@
+import { createGroupIndex, isEffectivelyVisible } from "./groups"
 import type {
   ArrowBinding,
   ArrowElement,
@@ -24,21 +25,32 @@ const BINDABLE_TYPES = new Set([
 
 // Only elements with an area can be bound: an endpoint resolves to the target's
 // center and the visible stroke is clipped at its border. Open geometry (lines,
-// paths, other arrows) has no border to clip against.
+// paths, other arrows) has no border to clip against. Groups stay bindable so
+// arrows bound to them before grouping became a first-class feature keep
+// working, but new endpoints resolve to the child shapes instead.
 export function isBindableElement(element: CanvasElement): boolean {
   return BINDABLE_TYPES.has(element.type)
 }
 
+function isBindingTarget(element: CanvasElement): boolean {
+  return element.type !== "group" && isBindableElement(element)
+}
+
 // Topmost visible bindable element whose (rotated) bounding box contains the
-// point, expanded by `margin` canvas units. Invisible elements cannot be picked;
-// locked ones can (a locked target still moves with its own drag).
+// point, expanded by `margin` canvas units. Invisible and effectively hidden
+// elements cannot be picked; locked ones can (a locked target still moves with
+// its own drag).
 export function findBindingTarget(
   elements: Map<ElementId, CanvasElement>,
   point: Point,
   margin: number,
 ): CanvasElement | null {
+  const index = createGroupIndex(elements)
   const candidates = [...elements.values()]
-    .filter((element) => element.visible && isBindableElement(element))
+    .filter(
+      (element) =>
+        isBindingTarget(element) && isEffectivelyVisible(index, element.id),
+    )
     .toSorted((a, b) => b.zIndex - a.zIndex)
 
   for (const element of candidates) {

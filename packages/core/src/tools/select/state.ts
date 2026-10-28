@@ -31,6 +31,17 @@ export interface SelectToolState {
   dragStartElement: CanvasElement | null
   dragStartPoint: Point | null
   originalPositions: Map<ElementId, OriginalPosition>
+  // Leaf ids actually transformed by the gesture. When a group is selected
+  // this is its descendant leaves, while `getSelectedIds()` stays the group.
+  transformIds: Set<ElementId>
+  // Selection ids plus their group subtrees and group ancestors, used for snap
+  // exclusions and arrow-binding preservation.
+  affectedIds: Set<ElementId>
+  // Whether the current selection contains a group (which disables the
+  // single-element rotated-resize path).
+  isGroupSelection: boolean
+  // Entered group captured for the marquee at pointer down.
+  contextId: ElementId | null
   dragHandle: string | null
   rotationCenter: Point | null
   originalBounds: BoundingBox | null
@@ -47,19 +58,23 @@ export interface SelectToolState {
 
 export function createSelectToolState(): SelectToolState {
   return {
+    affectedIds: new Set(),
     bindingCandidate: null,
     brushBaseSelection: null,
     brushBox: null,
     brushStart: null,
+    contextId: null,
     currentPoint: null,
     dragHandle: null,
     dragStartElement: null,
     dragStartPoint: null,
     isActive: false,
+    isGroupSelection: false,
     originalBounds: null,
     originalPositions: new Map(),
     rotationCenter: null,
     startPoint: null,
+    transformIds: new Set(),
   }
 }
 

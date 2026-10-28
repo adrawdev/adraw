@@ -1,6 +1,14 @@
 import { pointInBounds } from "../../coordinates"
 import { getElementAtPoint, getElementsBounds } from "../../elements"
-import type { Point, ToolType } from "../../types"
+import {
+  createGroupIndex,
+  getAffectedIds,
+  getDirectChildId,
+  getLeafDescendantIds,
+  getTopLevelId,
+  normalizeSelectionForLevel,
+} from "../../groups"
+import type { CanvasElement, Point, ToolType } from "../../types"
 import { type Tool, type ToolContext } from "../base"
 import { updateBrushSelection } from "./brush"
 import { moveSelection } from "./move"
@@ -50,7 +58,12 @@ export function createSelectTool(
       state.brushStart = null
       state.brushBox = null
       state.brushBaseSelection = null
+      state.contextId = null
+      state.isGroupSelection = false
+      state.affectedIds.clear()
+      state.transformIds.clear()
       state.originalPositions.clear()
+      context.setGroupContext?.(null)
       context.setSelectedIds(new Set())
     },
     onPointerDown(context: ToolContext, point: Point, event: PointerEvent) {
@@ -58,7 +71,9 @@ export function createSelectTool(
       state.currentPoint = point
 
       const elements = context.getElements()
+      const index = createGroupIndex(elements)
       const selectedIds = context.getSelectedIds()
+      const contextId = context.getGroupContext?.() ?? null
 
       // Check if we clicked on a resize handle or rotation handle (only in
       // vanilla for now). For other frameworks, this would be handled by their
@@ -76,44 +91,88 @@ export function createSelectTool(
         const isInsideSelection =
           selectionBounds !== null && pointInBounds(point, selectionBounds)
 
-        let element = isInsideSelection
-          ? null
-          : getElementAtPoint(elements, point)
+        let hit = isInsideSelection ? null : getElementAtPoint(elements, point)
         // Clicking a bound label selects the container it belongs to, so moving
         // the selection moves the shape (and its label) instead of detaching it.
-        if (element?.type === "text" && element.containerId) {
-          element = elements.get(element.containerId) ?? element
+        if (hit?.type === "text" && hit.containerId) {
+          hit = elements.get(hit.containerId) ?? hit
         }
+
+        let targetElement: CanvasElement | null = null
+        let nextContextId = contextId
+        let selectionBase = selectedIds
+
         if (isInsideSelection) {
           // The gap between selected elements is part of the selection box, so
           // it should start moving the selection instead of starting a marquee.
           for (const id of selectedIds) {
             const selectedElement = elements.get(id)
             if (selectedElement) {
-              element = selectedElement
+              targetElement = selectedElement
               break
             }
           }
+        } else if (hit) {
+          if (contextId) {
+            const levelTargetId = getDirectChildId(index, contextId, hit.id)
+            if (levelTargetId) {
+              // Inside a group, clicks act on its direct children.
+              targetElement = elements.get(levelTargetId) ?? null
+            } else {
+              // Clicking outside the entered group leaves it and acts on the
+              // outermost object at the top level.
+              nextContextId = null
+              selectionBase = normalizeSelectionForLevel(
+                index,
+                selectedIds,
+                null,
+              )
+              const topId = getTopLevelId(index, hit.id)
+              targetElement = elements.get(topId) ?? null
+            }
+          } else {
+            targetElement = elements.get(getTopLevelId(index, hit.id)) ?? null
+          }
+        } else if (contextId) {
+          const contextGroup = elements.get(contextId)
+          const insideContext =
+            contextGroup?.type === "group" &&
+            point.x >= contextGroup.x &&
+            point.x <= contextGroup.x + contextGroup.width &&
+            point.y >= contextGroup.y &&
+            point.y <= contextGroup.y + contextGroup.height
+          if (!insideContext) {
+            nextContextId = null
+            selectionBase = normalizeSelectionForLevel(index, selectedIds, null)
+          }
         }
 
-        if (element) {
+        if (nextContextId !== contextId) {
+          context.setGroupContext?.(nextContextId)
+          if (isMultiSelect) {
+            context.setSelectedIds(new Set(selectionBase))
+          }
+        }
+
+        if (targetElement) {
           if (!isInsideSelection) {
             if (isMultiSelect) {
-              if (selectedIds.has(element.id)) {
-                const newSelected = new Set(selectedIds)
-                newSelected.delete(element.id)
-                context.setSelectedIds(newSelected)
+              const nextSelected = new Set(selectionBase)
+              if (nextSelected.has(targetElement.id)) {
+                nextSelected.delete(targetElement.id)
               } else {
-                const newSelected = new Set(selectedIds)
-                newSelected.add(element.id)
-                context.setSelectedIds(newSelected)
+                nextSelected.add(targetElement.id)
               }
-            } else if (!selectedIds.has(element.id)) {
-              context.setSelectedIds(new Set([element.id]))
+              context.setSelectedIds(nextSelected)
+            } else if (
+              nextContextId !== contextId ||
+              !selectionBase.has(targetElement.id)
+            ) {
+              context.setSelectedIds(new Set([targetElement.id]))
             }
           }
 
-          state.dragStartElement = element
+          state.dragStartElement = targetElement
           state.dragStartPoint = point
         } else {
           // Empty space: begin a marquee (rubber-band) selection. With the
@@ -122,7 +181,7 @@ export function createSelectTool(
           state.brushStart = point
           state.brushBox = { height: 0, width: 0, x: point.x, y: point.y }
           state.brushBaseSelection = isMultiSelect
-            ? new Set(selectedIds)
+            ? new Set(selectionBase)
             : new Set()
           if (!isMultiSelect) {
             context.setSelectedIds(new Set())
@@ -131,7 +190,14 @@ export function createSelectTool(
       }
 
       const selectedElements = context.getSelectedIds()
-      for (const id of selectedElements) {
+      state.contextId = context.getGroupContext?.() ?? null
+      state.transformIds = getLeafDescendantIds(index, selectedElements)
+      state.affectedIds = getAffectedIds(index, selectedElements)
+      state.isGroupSelection = [...selectedElements].some(
+        (id) => elements.get(id)?.type === "group",
+      )
+
+      for (const id of state.transformIds) {
         const el = elements.get(id)
         if (el) {
           state.originalPositions.set(id, {
@@ -256,6 +322,10 @@ export function createSelectTool(
       state.brushStart = null
       state.brushBox = null
       state.brushBaseSelection = null
+      state.contextId = null
+      state.isGroupSelection = false
+      state.affectedIds.clear()
+      state.transformIds.clear()
       state.originalPositions.clear()
     },
     type: "select" as ToolType,

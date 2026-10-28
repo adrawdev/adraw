@@ -115,6 +115,7 @@ function initDom(state: DomState, engine: CanvasEngine): void {
   // The element node caches likewise start empty against the fresh group.
   state.overlayNodes = null
   state.selectionBoxNode = null
+  state.groupContextBox = null
   state.multiSelectionGroup = null
   state.multiSelectionNodes.clear()
   state.nodeById.clear()

@@ -1,6 +1,7 @@
 import { BACKGROUND_COLOR, NOTE_SHADOW_OVERHANG } from "../constants"
 import { getElementBounds } from "../coordinates"
 import type { CanvasEngine } from "../engine/engine"
+import { createGroupIndex, isEffectivelyVisible } from "../groups"
 import type { ToImageOptions } from "../options"
 import { getBoundTextBounds } from "../text-bindings"
 import type { CanvasElement } from "../types"
@@ -98,10 +99,19 @@ export async function toImage(
   } = options
 
   // Same order as the DOM adapter: ascending z-index, stable for equal
-  // z-indexes. Hidden and excluded elements are left out of both the drawing
-  // and the bounds, so `exclude` also crops the exported region.
-  const elements = [...engine.getElements().values()]
-    .filter((element) => element.visible && !exclude?.(element))
+  // z-indexes. Group records are containers and render nothing; hidden
+  // descendants (including children of a hidden group) and excluded elements
+  // are left out of both the drawing and the bounds, so `exclude` also crops
+  // the exported region.
+  const allElements = engine.getElements()
+  const index = createGroupIndex(allElements)
+  const elements = [...allElements.values()]
+    .filter(
+      (element) =>
+        element.type !== "group" &&
+        isEffectivelyVisible(index, element.id) &&
+        !exclude?.(element),
+    )
     .toSorted((a, b) => a.zIndex - b.zIndex)
 
   const bounds = getExportBounds(elements)

@@ -25,10 +25,9 @@ export function applyRotation(
   }
 
   const elements = context.getElements()
-  const selectedIds = context.getSelectedIds()
   // Rotating an arrow directly detaches it from targets outside the rotating
   // selection; arrows whose targets rotate along stay bound.
-  detachArrowsOutsideSelection(elements, selectedIds)
+  detachArrowsOutsideSelection(elements, state.affectedIds)
 
   const startAngle = Math.atan2(
     state.startPoint.y - state.rotationCenter.y,
@@ -43,7 +42,7 @@ export function applyRotation(
   const cos = Math.cos(deltaRad)
   const sin = Math.sin(deltaRad)
 
-  for (const id of selectedIds) {
+  for (const id of state.transformIds) {
     const original = state.originalPositions.get(id)
     if (original) {
       const element = elements.get(id)

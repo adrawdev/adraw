@@ -8,7 +8,11 @@ import {
   rotationHandleRadio,
   rotationHandleSpacing,
 } from "../svg"
-import { ensureOverlayNodes, renderMultiSelectionBoxes } from "./overlay-nodes"
+import {
+  ensureOverlayNodes,
+  renderGroupContextBox,
+  renderMultiSelectionBoxes,
+} from "./overlay-nodes"
 
 export function renderTransformOverlay(
   state: DomState,
@@ -26,9 +30,14 @@ export function renderTransformOverlay(
   // overlay doesn't lag the element mid-gesture; it reappears on pointer up.
   // Opt out via the `hideOverlayWhileTransforming` option.
   const transforming = isTransforming(engine)
+  const singleElement =
+    selectedIds.size === 1 ? elements.get([...selectedIds][0]) : undefined
   const suppressed =
     (engine.getHideOverlayWhileTransforming() && transforming) ||
-    (isRotating(engine) && selectedIds.size > 1)
+    (isRotating(engine) &&
+      (selectedIds.size > 1 || singleElement?.type === "group"))
+
+  renderGroupContextBox(state, engine, transforming)
 
   const bounds =
     selectedIds.size === 0 || suppressed

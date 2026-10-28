@@ -1,9 +1,11 @@
 import { BACKGROUND_COLOR, SELECTION_COLOR } from "../../constants"
 import type { CanvasEngine } from "../../engine/engine"
 import { getSelectionBox } from "../../engine/internal"
+import { createGroupIndex, isEffectivelyVisible } from "../../groups"
 import type { DomState } from "../state"
 import {
   boundingBoxStrokeWidth,
+  groupContextBoxClass,
   multiSelectionBoxClass,
   resizeEdgeClass,
   resizeHandleClass,
@@ -55,6 +57,60 @@ export function renderSelectionBox(
   rect.setAttribute("rx", `${handleSize / 4}`)
   rect.setAttribute("width", `${box.width}`)
   rect.setAttribute("height", `${box.height}`)
+}
+
+// Draw a subtle dashed outline around the group the select tool is inside, so
+// the drill state is visible even when the entered group itself is not
+// selected. The outline is hidden while resizing/rotating.
+export function renderGroupContextBox(
+  state: DomState,
+  engine: CanvasEngine,
+  suppressed: boolean,
+): void {
+  if (!state.transformOverlay) {
+    return
+  }
+
+  const contextId = engine.getGroupContext()
+  const selectedIds = engine.getSelectedIds()
+  const elements = engine.getElements()
+  const group = contextId ? elements.get(contextId) : null
+
+  if (
+    !contextId ||
+    suppressed ||
+    group?.type !== "group" ||
+    selectedIds.has(contextId)
+  ) {
+    state.groupContextBox?.remove()
+    return
+  }
+
+  let rect = state.groupContextBox
+  if (!rect) {
+    rect = document.createElementNS(svgNamespaceURI, "rect")
+    rect.classList.add(groupContextBoxClass)
+    rect.setAttribute("fill", "none")
+    rect.setAttribute("stroke", SELECTION_COLOR)
+    rect.setAttribute("stroke-opacity", "0.55")
+    rect.setAttribute("stroke-width", `${boundingBoxStrokeWidth}`)
+    rect.setAttribute("vector-effect", "non-scaling-stroke")
+    rect.setAttribute("pointer-events", "none")
+    state.groupContextBox = rect
+  }
+
+  if (rect.parentNode !== state.transformOverlay) {
+    // Keep the context outline behind the selection box and handles.
+    state.transformOverlay.insertBefore(rect, state.transformOverlay.firstChild)
+  }
+
+  const zoom = Math.max(engine.getViewport().zoom, 0.01)
+  rect.setAttribute("stroke-dasharray", `${6 / zoom} ${4 / zoom}`)
+  rect.setAttribute("x", `${group.x}`)
+  rect.setAttribute("y", `${group.y}`)
+  rect.setAttribute("rx", `${resizeHandleSize / 4}`)
+  rect.setAttribute("width", `${group.width}`)
+  rect.setAttribute("height", `${group.height}`)
 }
 
 // Build the overlay's bounding box, edge bands, rotation handle and resize
@@ -164,6 +220,7 @@ export function renderMultiSelectionBoxes(
 
   const selectedIds = engine.getSelectedIds()
   const elements = engine.getElements()
+  const index = createGroupIndex(elements)
   const showMulti = !suppressed && selectedIds.size > 1
 
   if (!showMulti) {
@@ -181,7 +238,7 @@ export function renderMultiSelectionBoxes(
 
   for (const [id, node] of state.multiSelectionNodes) {
     const element = elements.get(id)
-    if (!selectedIds.has(id) || !element || !element.visible) {
+    if (!selectedIds.has(id) || !element || !isEffectivelyVisible(index, id)) {
       node.remove()
       state.multiSelectionNodes.delete(id)
     }
@@ -190,7 +247,7 @@ export function renderMultiSelectionBoxes(
   const handleSize = resizeHandleSize / engine.getViewport().zoom
   for (const id of selectedIds) {
     const element = elements.get(id)
-    if (!element || !element.visible) {
+    if (!element || !isEffectivelyVisible(index, id)) {
       continue
     }
 

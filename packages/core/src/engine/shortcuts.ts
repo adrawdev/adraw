@@ -1,17 +1,20 @@
 import type { ToolType } from "../types"
 
 export interface ShortcutActions {
-  clearSelection: () => void
   copy: () => void
   cut: () => void
   deleteSelected: () => void
+  /** Leave the entered group one level, or clear the selection at the top. */
+  escapeSelection: () => void
   getIsToolLocked: () => boolean
+  group: () => void
   paste: () => void
   redo: () => boolean
   selectAll: () => void
   setActiveTool: (tool: ToolType) => void
   setIsToolLocked: (locked: boolean) => void
   undo: () => boolean
+  ungroup: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -57,6 +60,13 @@ export function handleShortcutKey(
     } else if (key === "v") {
       event.preventDefault()
       actions.paste()
+    } else if (key === "g") {
+      event.preventDefault()
+      if (event.shiftKey) {
+        actions.ungroup()
+      } else {
+        actions.group()
+      }
     }
   } else {
     switch (key) {
@@ -110,7 +120,7 @@ export function handleShortcutKey(
         break
       }
       case "escape": {
-        actions.clearSelection()
+        actions.escapeSelection()
         break
       }
     }

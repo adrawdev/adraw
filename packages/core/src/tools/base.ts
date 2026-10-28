@@ -22,6 +22,13 @@ export interface ToolContext {
   setElements: (elements: Map<ElementId, CanvasElement>) => void
   getSelectedIds: () => Set<ElementId>
   setSelectedIds: (ids: Set<ElementId>) => void
+  /**
+   * Group the select tool is currently inside, or null at the top level.
+   * Optional so standalone tool factories can run without engine group state.
+   */
+  getGroupContext?: () => ElementId | null
+  /** Set the entered group, or null to leave it. */
+  setGroupContext?: (id: ElementId | null) => void
   getViewport: () => ViewportState
   setViewport: (viewport: ViewportState) => void
   getCanvasSize: () => { width: number; height: number }

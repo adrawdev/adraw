@@ -58,6 +58,8 @@ export interface DomState {
   multiSelectionNodes: Map<ElementId, SVGRectElement>
   // Persistent marquee (rubber-band) node, likewise reused across renders.
   selectionBoxNode: SVGRectElement | null
+  // Outline around the group the select tool is currently inside.
+  groupContextBox: SVGRectElement | null
   resizeObserver: ResizeObserver | null
   // Inline text editing state. The editor is an absolutely-positioned
   // `<textarea>` overlay owned by the DOM adapter: it appears when the text
@@ -92,6 +94,7 @@ export function createDomState(): DomState {
     bindingHighlightId: null,
     container: null,
     elementsGroup: null,
+    groupContextBox: null,
     guideNodes: [],
     guidesGroup: null,
     multiSelectionGroup: null,
