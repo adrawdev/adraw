@@ -119,7 +119,7 @@ function sameSnapping(left: SnappingConfig, right: SnappingConfig): boolean {
 }
 
 /**
- * Adapter-facing state module. It mirrors an engine into an {@link AdrawSnapshot},
+ * Adapter-facing state source. It projects an engine into an {@link AdrawSnapshot},
  * copies changed slices, suppresses no-op changes and notifies framework
  * adapters through {@link AdrawStore.subscribe}.
  *

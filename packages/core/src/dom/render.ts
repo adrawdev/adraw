@@ -162,7 +162,7 @@ export function updateElementGeometry(
   group: SVGGElement,
   element: CanvasElement,
   textMeasurer: TextMeasurer = approximateTextMeasurer,
-  arrowLabelBox: BoundingBox | null = null,
+  arrowBoundTextBox: BoundingBox | null = null,
 ): void {
   group.setAttribute("transform", getTransformElementAttribute(element))
   applyElementOpacity(group, element)
@@ -182,7 +182,7 @@ export function updateElementGeometry(
       break
     }
     case "arrow": {
-      const geometry = getArrowSvgGeometry(element, arrowLabelBox)
+      const geometry = getArrowSvgGeometry(element, arrowBoundTextBox)
       const stroke = element.strokeColor || STROKE_COLOR
       const strokeWidth = element.strokeWidth || STROKE_WIDTH
       const shafts = group.getElementsByTagName("line")

@@ -34,6 +34,7 @@ src/
   canvas.ts          AdrawCanvas extends CanvasEngine — adds mount/render/destroy + DOM event handling
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, ToImageOptions
   text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
+  arrow-bindings.ts  arrow-to-element binding/synchronization math
   text-bindings.ts   bound text: max width/height, centering, container growth, sync
   groups.ts          group hierarchy, bounds sync, selection levels, group/ungroup math
   style.ts           style types and global defaults
@@ -57,7 +58,7 @@ src/
     pointer.ts       mounted pointer handlers + getRelativePoint
     text-editor.ts   inline <textarea> editing lifecycle
     text-measure.ts  canvas-backed TextMeasurer installed on mount
-    text-target.ts   resolves text-tool clicks and creates shape/arrow labels
+    text-target.ts   resolves text-tool clicks and creates bound text
     render.ts        renderAll, renderTemporary, updateElementGeometry, positionTextEditor
     render/elements.ts     reconcileElements, renderSelectElements
     render/guides.ts       renderGuides (alignment guides)
@@ -137,7 +138,7 @@ Listener collections are captured at publication start. Listener errors do not p
 
 ### Scene
 
-`src/engine/scene.ts` owns elements, selection and undo history. Mutations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine composes with non-Scene changes into one operation-scoped State publication. Commits and replacements sync arrow and bound-text bindings, keep group bounds/z-index in sync and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
+`src/engine/scene.ts` owns elements, selection and undo history. Scene operations go through `Scene.commit` (atomic copy), `Scene.replace` (caller-built map) or `Scene.select` (selection only); each returns a `SceneChange` that the engine composes with non-Scene changes into one operation-scoped State publication. Commits and replacements sync arrow and bound-text bindings, keep group bounds/z-index in sync and clamp the selection. Checkpoints are opt-in with `{ history: true }`; `withoutHistory` lives on the scene. The engine keeps viewport, tool, style, snapping, clipboard storage and the text measurer.
 
 ### Groups
 
@@ -168,9 +169,9 @@ Passed to constructor as `CanvasOptions`:
 
 `AdrawCanvas.mount()` calls `setAdapterTextMeasurer(createCanvasTextMeasurer(document))`, which re-measures existing text; `destroy()` restores the approximation. `setTextMeasurer(fn)` also re-measures every text element without adding a history entry.
 
-Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` commits. Opening an editor clears the selection and normally switches the active tool to `select`; with `isToolLocked` on, the text or note tool stays active, and clicking outside the editor commits it and starts the next element in the same click. Committing selects the edited text (or its container for a label). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
+Text editing follows Excalidraw semantics: double-click or `Enter`/`F2` on a selected text starts editing, the text tool edits an existing text under the pointer, `Enter` inserts a newline, and `Escape` / `Ctrl`/`Cmd+Enter` confirms the edit. Opening an editor clears the selection and normally switches the active tool to `select`; with `isToolLocked` on, the text or note tool stays active, and clicking outside the editor confirms it and starts the next element in the same click. Confirming selects the edited text (or its container for bound text). The overlay reuses the element's unscaled font, `lineHeight`, alignment and box, applying viewport zoom and rotation with a CSS transform. Dragging the left/right resize handle switches to fixed-width wrapping; corners and top/bottom edges scale `fontSize`.
 
-`src/text-bindings.ts` handles labels bound to a rectangle, ellipse, diamond or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, mirrors the container's rotation/visibility and grows the container vertically when the label no longer fits. Arrows use `labelPosition` (0–1) and auto-size labels; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the label box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes labels whose container disappeared. The DOM creates labels through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
+`src/text-bindings.ts` handles bound text attached to a rectangle, ellipse, diamond or arrow. Bound text has a `containerId`; `syncTextBindings()` re-wraps it to the container's inner width (`wrapWidth`), sizes the box to the longest wrapped line, centers it, matches the container's rotation/visibility and grows the container vertically when the bound text no longer fits. Arrows use `labelPosition` (0–1) and auto-size bound text; `getBoundTextBounds()` feeds the arrow renderer, which splits the shaft around the bound-text box so the line does not cross the text. `syncBindings()` in the engine runs arrows first, then bound text, then arrows again when a container grew; it also removes bound text whose container disappeared. The DOM creates bound text through `dom/text-target.ts` (`startBoundTextEditing`), creates double-click free text through `startFreeTextEditing`, and drags fixed-width free text through the text tool's pending gesture in `dom/pointer.ts`.
 
 ## Type system
 
@@ -320,8 +321,8 @@ snapping-dom.test.ts           — snap guide DOM rendering
 snapping-gestures.test.ts      — move/resize/create snapping via headless canvas
 text.test.ts                  — text tool, measurement, hit-testing, resize
 text-layout.test.ts           — measureTextLayout, wrapping, alignment helpers
-text-bindings.test.ts         — shape/arrow labels, growth, clipboard, z-order
-text-dom.test.ts              — inline editor, drag-to-create, labels
+text-bindings.test.ts         — bound text, growth, clipboard, z-order
+text-dom.test.ts              — inline editor, drag-to-create, bound text
 transform-overlay.test.ts      — transform overlay
 viewport.test.ts               — zoom, pan, zoomToFit
 viewport-config.test.ts        — CanvasOptions.viewport, constraints, fit bounds

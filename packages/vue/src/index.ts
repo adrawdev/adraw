@@ -33,7 +33,7 @@ export interface CanvasVueOptions extends CanvasOptions {
 }
 
 /**
- * Reactive state synced with an adraw canvas.
+ * Reactive adapter state projected from an AdrawSnapshot.
  */
 export interface CanvasState {
   elements: ReadonlyMap<ElementId, CanvasElement>

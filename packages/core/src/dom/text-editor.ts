@@ -173,7 +173,7 @@ export function commitTextEditing(
   if (editingExisting && id) {
     const before = engine.getElements().get(id)
     if (before?.type === "text") {
-      // Restore a visible selection as the edit ends: the shape for a label,
+      // Restore a visible selection as the edit ends: the container for bound text,
       // the text itself for free text. An empty free text is deleted below and
       // commitTextEdit drops it from the selection again.
       if (!suppressSelection) {

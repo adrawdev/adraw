@@ -1,7 +1,7 @@
 {
   "name": "@adraw/react",
   "version": "0.2.0",
-  "description": "React bindings for adraw — hooks and components for building canvas-based drawing and whiteboard UIs.",
+  "description": "React adapter for adraw — hooks and components for building canvas-based drawing and whiteboard UIs.",
   "keywords": [
     "canvas",
     "drawing",

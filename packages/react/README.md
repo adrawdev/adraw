@@ -1,6 +1,6 @@
 # @adraw/react
 
-React bindings for adraw — hooks and components for building canvas-based drawing and whiteboard UIs.
+React adapter for adraw — hooks and components for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 

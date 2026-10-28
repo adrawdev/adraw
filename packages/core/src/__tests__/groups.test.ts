@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { findBindingTarget, resolveArrowElement } from "../bindings"
+import { findBindingTarget, resolveArrowElement } from "../arrow-bindings"
 import { AdrawCanvas } from "../canvas"
 import {
   createArrow,
@@ -164,7 +164,7 @@ describe("grouping", () => {
     expect(canvas.getElements().size).toBe(1)
   })
 
-  it("includes bound labels and a selected label's container", () => {
+  it("includes bound text and a selected text's container", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect("rect", 0, 0, 100, 60)
     const other = makeRect("other", 140, 0)
@@ -180,7 +180,7 @@ describe("grouping", () => {
     )
   })
 
-  it("does not group a single labeled container", () => {
+  it("does not group a single container with bound text", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect("rect", 0, 0, 100, 60)
     const label = makeText("label", "rect")
@@ -792,7 +792,7 @@ describe("group DOM behavior", () => {
     canvas.destroy()
   })
 
-  it("double-click enters the group, then edits a direct child's label", () => {
+  it("double-click enters the group, then edits a direct child's bound text", () => {
     const a = makeRect("a", 0, 0, 20, 20)
     const b = makeRect("b", 40, 0, 20, 20)
     const outer = makeGroup("outer", ["a", "b"])

@@ -1,6 +1,6 @@
 # @adraw/svelte
 
-Svelte bindings for adraw — components and composables for building canvas-based drawing and whiteboard UIs.
+Svelte adapter for adraw — components and composables for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 

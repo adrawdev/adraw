@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Angular bindings for adraw. Component-scoped `CanvasService` via `provideCanvas()`, injectable hooks returning Angular signals.
+Angular adapter for adraw. Component-scoped `CanvasService` via `provideCanvas()`, injectable hooks returning Angular signals.
 
 Angular uses `ng-packagr` (not tsdown) and has special build requirements.
 

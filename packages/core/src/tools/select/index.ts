@@ -92,8 +92,9 @@ export function createSelectTool(
           selectionBounds !== null && pointInBounds(point, selectionBounds)
 
         let hit = isInsideSelection ? null : getElementAtPoint(elements, point)
-        // Clicking a bound label selects the container it belongs to, so moving
-        // the selection moves the shape (and its label) instead of detaching it.
+        // Clicking bound text selects the container it belongs to, so moving
+        // the selection moves the container and its bound text instead of
+        // detaching them.
         if (hit?.type === "text" && hit.containerId) {
           hit = elements.get(hit.containerId) ?? hit
         }

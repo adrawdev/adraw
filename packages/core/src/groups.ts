@@ -492,7 +492,7 @@ function collapseContained(
 }
 
 /**
- * Group the selection at its shared parent. Includes bound labels of selected
+ * Group the selection at its shared parent. Includes bound text of selected
  * containers; normalizes cross-parent selections to the top level.
  *
  * @internal
@@ -513,23 +513,23 @@ export function groupSelection(
     return { elements, group: null, parentId: null }
   }
 
-  // The minimum counts explicitly selected objects, not the labels that a
-  // container implicitly brings along: grouping one labeled shape is a no-op.
+  // The minimum counts explicitly selected objects, not the bound text that a
+  // container implicitly brings along: grouping one shape with bound text is a no-op.
   if (collapseContained(index, ids).size < 2) {
     return { elements, group: null, parentId: null }
   }
 
-  const labelsByContainer = new Map<ElementId, ElementId[]>()
+  const boundTextByContainer = new Map<ElementId, ElementId[]>()
   for (const element of elements.values()) {
     if (element.type === "text" && element.containerId) {
-      const labels = labelsByContainer.get(element.containerId) ?? []
-      labels.push(element.id)
-      labelsByContainer.set(element.containerId, labels)
+      const boundTextIds = boundTextByContainer.get(element.containerId) ?? []
+      boundTextIds.push(element.id)
+      boundTextByContainer.set(element.containerId, boundTextIds)
     }
   }
 
-  // A selected label brings its container, and a selected container brings its
-  // bound label, so the pair always moves into the new group together.
+  // Selected bound text brings its container, and a selected container brings
+  // its bound text, so the pair always moves into the new group together.
   const containers = new Set<ElementId>()
   for (const id of ids) {
     const element = elements.get(id)
@@ -541,13 +541,13 @@ export function groupSelection(
     ids.add(id)
   }
 
-  const labelAdditions: ElementId[] = []
+  const boundTextAdditions: ElementId[] = []
   for (const id of ids) {
-    for (const labelId of labelsByContainer.get(id) ?? []) {
-      labelAdditions.push(labelId)
+    for (const boundTextId of boundTextByContainer.get(id) ?? []) {
+      boundTextAdditions.push(boundTextId)
     }
   }
-  for (const id of labelAdditions) {
+  for (const id of boundTextAdditions) {
     ids.add(id)
   }
 

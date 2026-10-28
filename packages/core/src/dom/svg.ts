@@ -158,13 +158,13 @@ interface ArrowSvgGeometry {
   endHead: string | null
   lineStart: Point
   lineEnd: Point
-  // Segment of the shaft hidden under a bound label, if any.
+  // Segment of the shaft hidden under bound text, if any.
   gapStart: Point | null
   gapEnd: Point | null
 }
 
-// Extra room around a label so the shaft does not touch the glyphs.
-const arrowLabelGap = 4
+// Extra room around bound text so the shaft does not touch the glyphs.
+const arrowBoundTextGap = 4
 
 // Liang–Barsky clipping: parameter interval of segment `start → end` that lies
 // inside an axis-aligned rectangle, or null when it misses.
@@ -217,7 +217,7 @@ function clipSegmentToRect(
 
 export function getArrowSvgGeometry(
   element: ArrowElement,
-  labelBox: BoundingBox | null = null,
+  boundTextBox: BoundingBox | null = null,
 ): ArrowSvgGeometry {
   const start = { x: element.startX, y: element.startY }
   const end = { x: element.endX, y: element.endY }
@@ -247,12 +247,12 @@ export function getArrowSvgGeometry(
 
   let gapStart: Point | null = null
   let gapEnd: Point | null = null
-  if (labelBox) {
+  if (boundTextBox) {
     const clip = clipSegmentToRect(lineStart, lineEnd, {
-      bottom: labelBox.y + labelBox.height + arrowLabelGap,
-      left: labelBox.x - arrowLabelGap,
-      right: labelBox.x + labelBox.width + arrowLabelGap,
-      top: labelBox.y - arrowLabelGap,
+      bottom: boundTextBox.y + boundTextBox.height + arrowBoundTextGap,
+      left: boundTextBox.x - arrowBoundTextGap,
+      right: boundTextBox.x + boundTextBox.width + arrowBoundTextGap,
+      top: boundTextBox.y - arrowBoundTextGap,
     })
     if (clip) {
       gapStart = {
@@ -309,8 +309,8 @@ export function applyElementOpacity(
 }
 
 /**
- * Write one arrow shaft segment. Zero-length segments are hidden so a label's
- * gap does not leave a round-cap dot behind.
+ * Write one arrow shaft segment. Zero-length segments are hidden so a bound
+ * text gap does not leave a round-cap dot behind.
  */
 export function applyArrowShaft(
   line: SVGLineElement,
@@ -346,14 +346,14 @@ export function getDiamondPoints(width: number, height: number): string {
  *
  * @param element Element to render.
  * @param textMeasurer Measurer used for text elements.
- * @param arrowLabelBox Bounds of an arrow's bound label. When present, the
- * shaft is split to leave a gap under the label.
+ * @param arrowBoundTextBox Bounds of an arrow's bound text. When present, the
+ * shaft is split to leave a gap under the text.
  * @returns The element's `<g>` node.
  */
 export function createElementGroup(
   element: CanvasElement,
   textMeasurer: TextMeasurer = approximateTextMeasurer,
-  arrowLabelBox: BoundingBox | null = null,
+  arrowBoundTextBox: BoundingBox | null = null,
 ): SVGGElement {
   const group = document.createElementNS(svgNamespaceURI, "g")
   group.id = element.id
@@ -427,7 +427,7 @@ export function createElementGroup(
     }
 
     case "arrow": {
-      const geometry = getArrowSvgGeometry(element, arrowLabelBox)
+      const geometry = getArrowSvgGeometry(element, arrowBoundTextBox)
       const stroke = element.strokeColor || STROKE_COLOR
       const strokeWidth = element.strokeWidth || STROKE_WIDTH
 
@@ -441,8 +441,8 @@ export function createElementGroup(
       )
       group.appendChild(line)
 
-      // The shaft resumes after the label. With no label this segment is
-      // zero-length and hidden.
+      // The shaft resumes after the bound text. With no bound text this
+      // segment is zero-length and hidden.
       const tail = document.createElementNS(svgNamespaceURI, "line")
       applyArrowShaft(
         tail,

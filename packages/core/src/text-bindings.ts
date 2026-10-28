@@ -12,7 +12,7 @@ import type {
 } from "./types"
 
 /**
- * Elements that can carry a bound text label.
+ * Elements that can own bound text.
  */
 export type BoundTextContainer =
   | RectangleElement
@@ -23,7 +23,7 @@ export type BoundTextContainer =
 const TEXT_PADDING = BOUND_TEXT_PADDING * 2
 
 /**
- * Whether an element can own a bound text label.
+ * Whether an element can own bound text.
  *
  * @param element Element to check.
  * @returns `true` for rectangles, ellipses, diamonds and arrows.
@@ -40,7 +40,7 @@ export function isBoundTextContainer(
 }
 
 /**
- * Find the text label bound to a container.
+ * Find the bound text owned by a container.
  *
  * @param elements Current element map.
  * @param containerId Container id.
@@ -60,25 +60,25 @@ export function findBoundText(
 
 /**
  * Bounding box of the text bound to a container, or `null` when it has none.
- * Used by the arrow renderer to leave a gap in the shaft under its label.
+ * Used by the arrow renderer to leave a gap in the shaft under its bound text.
  *
  * @param elements Current element map.
  * @param containerId Container id.
- * @returns The label bounds, or `null`.
+ * @returns The bound-text bounds, or `null`.
  */
 export function getBoundTextBounds(
   elements: ReadonlyMap<ElementId, CanvasElement>,
   containerId: ElementId,
 ): BoundingBox | null {
-  const label = findBoundText(elements, containerId)
-  if (!label || !label.visible) {
+  const boundText = findBoundText(elements, containerId)
+  if (!boundText || !boundText.visible) {
     return null
   }
   return {
-    height: label.height,
-    width: label.width,
-    x: label.x,
-    y: label.y,
+    height: boundText.height,
+    width: boundText.width,
+    x: boundText.x,
+    y: boundText.y,
   }
 }
 
@@ -87,7 +87,7 @@ export function getBoundTextBounds(
  * their length; ellipses and diamonds use the largest rectangle inscribed in
  * the shape.
  *
- * @param container Label container.
+ * @param container Bound-text container.
  * @param fontSize Font size used for the arrow minimum width.
  * @returns Wrap width in pixels.
  */
@@ -117,7 +117,7 @@ export function getBoundTextMaxWidth(
 /**
  * Maximum text height inside a container, in pixels. Arrows are unbounded.
  *
- * @param container Label container.
+ * @param container Bound-text container.
  * @returns Available height in pixels.
  */
 export function getBoundTextMaxHeight(container: BoundTextContainer): number {
@@ -144,10 +144,10 @@ function clampLabelPosition(value: number | null | undefined): number {
 }
 
 /**
- * Center and rotation a bound text should have. Shape labels inherit the
- * container's rotation; arrow labels sit on the line at `labelPosition`.
+ * Center and rotation a bound text should have. Shape-bound text inherits the
+ * container's rotation; arrow-bound text sits on the line at `labelPosition`.
  *
- * @param container Label container.
+ * @param container Bound-text container.
  * @param labelPosition Arrow position (0–1).
  * @returns Center point and rotation.
  */
@@ -170,8 +170,8 @@ export function getBoundTextCenter(
   }
 }
 
-// Grow a shape vertically when its label no longer fits. Arrow labels never
-// grow their container. Excalidraw uses the inscribed-rectangle ratio for
+// Grow a shape vertically when its bound text no longer fits. Arrow-bound text
+// never grows its container. Excalidraw uses the inscribed-rectangle ratio for
 // ellipses so the text stays inside the curve.
 function growBoundTextContainer(
   container: BoundTextContainer,
@@ -197,7 +197,7 @@ function growBoundTextContainer(
 
 /**
  * Re-wrap, center and grow every bound text element so it fits its container.
- * Removes labels whose container no longer exists. Repositioning is skipped
+ * Removes bound text whose container no longer exists. Repositioning is skipped
  * when the width and geometry already match, so this is cheap enough to run on
  * every tool update.
  *

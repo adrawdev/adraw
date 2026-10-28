@@ -1,6 +1,6 @@
 # @adraw/web-components
 
-Web Components bindings for adraw — a framework-agnostic `<adraw-canvas>` custom element for building canvas-based drawing and whiteboard UIs.
+Web Components adapter for adraw — a framework-agnostic `<adraw-canvas>` custom element for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 

@@ -309,7 +309,7 @@ test.describe("text tool", () => {
     expect(text.text).toBe("This label wraps inside a fixed width")
   })
 
-  test("double-clicking a shape adds a centered label that follows it", async ({
+  test("double-clicking a shape adds centered bound text that follows it", async ({
     page,
   }) => {
     await openCanvas(page)
@@ -368,7 +368,7 @@ test.describe("text tool", () => {
       0,
     )
 
-    // Dragging the shape by its label moves the label with it.
+    // Dragging the shape by its bound text moves the text with it.
     await page.mouse.move(box.x + 300, box.y + 225)
     await page.mouse.down()
     await page.mouse.move(box.x + 350, box.y + 260, { steps: 6 })
@@ -394,7 +394,9 @@ test.describe("text tool", () => {
     )
   })
 
-  test("double-clicking a diamond adds a centered label", async ({ page }) => {
+  test("double-clicking a diamond adds centered bound text", async ({
+    page,
+  }) => {
     await openCanvas(page)
     const svg = page.locator(".canvas-container svg")
     const box = await svg.boundingBox()
@@ -426,7 +428,7 @@ test.describe("text tool", () => {
     expect(state.text.wrapWidth).toBe(90)
   })
 
-  test("clicking an arrow with the text tool creates a label on the line", async ({
+  test("clicking an arrow with the text tool creates bound text on the line", async ({
     page,
   }) => {
     await openCanvas(page)

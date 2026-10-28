@@ -1027,8 +1027,8 @@ export class CanvasEngine {
     return { ...DEFAULT_STYLE, ...this.style }
   }
 
-  // Restyle every selected element that supports the given options. Labels
-  // bound to a selected container are included so text styles reach them too.
+  // Restyle every selected element that supports the given options. Bound text
+  // attached to a selected container is included so text styles reach it too.
   private applyStyleToSelection(
     elements: Map<ElementId, CanvasElement>,
     selectedIds: Set<ElementId>,
@@ -1040,18 +1040,18 @@ export class CanvasEngine {
 
     const index = createGroupIndex(elements)
     const targets = getLeafDescendantIds(index, selectedIds)
-    const labelAdditions: ElementId[] = []
+    const boundTextAdditions: ElementId[] = []
     for (const id of targets) {
       const element = elements.get(id)
       if (!isBoundTextContainer(element)) {
         continue
       }
-      const label = findBoundText(elements, id)
-      if (label) {
-        labelAdditions.push(label.id)
+      const boundText = findBoundText(elements, id)
+      if (boundText) {
+        boundTextAdditions.push(boundText.id)
       }
     }
-    for (const id of labelAdditions) {
+    for (const id of boundTextAdditions) {
       targets.add(id)
     }
 

@@ -1,6 +1,6 @@
 # @adraw/solid
 
-SolidJS bindings for adraw — primitives and components for building canvas-based drawing and whiteboard UIs.
+SolidJS adapter for adraw — primitives and components for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 

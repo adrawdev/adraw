@@ -1,4 +1,4 @@
-import { detachArrowsOutsideSelection } from "../../bindings"
+import { detachArrowsOutsideSelection } from "../../arrow-bindings"
 import { isSnapActive, snapBoundsToElements } from "../../snapping"
 import type { Point, SnapGuide } from "../../types"
 import { type ToolContext } from "../base"

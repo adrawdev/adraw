@@ -54,7 +54,7 @@ function makeArrow(overrides: Partial<ArrowElement> = {}): ArrowElement {
   })
 }
 
-function makeLabel(
+function makeBoundText(
   containerId: string,
   overrides: Partial<TextElement> = {},
 ): TextElement {
@@ -82,9 +82,9 @@ function mapOf(elements: CanvasElement[]): Map<string, CanvasElement> {
 }
 
 describe("syncTextBindings", () => {
-  it("wraps, centers and grows a shape label", () => {
+  it("wraps, centers and grows shape-bound text", () => {
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label" })
+    const label = makeBoundText("rect", { id: "label" })
     const elements = mapOf([rect, label])
 
     syncTextBindings(elements, approximateTextMeasurer)
@@ -93,7 +93,7 @@ describe("syncTextBindings", () => {
     const text = elements.get("label") as TextElement
     // Inner width 90: "hello world" wraps into two 60px lines, 50px tall.
     // The box shrinks to the longest line (60px) and the 40px-tall rectangle
-    // grows to 60px so the label fits vertically.
+    // grows to 60px so the bound text fits vertically.
     expect(resized.height).toBe(60)
     expect(text.autoSize).toBe(false)
     expect(text.wrapWidth).toBe(90)
@@ -103,7 +103,7 @@ describe("syncTextBindings", () => {
     expect(text.y).toBe(5)
   })
 
-  it("wraps, centers and grows a diamond label", () => {
+  it("wraps, centers and grows diamond-bound text", () => {
     const diamond = createDiamond({
       height: 100,
       id: "diamond",
@@ -117,7 +117,7 @@ describe("syncTextBindings", () => {
       y: 0,
       zIndex: 0,
     })
-    const label = makeLabel("diamond", { id: "label" })
+    const label = makeBoundText("diamond", { id: "label" })
     const elements = mapOf([diamond, label])
 
     syncTextBindings(elements, approximateTextMeasurer)
@@ -139,7 +139,7 @@ describe("syncTextBindings", () => {
 
   it("follows the container when it moves and rotates", () => {
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", {
+    const label = makeBoundText("rect", {
       id: "label",
       text: "Hi",
     })
@@ -160,9 +160,9 @@ describe("syncTextBindings", () => {
     expect(rotated.rotation).toBe(90)
   })
 
-  it("centers arrow labels on the line and repositions them when it moves", () => {
+  it("centers arrow-bound text on the line and repositions it when it moves", () => {
     const arrow = makeArrow({ id: "arrow" })
-    const label = makeLabel("arrow", {
+    const label = makeBoundText("arrow", {
       autoSize: true,
       id: "label",
       labelPosition: 0.5,
@@ -189,9 +189,9 @@ describe("syncTextBindings", () => {
     expect(shifted.x).toBeCloseTo(94)
   })
 
-  it("removes labels whose container disappeared", () => {
+  it("removes bound text whose container disappeared", () => {
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label" })
+    const label = makeBoundText("rect", { id: "label" })
     const elements = mapOf([rect, label])
 
     elements.delete("rect")
@@ -200,10 +200,10 @@ describe("syncTextBindings", () => {
     expect(elements.has("label")).toBe(false)
   })
 
-  it("deletes a container's label when the container is deleted", () => {
+  it("deletes a container's bound text when the container is deleted", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label", text: "Hi" })
+    const label = makeBoundText("rect", { id: "label", text: "Hi" })
     canvas.addElement(rect)
     canvas.addElement(label)
     canvas.setSelectedIds(new Set(["rect"]))
@@ -214,10 +214,10 @@ describe("syncTextBindings", () => {
     expect(canvas.getElements().has("label")).toBe(false)
   })
 
-  it("copies a container's label and remaps the binding on paste", () => {
+  it("copies a container's bound text and remaps the binding on paste", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label", text: "Hi" })
+    const label = makeBoundText("rect", { id: "label", text: "Hi" })
     canvas.addElement(rect)
     canvas.addElement(label)
     canvas.setSelectedIds(new Set(["rect"]))
@@ -241,10 +241,10 @@ describe("syncTextBindings", () => {
     expect(pastedText.y).toBeGreaterThan(pastedRect.y)
   })
 
-  it("moves a label with its container through z-order changes", () => {
+  it("moves bound text with its container through z-order changes", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label", text: "Hi" })
+    const label = makeBoundText("rect", { id: "label", text: "Hi" })
     const other = makeRect({ id: "other", x: 200, zIndex: 10 })
     canvas.addElement(rect)
     canvas.addElement(label)
@@ -260,10 +260,10 @@ describe("syncTextBindings", () => {
     expect(frontLabel.zIndex).toBeGreaterThan(frontRect.zIndex)
   })
 
-  it("applies text options to the label of a selected shape", () => {
+  it("applies text options to bound text of a selected shape", () => {
     const canvas = new AdrawCanvas()
     const rect = makeRect({ id: "rect" })
-    const label = makeLabel("rect", { id: "label" })
+    const label = makeBoundText("rect", { id: "label" })
     canvas.addElement(rect)
     canvas.addElement(label)
     canvas.setSelectedIds(new Set(["rect"]))

@@ -118,7 +118,7 @@ The `arrow` tool draws a straight arrow with a filled head (`startArrowhead` and
 or `canvas.setActiveTool("arrow")` to activate it.
 
 Drop an endpoint on a rectangle, ellipse, diamond, text, or media to bind it.
-Shapes inside a group bind individually rather than to the group's union box. A
+Elements inside a group bind individually rather than to the group's union box. A
 bound endpoint aims at the target's center, is clipped just outside the target's
 border (with a `max(4, strokeWidth)` gap), and follows the target through moves,
 resizes, and rotations. Bound arrows are re-resolved automatically on every
@@ -144,7 +144,7 @@ const arrow = createArrow({
   locked: false,
   visible: true,
   endArrowhead: true,
-  endBinding: { elementId: rectangle.id }, // live link to another element
+  endBinding: { elementId: rectangle.id }, // live binding to another element
 })
 ```
 
@@ -219,7 +219,7 @@ canvas.group() // group the selection; returns the new group or null
 canvas.ungroup() // ungroup selected groups; returns the released child ids
 ```
 
-Grouping requires at least two top-level objects and includes bound labels of
+Grouping requires at least two top-level objects and includes bound text of
 selected containers. Groups may nest; ungrouping removes one level and leaves
 nested groups intact.
 

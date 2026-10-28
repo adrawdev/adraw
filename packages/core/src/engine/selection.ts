@@ -1,4 +1,4 @@
-import { syncArrowBindings } from "../bindings"
+import { syncArrowBindings } from "../arrow-bindings"
 import {
   collectSubtreeIds,
   createGroupIndex,

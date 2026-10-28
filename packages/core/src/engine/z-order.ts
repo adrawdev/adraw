@@ -32,8 +32,8 @@ function collectIds(
         visit(childId)
       }
     }
-    // A container carries its bound label through z-order changes so the label
-    // stays above the shape it belongs to.
+    // A container carries its bound text through z-order changes so the text
+    // stays above the container it belongs to.
     for (const textId of boundText.get(id) ?? []) {
       visit(textId)
     }

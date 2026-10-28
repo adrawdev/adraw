@@ -21,7 +21,7 @@ export interface TextLayoutOptions {
   maxWidth?: number
   /**
    * When `true` (with `autoSize: false`), wrap at `maxWidth` but size the box
-   * to the longest wrapped line instead of the full `maxWidth`. Used by labels
+   * to the longest wrapped line instead of the full `maxWidth`. Used by bound text
    * bound to a shape so their editor grows and shrinks with the text.
    */
   shrinkWidth?: boolean

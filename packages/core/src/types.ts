@@ -123,8 +123,8 @@ export interface LineElement extends BaseElement {
 }
 
 /**
- * A link from one arrow endpoint to another element. `focus` is reserved for
- * a future attach point along the target's border; v1 always aims at the
+ * A binding from one arrow endpoint to another element. `focus` is reserved
+ * for a future attach point along the target's border; v1 always aims at the
  * target's center and clips at its border.
  */
 export interface ArrowBinding {
@@ -195,7 +195,7 @@ export interface GroupElement extends BaseElement {
 export type TextAlign = "left" | "center" | "right"
 
 /**
- * A text label element.
+ * A text element, either free or bound to a container.
  */
 export interface TextElement extends BaseElement {
   type: "text"
@@ -224,19 +224,20 @@ export interface TextElement extends BaseElement {
    */
   autoSize?: boolean
   /**
-   * Id of the rectangle, ellipse, diamond or arrow this text labels. Bound text
-   * is centered inside the container, wraps to its inner width and follows it
-   * when it moves, resizes or rotates.
+   * Id of the rectangle, ellipse, diamond or arrow this text is bound to.
+   * Bound text is centered inside the container, wraps to its inner width and
+   * follows it when it moves, resizes or rotates.
    */
   containerId?: ElementId | null
   /**
-   * Position of an arrow label along the arrow, from `0` (start) to `1` (end).
-   * Defaults to `0.5`. Ignored for shape labels.
+   * Position of arrow-bound text along the arrow, from `0` (start) to `1`
+   * (end). Defaults to `0.5`. Ignored for shape-bound text. The field name is
+   * historical; it positions bound text.
    */
   labelPosition?: number | null
   /**
-   * Wrap width for bound text. Bound labels wrap at this width but keep a box
-   * as wide as their longest wrapped line (up to `wrapWidth`), so the inline
+   * Wrap width for bound text. Bound text wraps at this width but keeps a box
+   * as wide as its longest wrapped line (up to `wrapWidth`), so the inline
    * editor grows and shrinks horizontally with the content.
    */
   wrapWidth?: number | null
@@ -326,16 +327,6 @@ export interface CanvasConfig {
   gridSize: number
   minZoom: number
   maxZoom: number
-}
-
-/**
- * Snapshot of the runtime canvas state exposed to consumers.
- */
-export interface CanvasState {
-  elements: Map<ElementId, CanvasElement>
-  selectedIds: Set<ElementId>
-  viewport: ViewportState
-  activeTool: ToolType
 }
 
 /**

@@ -116,7 +116,7 @@ export function setupEventListeners(
 
   // Double-click resolves the target at the current drill level. A group is
   // entered; any other target keeps the existing text/note editor, container
-  // label or free-text behavior. On empty canvas it creates free text.
+  // bound-text or free-text behavior. On empty canvas it creates free text.
   state.svgElement.addEventListener("dblclick", (event) => {
     runStateOperation(engine, () => {
       if (state.textEditor || engine.getActiveTool() !== "select") {
@@ -129,7 +129,7 @@ export function setupEventListeners(
       const index = createGroupIndex(elements)
       const contextId = engine.getGroupContext()
       let hit = getElementAtPoint(elements, point)
-      // Clicking a bound label resolves to its container, like a single click.
+      // Clicking bound text resolves to its container, like a single click.
       if (hit?.type === "text" && hit.containerId) {
         hit = elements.get(hit.containerId) ?? hit
       }

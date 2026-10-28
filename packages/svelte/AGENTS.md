@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Svelte 5 bindings for adraw. Uses Svelte 5 runes (`$state`, `$effect`, snippets) with a `CanvasProvider` context. Each provider subtree owns one canvas; multiple independent providers can coexist.
+Svelte 5 adapter for adraw. Uses Svelte 5 runes (`$state`, `$effect`, snippets) with a `CanvasProvider` context. Each provider subtree owns one canvas; multiple independent providers can coexist.
 
 ## Exports
 
@@ -19,7 +19,7 @@ From `src/index.ts`:
 - `useSelection()` — `{ selectedIds, elements, selectAll, clearSelection, deleteSelected }` (`elements` are the selected elements)
 - `useTransformOverlay()` — `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasSvelteOptions` — type extending `CanvasOptions`
-- `CanvasContextValue` — type for context value
+- `CanvasContextValue` — type for context value; its `state` field is the reactive adapter state projected from an `AdrawSnapshot`
 
 ## Usage
 

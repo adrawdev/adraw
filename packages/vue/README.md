@@ -1,6 +1,6 @@
 # @adraw/vue
 
-Vue bindings for adraw — composables and components for building canvas-based drawing and whiteboard UIs.
+Vue adapter for adraw — composables and components for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 

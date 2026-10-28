@@ -48,7 +48,7 @@ export function updateBrushSelection(
     if (!element) {
       continue
     }
-    // Bound labels move with their container; selecting them directly would
+    // Bound text moves with its container; selecting it directly would
     // let a drag detach them from the shape.
     if (element.type === "text" && element.containerId) {
       continue

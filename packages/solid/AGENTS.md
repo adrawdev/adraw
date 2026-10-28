@@ -2,7 +2,7 @@
 
 ## Purpose
 
-SolidJS bindings for adraw. Provides context-based primitives and a `CanvasProvider`/`Canvas` component pair supporting multiple independent canvas instances.
+SolidJS adapter for adraw. Provides context-based primitives and a `CanvasProvider`/`Canvas` component pair supporting multiple independent canvas instances.
 
 ## Exports
 

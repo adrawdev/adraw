@@ -33,8 +33,8 @@ export type TextTarget =
 
 /**
  * Resolve what a text-tool click at `point` should do: edit a text, create or
- * edit a label inside a container near its center, or create free text. Arrow
- * labels are created wherever the line is hit.
+ * edit bound text inside a container near its center, or create free text.
+ * Arrow-bound text is created wherever the line is hit.
  *
  * @param elements Current element map.
  * @param point Canvas-space click point.
@@ -115,9 +115,9 @@ export function startFreeTextEditing(
 }
 
 /**
- * Start editing a container's label, creating an empty centered label first
- * when the container does not have one yet. The label is inserted without a
- * history checkpoint; committing the edit records the insertion and any
+ * Start editing a container's bound text, creating an empty centered text first
+ * when the container does not have one yet. The text is inserted without a
+ * history checkpoint; confirming the edit records the insertion and any
  * container growth as a single undoable change.
  *
  * @param state DOM adapter state.
@@ -136,24 +136,27 @@ export function startBoundTextEditing(
     return false
   }
 
-  // A label belongs to the same parent group as its container so it inherits
-  // the group's visibility/lock and transforms with it.
-  const addLabelToContainerGroup = (labelId: ElementId): void => {
+  // Bound text belongs to the same parent group as its container so it
+  // inherits the group's visibility/lock and transforms with it.
+  const addBoundTextToContainerGroup = (boundTextId: ElementId): void => {
     const parentId = getParentGroupId(createGroupIndex(elements), live.id)
     if (!parentId) {
       return
     }
     const parent = elements.get(parentId)
-    if (parent?.type !== "group" || parent.children.includes(labelId)) {
+    if (parent?.type !== "group" || parent.children.includes(boundTextId)) {
       return
     }
     engine.commitScene(
       (draft) => {
         const current = draft.elements.get(parentId)
-        if (current?.type === "group" && !current.children.includes(labelId)) {
+        if (
+          current?.type === "group" &&
+          !current.children.includes(boundTextId)
+        ) {
           draft.elements.set(parentId, {
             ...current,
-            children: [...current.children, labelId],
+            children: [...current.children, boundTextId],
           })
         }
       },
@@ -195,7 +198,7 @@ export function startBoundTextEditing(
   })
 
   engine.addElement(text, { history: false })
-  addLabelToContainerGroup(text.id)
+  addBoundTextToContainerGroup(text.id)
   const positioned = engine.getElements().get(text.id)
   if (positioned?.type !== "text") {
     return false

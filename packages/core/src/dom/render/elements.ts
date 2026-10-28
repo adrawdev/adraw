@@ -12,12 +12,12 @@ import { createElementGroup, elementClass, selectedClass } from "../svg"
 
 // Fingerprint of everything `updateElementGeometry` writes to the DOM for an
 // element (group transform plus type-specific geometry and style). Nodes whose
-// element fingerprints identically skip DOM writes, so a `change` event only
+// element fingerprints identically skip DOM writes, so a state publication only
 // touches the elements that actually changed. Media `src` is still creation-only.
 function geometrySignature(
   state: DomState,
   element: CanvasElement,
-  arrowLabelBox: {
+  arrowBoundTextBox: {
     height: number
     width: number
     x: number
@@ -30,10 +30,10 @@ function geometrySignature(
       return `line|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}`
     }
     case "arrow": {
-      const gap = arrowLabelBox
-        ? `${arrowLabelBox.x}|${arrowLabelBox.y}|${arrowLabelBox.width}|${arrowLabelBox.height}`
+      const gap = arrowBoundTextBox
+        ? `${arrowBoundTextBox.x}|${arrowBoundTextBox.y}|${arrowBoundTextBox.width}|${arrowBoundTextBox.height}`
         : ""
-      return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}|label:${gap}`
+      return `arrow|${base}|${element.startX}|${element.startY}|${element.endX}|${element.endY}|${element.strokeColor}|${element.strokeWidth}|${element.startArrowhead ? 1 : 0}|${element.endArrowhead ? 1 : 0}|${element.startBinding?.elementId ?? ""}|${element.endBinding?.elementId ?? ""}|boundText:${gap}`
     }
     case "path": {
       return `path|${base}|${element.smoothing ?? ""}|${pathPointsSignature(state, element.id, element.points)}|${element.strokeColor}|${element.strokeWidth}`
@@ -114,13 +114,17 @@ function syncElementNode(
     return null
   }
 
-  const arrowLabelBox =
+  const arrowBoundTextBox =
     element.type === "arrow"
       ? getBoundTextBounds(engine.getElements(), element.id)
       : null
-  const signature = geometrySignature(state, element, arrowLabelBox)
+  const signature = geometrySignature(state, element, arrowBoundTextBox)
   if (!group) {
-    group = createElementGroup(element, engine.getTextMeasurer(), arrowLabelBox)
+    group = createElementGroup(
+      element,
+      engine.getTextMeasurer(),
+      arrowBoundTextBox,
+    )
     group.classList.add(elementClass)
     state.elementsGroup!.appendChild(group)
     state.nodeById.set(element.id, group)
@@ -130,7 +134,7 @@ function syncElementNode(
       group,
       element,
       engine.getTextMeasurer(),
-      arrowLabelBox,
+      arrowBoundTextBox,
     )
     state.renderedGeometry.set(element.id, signature)
   }
@@ -271,17 +275,17 @@ export function renderSelectElements(
 
     // The select tool already transforms geometry in canvas space, so just
     // re-render each selected node — but only when its element changed.
-    const arrowLabelBox =
+    const arrowBoundTextBox =
       element.type === "arrow"
         ? getBoundTextBounds(engine.getElements(), element.id)
         : null
-    const signature = geometrySignature(state, element, arrowLabelBox)
+    const signature = geometrySignature(state, element, arrowBoundTextBox)
     if (state.renderedGeometry.get(element.id) !== signature) {
       updateElementGeometry(
         group,
         element,
         engine.getTextMeasurer(),
-        arrowLabelBox,
+        arrowBoundTextBox,
       )
       state.renderedGeometry.set(element.id, signature)
     }

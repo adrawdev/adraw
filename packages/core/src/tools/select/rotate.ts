@@ -1,4 +1,4 @@
-import { detachArrowsOutsideSelection } from "../../bindings"
+import { detachArrowsOutsideSelection } from "../../arrow-bindings"
 import type { Point } from "../../types"
 import { type ToolContext } from "../base"
 import { getPointsBounds, type SelectToolState } from "./state"

@@ -73,7 +73,7 @@ export function handlePointerDown(
   cancelTextGesture(state, engine)
 
   // The text tool resolves the click first: existing text is edited, a shape
-  // near its center gets a label, and anything else arms a free-text press.
+  // near its center gets bound text, and anything else arms a free-text press.
   // The editor opens on pointer-up so a horizontal drag can create a
   // fixed-width text instead.
   if (engine.getActiveTool() === "text") {
@@ -142,8 +142,8 @@ export function handlePointerMove(
       if (Math.abs(dx) <= TEXT_DRAG_THRESHOLD) {
         return
       }
-      // A drag turns the press into free text: a label armed inside a shape is
-      // abandoned in favour of a fixed-width text at the origin.
+      // A drag turns the press into free text: bound text armed inside a
+      // container is abandoned in favour of a fixed-width text at the origin.
       gesture.dragging = true
       gesture.containerId = null
       dispatchPointerDown(engine, gesture.start, gesture.event)

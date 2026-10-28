@@ -2,7 +2,7 @@ import {
   BINDING_PICK_MARGIN,
   detachArrowsOutsideSelection,
   findBindingTarget,
-} from "../../bindings"
+} from "../../arrow-bindings"
 import type { ArrowBinding, ElementId, Point } from "../../types"
 import { calculateShapeBounds, type ToolContext } from "../base"
 import { snapToolPoint } from "../snap"

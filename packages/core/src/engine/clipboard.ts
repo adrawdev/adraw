@@ -78,7 +78,7 @@ export function collectClipboardElements(
         visit(childId)
       }
     }
-    // Copying a container includes its label so the pasted pair stays linked.
+    // Copying a container includes its bound text so the pasted pair stays bound.
     for (const textId of boundText.get(id) ?? []) {
       visit(textId)
     }

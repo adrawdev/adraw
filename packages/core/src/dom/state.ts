@@ -72,7 +72,7 @@ export interface DomState {
   textEditElementId: ElementId | null
   // Snapshot of the element being edited, restored on cancel.
   textEditOriginalElement: EditableTextElement | null
-  // Pending text-tool press: a click creates a label/free text, while a
+  // Pending text-tool press: a click creates bound text or free text, while a
   // horizontal drag turns it into a fixed-width text. Null when no press is
   // pending or the editor is already open.
   textGesture: {

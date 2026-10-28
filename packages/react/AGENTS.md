@@ -2,7 +2,7 @@
 
 ## Purpose
 
-React bindings for adraw. Provides context-based hooks and a `Canvas` component that wraps `@adraw/core`'s `AdrawCanvas`.
+React adapter for adraw. Provides context-based hooks and a `Canvas` component that wraps `@adraw/core`'s `AdrawCanvas`.
 
 ## Exports
 

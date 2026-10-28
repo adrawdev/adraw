@@ -1,6 +1,6 @@
 # @adraw/angular
 
-Angular bindings for adraw — a service, a component, and injectable hooks for building canvas-based drawing and whiteboard UIs.
+Angular adapter for adraw — a service, a component, and injectable hooks for building canvas-based drawing and whiteboard UIs.
 
 ## Installation
 
@@ -11,7 +11,7 @@ pnpm add @adraw/angular
 npm install @adraw/angular
 ```
 
-Angular 17 or later is required as a peer dependency (the bindings are standalone and signal-based). State is exposed through [signals](https://angular.dev/guide/signals), so the components work with `OnPush` change detection and in zoneless apps.
+Angular 17 or later is required as a peer dependency (the adapter is standalone and signal-based). State is exposed through [signals](https://angular.dev/guide/signals), so the components work with `OnPush` change detection and in zoneless apps.
 
 ## Quick start
 

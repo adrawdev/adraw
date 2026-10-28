@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Vue 3 bindings for adraw. Provides composables and components via `provide`/`inject` with support for multiple independent canvas instances.
+Vue 3 adapter for adraw. Provides composables and components via `provide`/`inject` with support for multiple independent canvas instances.
 
 ## Exports
 
@@ -20,7 +20,7 @@ All defined in `src/index.ts` (single file):
 - `useStyle()` — returns `{ style, setStyle }`
 - `useTransformOverlay()` — returns `{ hideWhileTransforming, setHideWhileTransforming }`
 - `CanvasVueOptions` — interface extending `CanvasOptions` (adds `initialViewport`)
-- `CanvasState` — reactive state interface
+- `CanvasState` — reactive adapter state interface projected from an `AdrawSnapshot`
 - `CanvasContext` — return type of `createCanvas`
 
 ## Usage

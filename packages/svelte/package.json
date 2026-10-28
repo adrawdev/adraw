@@ -1,7 +1,7 @@
 {
   "name": "@adraw/svelte",
   "version": "0.2.0",
-  "description": "Svelte bindings for adraw — components and composables for building canvas-based drawing and whiteboard UIs.",
+  "description": "Svelte adapter for adraw — components and composables for building canvas-based drawing and whiteboard UIs.",
   "keywords": [
     "canvas",
     "drawing",

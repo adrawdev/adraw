@@ -1,4 +1,4 @@
-# Scene transactions and AdrawStore replace engine events
+# Scene operations and AdrawStore replace engine events
 
 ## Status
 
@@ -6,13 +6,13 @@ accepted
 
 ## Context
 
-`CanvasEngine` exposes four low-level events — `change`, `viewportChange`, `toolChange` and `selectionChange` — whose payloads are live maps and sets. Every adapter re-implements the same seed → subscribe → copy → readiness protocol, and the events do not cover history availability, style, snapping, tool lock or overlay visibility. The result is six mirrors, shadow state and behaviour that has already diverged.
+`CanvasEngine` exposes four low-level events — `change`, `viewportChange`, `toolChange` and `selectionChange` — whose payloads are live maps and sets. Every adapter re-implements the same seed → subscribe → copy → readiness protocol, and the events do not cover history availability, style, snapping, tool lock or overlay visibility. The result is six adapter-local copies, shadow state and behaviour that has already diverged.
 
 ## Decision
 
 Do the work in two phases.
 
-**Phase 1** extracts an internal `Scene` module that owns elements, selection, history, binding sync and atomic commits (`commit`, `replace`, `select`). `CanvasEngine` keeps viewport, tool, style, snapping, clipboard storage and the text-measurer source. `Scene` returns a `SceneChange` and does not emit engine events; the engine keeps the existing event order.
+**Phase 1** extracts an internal `Scene` module that owns elements, selection, history, binding sync and atomic scene operations (`commit`, `replace`, `select`). `CanvasEngine` keeps viewport, tool, style, snapping, clipboard storage and the text-measurer source. `Scene` returns a `SceneChange` and does not emit engine events; the engine keeps the existing event order.
 
 **Phase 2** adds a public `AdrawStore` in `@adraw/core`, exposing an `AdrawSnapshot` through `getSnapshot()` and `subscribe()`. Adapters move onto it, and the public `on`/`off`, `CanvasEventMap` and the four events are removed. The DOM adapter and the store consume one internal kind-carrying notifier; the store reuses unchanged snapshot slices, so a viewport change does not copy the element map.
 

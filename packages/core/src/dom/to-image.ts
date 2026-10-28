@@ -156,12 +156,12 @@ export async function toImage(
   }
 
   for (const element of elements) {
-    const arrowLabelBox =
+    const arrowBoundTextBox =
       element.type === "arrow"
         ? getBoundTextBounds(engine.getElements(), element.id)
         : null
     svg.appendChild(
-      createElementGroup(element, engine.getTextMeasurer(), arrowLabelBox),
+      createElementGroup(element, engine.getTextMeasurer(), arrowBoundTextBox),
     )
   }
 

@@ -10,7 +10,7 @@ A lightweight, framework-agnostic infinity canvas library built on SVG. Supports
 - Infinite canvas with smooth pan and zoom
 - Freehand drawing with Catmull-Rom spline smoothing
 - Shape tools: Rectangle, Ellipse, Line, Arrow
-- Arrows bind to shapes and follow them when they move, resize, or rotate
+- Arrows bind to elements and follow them when they move, resize, or rotate
 - Selection with multi-select, resize, rotation, and flip
 - Clipboard: copy, cut, and paste (`Ctrl/Cmd+C/X/V`)
 - Eraser tool
@@ -18,7 +18,7 @@ A lightweight, framework-agnostic infinity canvas library built on SVG. Supports
 - Snap-to-grid and element snapping guides
 - Media (image) elements
 - Headless-friendly — mount to DOM or use as pure state engine
-- Framework bindings for React, Vue, Svelte, SolidJS, Angular, and Web Components
+- Framework adapters for React, Vue, Svelte, SolidJS, Angular, and Web Components
 
 ## Tools
 
@@ -31,7 +31,7 @@ A lightweight, framework-agnostic infinity canvas library built on SVG. Supports
 | Rectangle | Draw rectangles                           |
 | Ellipse   | Draw ellipses                             |
 | Line      | Draw lines                                |
-| Arrow     | Draw arrows; endpoints bind to shapes     |
+| Arrow     | Draw arrows; endpoints bind to elements   |
 
 ## Packages
 

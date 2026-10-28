@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**adraw** is a TypeScript monorepo for an infinite SVG canvas. `@adraw/core` combines a headless engine with an optional DOM/SVG adapter; framework bindings for React, Vue, Svelte, Solid, Angular, and Web Components live in separate packages.
+**adraw** is a TypeScript monorepo for an infinite SVG canvas. `@adraw/core` combines a headless engine with an optional DOM/SVG adapter; framework adapters for React, Vue, Svelte, Solid, Angular, and Web Components live in separate packages.
 
 - `packages/*` — published `@adraw/*` libraries
 - `examples/vite-*` — integration apps; `vite-vanilla` is the Playwright target and exposes the canvas as `window.adraw`
@@ -62,10 +62,10 @@ Every publicly exported function, class, type, interface, and constant must have
 
 `AdrawCanvas` (`src/canvas.ts`) extends the headless `CanvasEngine`. `new AdrawCanvas({ container })` mounts immediately; `new AdrawCanvas()` stays headless until `mount(container)`; `destroy()` removes the DOM adapter.
 
-- `src/engine/` — DOM-free state, scene transactions, tools, history, snapping, clipboard and global styles.
+- `src/engine/` — DOM-free state, scene operations, tools, history, snapping, clipboard and global styles.
 - `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
-- `src/bindings.ts` — arrow-to-shape binding/synchronization math.
+- `src/arrow-bindings.ts` — arrow-to-element binding/synchronization math.
 - `src/groups.ts` — group hierarchy, derived group bounds, selection levels and group/ungroup math. Grouping is exposed through `group()` / `ungroup()` and `Ctrl/Cmd+G` / `Ctrl/Cmd+Shift+G`.
 
 `AdrawStore` is the adapter contract. It exposes an immutable `AdrawSnapshot` through `getSnapshot()` / `subscribe()`:
@@ -85,9 +85,9 @@ The engine has no public `on`/`off`/`emit`; adapters and consumers read snapshot
 
 Styles are global: `engine.setStyle(partial)` merges the same style into every tool, applying each field only where the tool supports it, and restyles matching selected elements. `engine.getStyle()` returns the selected elements' common style, then the global style. (The style hooks were removed; toolbars call `setStyle`/`getStyle` through the engine.)
 
-### Framework bindings
+### Framework adapters
 
-Each adapter creates an `AdrawCanvas` and `AdrawStore` imperatively (headless in the provider/service where possible), mounts the engine through its canvas component/element, subscribes to the store, and mirrors the snapshot into its framework's reactivity system. Providers accept `onReady(engine)`; Web Components use `isReady` + `adraw:ready`.
+Each adapter creates an `AdrawCanvas` and `AdrawStore` imperatively (headless in the provider/service where possible), mounts the engine through its canvas component/element, subscribes to the store, and projects the snapshot into its framework's reactivity system. Providers accept `onReady(engine)`; Web Components use `isReady` + `adraw:ready`.
 
 | Hook                    | Returns                                                                |
 | ----------------------- | ---------------------------------------------------------------------- |

@@ -312,7 +312,7 @@ describe("text editor DOM integration", () => {
     expect(canvas.getSelectedIds().has(text.id)).toBe(true)
   })
 
-  it("creates a centered label when double-clicking a shape", () => {
+  it("creates centered bound text when double-clicking a shape", () => {
     const { canvas, svg } = mount()
     const rect = createRectangle({
       cornerRadius: 0,
@@ -357,7 +357,7 @@ describe("text editor DOM integration", () => {
     expect(canvas.getSelectedIds().has("rect")).toBe(true)
   })
 
-  it("creates a centered label when double-clicking a diamond", () => {
+  it("creates centered bound text when double-clicking a diamond", () => {
     const { canvas, svg } = mount()
     const diamond = createDiamond({
       height: 100,
@@ -434,7 +434,7 @@ describe("text editor DOM integration", () => {
     expect(canvas.getSelectedIds().has(text.id)).toBe(true)
   })
 
-  it("creates a label when the text tool clicks a shape center", () => {
+  it("creates bound text when the text tool clicks a shape center", () => {
     const { canvas, svg } = mount()
     const rect = createRectangle({
       cornerRadius: 0,

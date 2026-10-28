@@ -57,7 +57,7 @@ canvas. Adapters expose the same options through their provider/service.
 | `diamond`   | Draw diamonds                             |
 | `line`      | Draw lines                                |
 | `arrow`     | Draw arrows                               |
-| `text`      | Add free text or shape labels             |
+| `text`      | Add free text or bound text               |
 | `note`      | Place a sticky note and edit its text     |
 
 ```ts
@@ -130,8 +130,8 @@ Each element on the canvas has a type:
 - `diamond` — diamond (rhombus) inscribed in its bounding box
 - `path` — freehand stroke (Catmull-Rom smoothing)
 - `line` — line
-- `arrow` — two-ended connector with optional bindings
-- `text` — label, free or bound to a shape/arrow
+- `arrow` — two-ended arrow with optional element bindings
+- `text` — free text or bound text
 - `note` — sticky note with wrapping text and a folded corner
 - `media` — raster image
 - `group` — container for other elements; its bounds and z-index follow its descendants
@@ -151,12 +151,12 @@ switches a text element to fixed width; dragging a corner scales its font size.
 
 Editing happens inline: double-click a text element (or press `Enter`/`F2` with
 it selected) to edit it, `Enter` inserts a newline, and `Escape` or
-`Ctrl`/`Cmd+Enter` commits. Starting an edit normally switches the active tool
-to `select` (the text tool's drag-to-create gesture also finishes as select);
-with `isToolLocked` on, the text tool stays active instead. The element is
-cleared from the selection while the editor is open so no resize handles
-compete with the caret; the text (or its shape, for a label) is selected again
-when editing ends. While mounted, `AdrawCanvas` measures text with the 2D
+`Ctrl`/`Cmd+Enter` confirms the edit. Starting an edit normally switches the
+active tool to `select` (the text tool's drag-to-create gesture also finishes as
+select); with `isToolLocked` on, the text tool stays active instead. The element
+is cleared from the selection while the editor is open so no resize handles
+compete with the caret; the text (or its container, for bound text) is selected
+again when editing ends. While mounted, `AdrawCanvas` measures text with the 2D
 canvas API so boxes match the rendered glyphs. Pass `measureText` to
 `AdrawCanvas` to supply your own measurer (for example to use loaded web fonts).
 
@@ -182,29 +182,30 @@ canvas.setActiveTool("note")
 canvas.setStyle({ fillColor: "#bbf7d0", fontSize: 24 })
 ```
 
-### Labels inside shapes and arrows
+### Bound text inside shapes and arrows
 
 Double-clicking a rectangle, ellipse, diamond or arrow — or clicking near a
-shape's center with the text tool — creates a centered label. Labels are regular
-text elements with a `containerId`, so they are measured, styled and serialized
-like any other text. A shape label wraps at the shape's inner width but its box
-shrinks to the longest wrapped line, so the editor grows and shrinks
-horizontally until it reaches that width, and grows vertically as lines are
-added. An arrow label sits on the line and follows `labelPosition` (`0`–`1`,
-default `0.5`), and the arrow shaft is split around the label so the line never
-crosses the text. Labels move, rotate and resize with their container, are
-copied and pasted with it, and are deleted when it is.
+shape's center with the text tool — creates centered bound text. Bound text
+elements are regular text elements with a `containerId`, so they are measured,
+styled and serialized like any other text. Bound text on a shape wraps at the
+shape's inner width but its box shrinks to the longest wrapped line, so the
+editor grows and shrinks horizontally until it reaches that width, and grows
+vertically as lines are added. Arrow-bound text sits on the line and follows
+`labelPosition` (`0`–`1`, default `0.5`), and the arrow shaft is split around
+the text so the line never crosses it. Bound text moves, rotates and resizes
+with its container, is copied and pasted with it, and is deleted when the
+container is.
 
-While a labeled shape is selected, text styles can still be applied to its
-label with `setStyle({ fontSize, textAlign })`. The text tool's click has three
-outcomes: edit the text under the pointer, add/edit a shape label, or create
-free text. Dragging horizontally with the text tool creates a fixed-width text
-instead of a click-sized one.
+While a container with bound text is selected, text styles can still be applied
+to its bound text with `setStyle({ fontSize, textAlign })`. The text tool's
+click has three outcomes: edit the text under the pointer, add/edit bound text,
+or create free text. Dragging horizontally with the text tool creates a
+fixed-width text instead of a click-sized one.
 
 ```ts
 canvas.setStyle({ fontSize: 18, textAlign: "center" })
 
-const label = [...canvas.getElements().values()].find(
+const boundText = [...canvas.getElements().values()].find(
   (element) => element.type === "text" && element.containerId === rectId,
 )
 // { containerId: rectId, textAlign: "center", labelPosition: null, ... }
@@ -308,8 +309,8 @@ original proportions.
 
 ### Groups
 
-Grouping requires at least two top-level objects and includes any bound text
-labels of the selected containers. Groups may nest, and ungrouping removes one
+Grouping requires at least two top-level objects and includes any bound text of
+the selected containers. Groups may nest, and ungrouping removes one
 level while leaving nested groups intact.
 
 A group is a container, not a drawn element. Its `x`, `y`, `width` and `height`
@@ -325,7 +326,7 @@ stay top-level until they are explicitly grouped.
 
 Deleting a selected group removes its whole subtree; deleting an individual
 child prunes it from the group, and empty groups disappear. Arrows bind to child
-shapes rather than a group's union box, while the eraser removes the outermost
+elements rather than a group's union box, while the eraser removes the outermost
 group when it touches any descendant.
 
 ## Z-order

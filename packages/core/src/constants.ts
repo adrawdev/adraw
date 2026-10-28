@@ -84,6 +84,6 @@ export const BOUND_TEXT_PADDING = 5
 
 /**
  * How close (in screen pixels) a click with the text tool must be to a shape's
- * center to create a label instead of a free text element.
+ * center to create bound text instead of a free text element.
  */
 export const TEXT_CONTAINER_SNAP_THRESHOLD = 30

@@ -2,7 +2,7 @@ import {
   BINDING_PICK_MARGIN,
   findBindingTarget,
   resolveArrowElement,
-} from "../../bindings"
+} from "../../arrow-bindings"
 import { STROKE_COLOR, STROKE_WIDTH } from "../../constants"
 import { createArrow, getNextZIndex } from "../../elements"
 import type {
