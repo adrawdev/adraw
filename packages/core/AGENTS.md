@@ -9,7 +9,7 @@ Framework-agnostic core canvas engine. Pure logic (elements, viewport, tools, hi
 ```bash
 pnpm core:build    # build
 pnpm core:dev      # watch mode
-pnpm test          # from root — Vitest includes packages/**/*
+pnpm test run      # from root — Vitest includes packages/**/*
 pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 ```
 
@@ -328,7 +328,7 @@ viewport.test.ts               — zoom, pan, zoomToFit
 viewport-config.test.ts        — CanvasOptions.viewport, constraints, fit bounds
 ```
 
-Run with `pnpm test` from root or `pnpm test run packages/core/src/__tests__/coordinates.test.ts`.
+Run with `pnpm test run` from root or `pnpm test run packages/core/src/__tests__/coordinates.test.ts`.
 
 ## Code style
 

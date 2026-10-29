@@ -59,6 +59,16 @@ Plain `pnpm test` is Vitest's watch mode in a TTY; use `pnpm test run` in agent 
 
 Every publicly exported function, class, type, interface, and constant must have a JSDoc comment describing what it is and how to use it. This applies to all packages under `packages/*`, not only `@adraw/core`. Use `@param` / `@returns` when behavior is not obvious from the signature, and add `@example` blocks for non-trivial adapter APIs. Internal (non-exported) helpers are not required to have JSDoc.
 
+### Domain vocabulary
+
+`GLOSSARY.md` is the source of truth for project terms. Read it before naming or renaming a concept, writing public docs or JSDoc, or changing a term. Architecture decisions live in `docs/adr/`; read the relevant ADR before changing the state, publication or Scene boundary.
+
+### Mechanical renames
+
+For a mechanical rename across more than five files, use `rg -l` to list the files and `perl -pi -e` (or a codemod) to apply the replacement; then run `pnpm lint` and `pnpm test run` and review `git diff`. Keep `edit` for context-sensitive changes.
+
+Review-time judgement calls live in `CODING_STANDARDS.md`.
+
 ## Architecture
 
 ### Core (`packages/core`)

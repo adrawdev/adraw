@@ -70,7 +70,7 @@ Run the repository checks before consuming the changesets:
 
 ```bash
 pnpm lint
-pnpm test
+pnpm test run
 pnpm build
 ```
 

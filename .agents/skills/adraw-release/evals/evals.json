@@ -9,7 +9,7 @@
       "expectations": [
         "Requires a clean, up-to-date main checkout without discarding unrelated changes",
         "Uses pnpm exec changeset status and pnpm ci:version",
-        "Includes pnpm lint, pnpm test, and pnpm build before versioning",
+        "Includes pnpm lint, pnpm test run, and pnpm build before versioning",
         "Requires reviewing generated package manifests and changelogs before committing"
       ]
     },

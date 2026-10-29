@@ -31,7 +31,8 @@
     "core:release": "pnpm --filter core publish --access public --no-git-checks && git tag \"@adraw/core@$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"packages/core/package.json\", \"utf8\")).version')\"",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:install": "playwright install"
+    "test:e2e:install": "playwright install",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
@@ -41,9 +42,13 @@
     "happy-dom": "^20.10.6",
     "oxfmt": "^0.56.0",
     "oxlint": "^1.71.0",
+    "simple-git-hooks": "^2.14.0",
     "tsdown": "0.22.14",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.0.18"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint && pnpm typecheck && pnpm core:build && pnpm test run"
   },
   "packageManager": "pnpm@12.14.0"
 }

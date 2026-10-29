@@ -4,6 +4,7 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
   sharp: true
+  simple-git-hooks: true
   svelte-preprocess: true
 
 minimumReleaseAgeExclude:

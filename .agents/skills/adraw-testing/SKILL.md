@@ -11,7 +11,7 @@ Run all commands from the repository root using `pnpm`.
 ## Unit Tests
 
 ```bash
-pnpm test           # all unit tests (Vitest, scoped to packages/**)
+pnpm test run       # all unit tests (Vitest, scoped to packages/**)
 pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 ```
 
@@ -82,4 +82,4 @@ pkill -f vite
 
 ## Submission Checks
 
-Before submitting a change, run `pnpm lint` and `pnpm test`, and update or add tests for changed code.
+Before submitting a change, run `pnpm lint` and `pnpm test run`, and update or add tests for changed code.
