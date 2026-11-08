@@ -1,0 +1,13 @@
+# adraw
+
+> Open-source drawing, diagramming, and agent-friendly canvas workflow tool.
+
+## Core Documentation & Repository
+
+- [GitHub Repository](https://github.com/adrawdev/adraw): Official source code, issues, and architecture documentation.
+- [README & Getting Started](https://github.com/adrawdev/adraw#readme): Installation, CLI/SDK usage, and agent integration guide.
+
+## AI Agent & LLM Guidance
+
+- Follows the standard /llms.txt specification for deterministic ingestion by coding assistants and RAG crawlers.
+- Validated via [AccessGuard AI-Readiness Suite](https://ronanchnlps-bit.github.io/).
