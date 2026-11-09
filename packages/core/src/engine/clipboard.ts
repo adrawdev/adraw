@@ -91,28 +91,14 @@ export function collectClipboardElements(
   return [...collected.values()]
 }
 
-// Clone clipboard elements with fresh IDs, translated so their bounding box is
-// centered on `at`, stacked above `baseZIndex`. Group children are remapped to
-// the pasted clones.
-export function createPastedElements(
+// Clone elements with fresh IDs, translated by `delta`, stacked from
+// `baseZIndex`. Group children, bound text containers and arrow bindings are
+// remapped to the cloned targets.
+export function createClonedElements(
   elements: CanvasElement[],
-  at: Point,
+  delta: Point,
   baseZIndex: number,
 ): CanvasElement[] {
-  let left = Infinity
-  let right = -Infinity
-  let top = Infinity
-  let bottom = -Infinity
-  for (const element of elements) {
-    left = Math.min(left, element.x)
-    right = Math.max(right, element.x + element.width)
-    top = Math.min(top, element.y)
-    bottom = Math.max(bottom, element.y + element.height)
-  }
-
-  const dx = at.x - (left + right) / 2
-  const dy = at.y - (top + bottom) / 2
-
   const idMap = new Map<ElementId, ElementId>()
   for (const element of elements) {
     idMap.set(element.id, generateId())
@@ -123,19 +109,19 @@ export function createPastedElements(
     .map((element, index) => {
       const clone = cloneElementDeep(element)
       clone.id = idMap.get(element.id)!
-      clone.x += dx
-      clone.y += dy
+      clone.x += delta.x
+      clone.y += delta.y
       clone.zIndex = baseZIndex + index
 
       if (clone.type === "line" || clone.type === "arrow") {
-        clone.startX += dx
-        clone.startY += dy
-        clone.endX += dx
-        clone.endY += dy
+        clone.startX += delta.x
+        clone.startY += delta.y
+        clone.endX += delta.x
+        clone.endY += delta.y
       } else if (clone.type === "path") {
         clone.points = clone.points.map((point) => ({
-          x: point.x + dx,
-          y: point.y + dy,
+          x: point.x + delta.x,
+          y: point.y + delta.y,
         }))
       } else if (clone.type === "group") {
         clone.children = clone.children.map(
@@ -156,6 +142,30 @@ export function createPastedElements(
 
       return clone
     })
+}
+
+// Clone clipboard elements with fresh IDs, translated so their bounding box is
+// centered on `at`, stacked above `baseZIndex`.
+export function createPastedElements(
+  elements: CanvasElement[],
+  at: Point,
+  baseZIndex: number,
+): CanvasElement[] {
+  let left = Infinity
+  let right = -Infinity
+  let top = Infinity
+  let bottom = -Infinity
+  for (const element of elements) {
+    left = Math.min(left, element.x)
+    right = Math.max(right, element.x + element.width)
+    top = Math.min(top, element.y)
+    bottom = Math.max(bottom, element.y + element.height)
+  }
+
+  const dx = at.x - (left + right) / 2
+  const dy = at.y - (top + bottom) / 2
+
+  return createClonedElements(elements, { x: dx, y: dy }, baseZIndex)
 }
 
 function isCanvasElement(value: unknown): value is CanvasElement {

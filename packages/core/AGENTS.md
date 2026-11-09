@@ -45,7 +45,7 @@ src/
     state-notifier.ts internal operation-scoped state publications
     style.ts        applyStyleToElement/getElementStyle: style write-back and read-back
     update.ts       validated partial element patches (updateElement/updateElements)
-    clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
+    clipboard.ts     ClipboardManager + copy/paste/duplicate element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements
     z-order.ts       bringToFront / sendToBack / setZIndex math
@@ -105,6 +105,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `updateElement(id, patch, options?)`                    | Validated partial update for one element                  |
 | `updateElements(updates, options?)`                     | Atomic batch of partial updates with one checkpoint       |
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
+| `duplicate(ids?, options?)`                             | Clone elements; groups, bound text and bindings remapped  |
+| `nudge(ids, delta, options?)`                           | Move elements; arrow-key shortcut uses the selection      |
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text              |
 | `undo()` / `redo()`                                     | History navigation                                        |
 | `canUndo()` / `canRedo()`                               | History stack state                                       |
@@ -318,6 +320,8 @@ store.test.ts                  — AdrawStore snapshots, slice reuse, readiness 
 update-element.test.ts         — partial element patches, derived-field checks, groups, batches
 element-flags.test.ts          — lock/visibility flags, group inheritance, selection clamping
 batch.test.ts                  — checkpoint coalescing, nested batches, error semantics
+duplicate.test.ts              — cloning, group/binding remap, offsets and history
+nudge.test.ts                  — element/group moves, bound text, arrow bindings
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

@@ -4,17 +4,23 @@ export interface ShortcutActions {
   copy: () => void
   cut: () => void
   deleteSelected: () => void
+  duplicate: () => void
   /** Leave the entered group one level, or clear the selection at the top. */
   escapeSelection: () => void
   getIsToolLocked: () => boolean
   group: () => void
+  hasSelection: () => boolean
+  nudgeSelection: (dx: number, dy: number) => void
   paste: () => void
   redo: () => boolean
+  resetZoom: () => void
   selectAll: () => void
   setActiveTool: (tool: ToolType) => void
   setIsToolLocked: (locked: boolean) => void
   undo: () => boolean
   ungroup: () => void
+  zoomIn: () => void
+  zoomOut: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -60,6 +66,18 @@ export function handleShortcutKey(
     } else if (key === "v") {
       event.preventDefault()
       actions.paste()
+    } else if (key === "d") {
+      event.preventDefault()
+      actions.duplicate()
+    } else if (key === "=" || key === "+") {
+      event.preventDefault()
+      actions.zoomIn()
+    } else if (key === "-" || key === "_") {
+      event.preventDefault()
+      actions.zoomOut()
+    } else if (key === "0") {
+      event.preventDefault()
+      actions.resetZoom()
     } else if (key === "g") {
       event.preventDefault()
       if (event.shiftKey) {
@@ -69,7 +87,36 @@ export function handleShortcutKey(
       }
     }
   } else {
+    const step = event.shiftKey ? 10 : 1
     switch (key) {
+      case "arrowup": {
+        if (actions.hasSelection()) {
+          event.preventDefault()
+          actions.nudgeSelection(0, -step)
+        }
+        break
+      }
+      case "arrowdown": {
+        if (actions.hasSelection()) {
+          event.preventDefault()
+          actions.nudgeSelection(0, step)
+        }
+        break
+      }
+      case "arrowleft": {
+        if (actions.hasSelection()) {
+          event.preventDefault()
+          actions.nudgeSelection(-step, 0)
+        }
+        break
+      }
+      case "arrowright": {
+        if (actions.hasSelection()) {
+          event.preventDefault()
+          actions.nudgeSelection(step, 0)
+        }
+        break
+      }
       case "v": {
         actions.setActiveTool("select")
         break

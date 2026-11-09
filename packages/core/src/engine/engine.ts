@@ -1,8 +1,10 @@
+import { detachArrowsOutsideSelection } from "../arrow-bindings"
 import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import {
   collectSubtreeIds,
   createGroupIndex,
+  getAffectedIds,
   getContextChain,
   getLeafDescendantIds,
   groupSelection,
@@ -64,6 +66,7 @@ import {
   ClipboardManager,
   cloneElementDeep,
   collectClipboardElements,
+  createClonedElements,
   createPastedElements,
 } from "./clipboard"
 import { createMediaElements } from "./media"
@@ -74,6 +77,7 @@ import { notifyState, runStateOperation } from "./state-notifier"
 import { applyStyleToElement, getElementStyle } from "./style"
 import {
   applyElementPatch,
+  translateElement,
   validateElementPatch,
   type ElementPatch,
   type ElementUpdate,
@@ -1813,6 +1817,152 @@ export class CanvasEngine {
       }
       return copied
     })
+  }
+
+  /**
+   * Duplicate elements with fresh ids.
+   *
+   * Defaults to the current selection and includes group descendants and bound
+   * text. Group references, bound-text containers and arrow bindings are
+   * remapped to the clones; bindings to elements outside the duplicated set are
+   * dropped. Clones are offset by 20,20 unless `offset` is provided, stack above
+   * the existing content, become the selection, and the whole call is one undo
+   * step unless `{ history: false }` is passed.
+   *
+   * @param ids Element id or iterable of ids; defaults to the current selection.
+   * @param options `{ offset, history }`.
+   * @returns The cloned elements.
+   * @example
+   * ```ts
+   * canvas.duplicate()
+   * canvas.duplicate("rect-1", { offset: { x: 10, y: 0 } })
+   * ```
+   */
+  duplicate(
+    ids?: ElementId | Iterable<ElementId>,
+    options: { offset?: Point; history?: boolean } = {},
+  ): CanvasElement[] {
+    return runStateOperation(this, () => {
+      const sourceIds =
+        ids === undefined
+          ? this.scene.getSelectedIds()
+          : new Set(normalizeIds(ids))
+      const source = collectClipboardElements(
+        this.scene.getElements(),
+        sourceIds,
+      )
+      if (source.length === 0) {
+        return []
+      }
+
+      const offset = options.offset ?? { x: 20, y: 20 }
+      if (!Number.isFinite(offset.x) || !Number.isFinite(offset.y)) {
+        throw new RangeError("duplicate: offset must contain finite numbers")
+      }
+
+      const clones = createClonedElements(
+        source,
+        offset,
+        getNextZIndex(this.scene.getElements().values()),
+      )
+      const change = this.commitSceneWithHistory((draft) => {
+        for (const clone of clones) {
+          draft.elements.set(clone.id, clone)
+        }
+        draft.selectedIds = new Set(clones.map((element) => element.id))
+      }, options.history)
+
+      // Duplicated elements are top-level until explicitly grouped.
+      this.groupContextId = null
+      this.publishSceneChange(change)
+      return clones
+    })
+  }
+
+  /**
+   * Move elements by a delta.
+   *
+   * Defaults to the current selection. Groups move their whole subtree; paths
+   * translate their points; lines and arrows translate their endpoints; bound
+   * text follows its container. Arrow bindings whose targets are outside the
+   * moving set detach like a direct drag. One history checkpoint unless
+   * `{ history: false }` is passed.
+   *
+   * @param ids Element id or iterable of ids; defaults to the current selection.
+   * @param delta Translation in canvas units.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targeted elements after the move.
+   */
+  nudge(
+    ids: ElementId | Iterable<ElementId> | undefined,
+    delta: Point,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    if (!Number.isFinite(delta.x) || !Number.isFinite(delta.y)) {
+      throw new RangeError("nudge: delta must contain finite numbers")
+    }
+    if (delta.x === 0 && delta.y === 0) {
+      return []
+    }
+
+    return runStateOperation(this, () => {
+      const elements = this.scene.getElements()
+      const selected =
+        ids === undefined
+          ? this.scene.getSelectedIds()
+          : new Set(normalizeIds(ids))
+      const targets = [...selected].filter((id) => elements.has(id))
+      if (targets.length === 0) {
+        return []
+      }
+
+      const index = createGroupIndex(elements)
+      const affected = getAffectedIds(index, targets)
+      const leaves = getLeafDescendantIds(index, targets)
+      const change = this.commitSceneWithHistory((draft) => {
+        detachArrowsOutsideSelection(draft.elements, affected)
+        for (const id of leaves) {
+          const element = draft.elements.get(id)
+          if (!element) {
+            continue
+          }
+          // Bound text follows its container; translating it here would be
+          // undone by the binding sync.
+          if (element.type === "text" && element.containerId) {
+            continue
+          }
+          draft.elements.set(id, translateElement(element, delta))
+        }
+      }, options.history)
+
+      this.publishSceneChange(change)
+
+      const next = this.scene.getElements()
+      const moved: CanvasElement[] = []
+      for (const id of targets) {
+        const element = next.get(id)
+        if (element) {
+          moved.push(element)
+        }
+      }
+      return moved
+    })
+  }
+
+  /**
+   * Nudge the current selection by a delta. Used by the arrow-key shortcuts.
+   * @internal
+   */
+  nudgeSelection(dx: number, dy: number): void {
+    this.nudge(undefined, { x: dx, y: dy })
+  }
+
+  /**
+   * Whether the canvas has a non-empty selection.
+   * @internal
+   */
+  hasSelection(): boolean {
+    return this.scene.getSelectedIds().size > 0
   }
 
   // Paste the clipboard centered on `at`, defaulting to the last pointer

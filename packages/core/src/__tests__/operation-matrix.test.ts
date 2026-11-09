@@ -158,6 +158,32 @@ const operations: OperationCase[] = [
   {
     expectedKinds: ["elements", "history", "selection"],
     expectedSnapshots: 1,
+    name: "duplicate",
+    run: (canvas) => canvas.duplicate(),
+    setup: addSelectedRect,
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "duplicate no selection",
+    run: (canvas) => canvas.duplicate(),
+  },
+  {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "nudge",
+    run: (canvas) => canvas.nudge(undefined, { x: 1, y: 0 }),
+    setup: addSelectedRect,
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "nudge no selection",
+    run: (canvas) => canvas.nudge(undefined, { x: 1, y: 0 }),
+  },
+  {
+    expectedKinds: ["elements", "history", "selection"],
+    expectedSnapshots: 1,
     name: "setLocked",
     run: (canvas) => canvas.setLocked("a", true),
     setup: addSelectedRect,

@@ -687,7 +687,14 @@ function getPointsBounds(points: Point[]): {
   }
 }
 
-function translateElement(element: CanvasElement, delta: Point): CanvasElement {
+/**
+ * Translate an element's geometry by a delta.
+ * @internal
+ */
+export function translateElement(
+  element: CanvasElement,
+  delta: Point,
+): CanvasElement {
   if (element.type === "path") {
     return {
       ...element,

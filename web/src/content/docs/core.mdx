@@ -300,6 +300,8 @@ canvas.clearHistory() // current state becomes the new baseline
 Keyboard shortcuts are scoped to the canvas by default: the SVG is focusable and
 takes focus on pointer down, so shortcuts never leak into forms, dialogs or
 other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo,
+`Ctrl/Cmd+D` duplicates the selection, arrow keys nudge it (Shift moves 10px),
+`Ctrl/Cmd +`, `Ctrl/Cmd -` and `Ctrl/Cmd 0` zoom in, out and reset,
 `Ctrl/Cmd+G` groups the selection, `Ctrl/Cmd+Shift+G` ungroups it, and `Escape`
 steps out of an entered group before clearing the selection.
 
@@ -443,12 +445,20 @@ canvas.copy() // snapshot the selection (group children included)
 canvas.cut() // copy, then delete the selection
 canvas.paste() // paste clones centered on the pointer
 canvas.paste({ x: 120, y: 80 }) // …or on an explicit canvas point
+canvas.duplicate() // clone the selection offset by 20,20
+canvas.duplicate("rect-1", { offset: { x: 10, y: 0 } })
 ```
 
 `Ctrl/Cmd+C`, `Ctrl/Cmd+X`, and `Ctrl/Cmd+V` map to the same operations.
 Pasted elements get new IDs (group references are remapped), are selected, and
 the paste is a single undo step. Without a pointer position, paste falls back to
 the viewport center.
+
+`duplicate()` clones the selection without touching the clipboard. Clones get
+fresh IDs, group children and bound-text containers are remapped, and arrow
+bindings to targets inside the duplicated set are remapped; bindings to targets
+outside it are dropped. The clones stack above the existing content, become the
+selection, and the whole call is one undo step.
 
 The clipboard is an in-memory buffer per canvas. Use
 `serializeClipboard()` / `deserializeClipboard(text)` to bridge it to the system
