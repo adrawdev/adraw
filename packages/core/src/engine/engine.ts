@@ -1,6 +1,7 @@
 import { detachArrowsOutsideSelection } from "../arrow-bindings"
 import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
+import { AdrawError } from "../errors"
 import {
   collectSubtreeIds,
   createGroupIndex,
@@ -116,8 +117,13 @@ function normalizeUpdates(
     return [...updates].map(([id, patch]) => ({ id, patch }))
   }
   if (!Array.isArray(updates)) {
-    throw new TypeError(
+    throw new AdrawError(
+      "invalid-argument",
       "updateElements: expected an array of updates or a Map of ids to patches",
+      {
+        details: { argument: "updates" },
+        hint: "Pass an array of { id, patch } entries or a Map.",
+      },
     )
   }
   return [...updates]
@@ -660,7 +666,14 @@ export class CanvasEngine {
         return []
       }
       if (options.zIndex !== undefined && !Number.isFinite(options.zIndex)) {
-        throw new RangeError("insertMedia: zIndex must be a finite number")
+        throw new AdrawError(
+          "invalid-z-index",
+          "insertMedia: zIndex must be a finite number",
+          {
+            details: { method: "insertMedia", zIndex: options.zIndex },
+            hint: "Use a finite number.",
+          },
+        )
       }
 
       const elements = createMediaElements(
@@ -772,13 +785,27 @@ export class CanvasEngine {
       const seen = new Set<ElementId>()
       for (const entry of entries) {
         if (!entry || typeof entry.id !== "string") {
-          throw new TypeError(
+          throw new AdrawError(
+            "invalid-argument",
             "updateElements: every update needs a string element id",
+            {
+              details: { argument: "id", value: entry?.id },
+              hint: "Pass { id, patch } entries with a string id.",
+            },
           )
         }
         if (seen.has(entry.id)) {
-          throw new TypeError(
+          throw new AdrawError(
+            "invalid-argument",
             `updateElements: duplicate update for "${entry.id}"`,
+            {
+              details: {
+                argument: "updates",
+                id: entry.id,
+                reason: "duplicate-id",
+              },
+              hint: "Merge the patches for repeated ids.",
+            },
           )
         }
         seen.add(entry.id)
@@ -1108,8 +1135,17 @@ export class CanvasEngine {
           element.containerId !== undefined
         ) {
           const flagName = flag === "locked" ? "lock state" : "visibility"
-          throw new TypeError(
+          throw new AdrawError(
+            "derived-field",
             `Bound text ${flagName} is derived from its container; set it on the container instead`,
+            {
+              details: {
+                elementType: "text",
+                field: flag,
+                reason: "bound-text",
+              },
+              hint: "Set the flag on the container instead.",
+            },
           )
         }
         applicable.push(id)
@@ -1670,7 +1706,14 @@ export class CanvasEngine {
     try {
       const result = fn()
       if (isPromiseLike(result)) {
-        throw new TypeError("batch: callback must be synchronous")
+        throw new AdrawError(
+          "async-callback",
+          "batch: callback must be synchronous",
+          {
+            details: { method: "batch" },
+            hint: "Use a synchronous callback and await outside batch().",
+          },
+        )
       }
       return result
     } finally {
@@ -1925,7 +1968,14 @@ export class CanvasEngine {
 
       const offset = options.offset ?? { x: 20, y: 20 }
       if (!Number.isFinite(offset.x) || !Number.isFinite(offset.y)) {
-        throw new RangeError("duplicate: offset must contain finite numbers")
+        throw new AdrawError(
+          "invalid-option",
+          "duplicate: offset must contain finite numbers",
+          {
+            details: { option: "offset", value: offset },
+            hint: "Pass { x, y } with finite numbers.",
+          },
+        )
       }
 
       const clones = createClonedElements(
@@ -1967,7 +2017,14 @@ export class CanvasEngine {
     options: { history?: boolean } = {},
   ): CanvasElement[] {
     if (!Number.isFinite(delta.x) || !Number.isFinite(delta.y)) {
-      throw new RangeError("nudge: delta must contain finite numbers")
+      throw new AdrawError(
+        "invalid-option",
+        "nudge: delta must contain finite numbers",
+        {
+          details: { option: "delta", value: delta },
+          hint: "Pass { x, y } with finite numbers.",
+        },
+      )
     }
     if (delta.x === 0 && delta.y === 0) {
       return []
@@ -2043,7 +2100,14 @@ export class CanvasEngine {
     options: { history?: boolean } = {},
   ): CanvasElement[] {
     if (!ALIGNMENTS.has(alignment)) {
-      throw new TypeError(`align: unknown alignment "${alignment}"`)
+      throw new AdrawError(
+        "unknown-alignment",
+        `align: unknown alignment "${alignment}"`,
+        {
+          details: { alignment },
+          hint: "Use left, center, right, top, middle or bottom.",
+        },
+      )
     }
 
     return this.transformTargets(ids, options, (targets) => {
@@ -2112,7 +2176,14 @@ export class CanvasEngine {
     options: { history?: boolean } = {},
   ): CanvasElement[] {
     if (!DISTRIBUTE_AXES.has(axis)) {
-      throw new TypeError(`distribute: unknown axis "${axis}"`)
+      throw new AdrawError(
+        "unknown-axis",
+        `distribute: unknown axis "${axis}"`,
+        {
+          details: { axis },
+          hint: "Use horizontal or vertical.",
+        },
+      )
     }
 
     return this.transformTargets(ids, options, (targets) => {

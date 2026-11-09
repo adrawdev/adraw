@@ -1,3 +1,4 @@
+import { AdrawError } from "../errors"
 import type { CanvasElement, ElementId } from "../types"
 
 type ElementMap = Map<ElementId, CanvasElement>
@@ -156,7 +157,14 @@ export function setElementZIndex(
   zIndex: number,
 ): ElementMap | null {
   if (!Number.isFinite(zIndex)) {
-    throw new RangeError("setZIndex: zIndex must be a finite number")
+    throw new AdrawError(
+      "invalid-z-index",
+      "setZIndex: zIndex must be a finite number",
+      {
+        details: { method: "setZIndex", zIndex },
+        hint: "Use a finite number.",
+      },
+    )
   }
 
   const element = elements.get(id)

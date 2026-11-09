@@ -1,4 +1,5 @@
 import { isBindableElement } from "../arrow-bindings"
+import { AdrawError, type AdrawErrorCode } from "../errors"
 import {
   createGroupIndex,
   getLeafDescendantIds,
@@ -176,6 +177,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+// Throw a structured public API error with optional details and remediation.
+function fail(
+  code: AdrawErrorCode,
+  message: string,
+  details?: Record<string, unknown>,
+  hint?: string,
+): never {
+  throw new AdrawError(code, message, { details, hint })
+}
+
 function sameValue(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) {
     return true
@@ -226,14 +237,29 @@ function assertFiniteNumber(
   value: unknown,
   field: string,
 ): asserts value is number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`updateElement: "${field}" must be a finite number`)
+  if (typeof value !== "number") {
+    fail(
+      "invalid-field-type",
+      `updateElement: "${field}" must be a finite number`,
+      { expected: "number", field, value },
+    )
+  }
+  if (!Number.isFinite(value)) {
+    fail(
+      "invalid-field-value",
+      `updateElement: "${field}" must be a finite number`,
+      { field, reason: "non-finite", value },
+    )
   }
 }
 
 function assertString(value: unknown, field: string): asserts value is string {
   if (typeof value !== "string") {
-    throw new TypeError(`updateElement: "${field}" must be a string`)
+    fail("invalid-field-type", `updateElement: "${field}" must be a string`, {
+      expected: "string",
+      field,
+      value,
+    })
   }
 }
 
@@ -242,7 +268,11 @@ function assertBoolean(
   field: string,
 ): asserts value is boolean {
   if (typeof value !== "boolean") {
-    throw new TypeError(`updateElement: "${field}" must be a boolean`)
+    fail("invalid-field-type", `updateElement: "${field}" must be a boolean`, {
+      expected: "boolean",
+      field,
+      value,
+    })
   }
 }
 
@@ -305,20 +335,31 @@ function validateBinding(
     return
   }
   if (!isRecord(value)) {
-    throw new TypeError(
+    fail(
+      "invalid-field-type",
       `updateElement: "${field}" must be an ArrowBinding or null`,
+      { expected: "ArrowBinding | null", field, value },
     )
   }
   assertString(value.elementId, `${field}.elementId`)
   if (value.elementId === element.id) {
-    throw new TypeError(
+    fail(
+      "invalid-reference",
       `updateElement: "${field}" cannot bind an arrow to itself`,
+      { elementId: value.elementId, field, reason: "self" },
     )
   }
   const target = elements.get(value.elementId)
   if (!target || !isBindableElement(target)) {
-    throw new TypeError(
+    fail(
+      "invalid-reference",
       `updateElement: "${field}" target "${value.elementId}" does not exist or is not bindable`,
+      {
+        elementId: value.elementId,
+        field,
+        reason: "missing-or-not-bindable",
+      },
+      "Bind to an existing rectangle, ellipse, diamond, text, media or group.",
     )
   }
   if (value.focus !== undefined) {
@@ -331,9 +372,19 @@ function validateChildren(
   group: GroupElement,
   value: unknown,
 ): void {
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new TypeError(
+  if (!Array.isArray(value)) {
+    fail(
+      "invalid-field-type",
       'updateElement: "children" must be a non-empty array of element ids; use ungroup() to remove the group',
+      { expected: "string[]", field: "children", value },
+    )
+  }
+  if (value.length === 0) {
+    fail(
+      "invalid-field-value",
+      'updateElement: "children" must be a non-empty array of element ids; use ungroup() to remove the group',
+      { field: "children", reason: "empty" },
+      "Use ungroup() to remove the group.",
     )
   }
 
@@ -341,34 +392,53 @@ function validateChildren(
   const seen = new Set<ElementId>()
   for (const childId of value) {
     if (typeof childId !== "string" || childId.length === 0) {
-      throw new TypeError(
+      fail(
+        "invalid-field-type",
         'updateElement: "children" must contain element ids as strings',
+        { expected: "string", field: "children", value: childId },
       )
     }
     if (seen.has(childId)) {
-      throw new TypeError(
+      fail(
+        "invalid-field-value",
         `updateElement: "children" contains "${childId}" more than once`,
+        { elementId: childId, field: "children", reason: "duplicate" },
       )
     }
     seen.add(childId)
 
     if (childId === group.id) {
-      throw new TypeError("updateElement: a group cannot contain itself")
+      fail(
+        "invalid-reference",
+        "updateElement: a group cannot contain itself",
+        { elementId: childId, field: "children", reason: "self" },
+      )
     }
     if (!elements.has(childId)) {
-      throw new TypeError(
+      fail(
+        "invalid-reference",
         `updateElement: "children" references missing element "${childId}"`,
+        { elementId: childId, field: "children", reason: "missing" },
       )
     }
     const parent = index.parentById.get(childId)
     if (parent && parent !== group.id) {
-      throw new TypeError(
+      fail(
+        "invalid-reference",
         `updateElement: "${childId}" already belongs to group "${parent}"`,
+        {
+          elementId: childId,
+          field: "children",
+          parentId: parent,
+          reason: "already-parented",
+        },
       )
     }
     if (isAncestor(index, group.id, childId)) {
-      throw new TypeError(
+      fail(
+        "invalid-reference",
         `updateElement: "${childId}" is an ancestor of the group`,
+        { elementId: childId, field: "children", reason: "cycle" },
       )
     }
   }
@@ -403,7 +473,15 @@ function validateField(
           field === "padding") &&
         value < 0
       ) {
-        throw new RangeError(`updateElement: "${field}" cannot be negative`)
+        fail(
+          "invalid-field-value",
+          `updateElement: "${field}" cannot be negative`,
+          {
+            field,
+            reason: "negative",
+            value,
+          },
+        )
       }
       if (
         (field === "fontSize" ||
@@ -412,7 +490,11 @@ function validateField(
           field === "naturalHeight") &&
         value <= 0
       ) {
-        throw new RangeError(`updateElement: "${field}" must be greater than 0`)
+        fail(
+          "invalid-field-value",
+          `updateElement: "${field}" must be greater than 0`,
+          { field, reason: "not-positive", value },
+        )
       }
       break
     }
@@ -420,22 +502,37 @@ function validateField(
     case "height": {
       assertFiniteNumber(value, field)
       if (value < 1) {
-        throw new RangeError(`updateElement: "${field}" must be at least 1`)
+        fail(
+          "invalid-field-value",
+          `updateElement: "${field}" must be at least 1`,
+          {
+            field,
+            min: 1,
+            reason: "min",
+            value,
+          },
+        )
       }
       break
     }
     case "opacity": {
       assertFiniteNumber(value, field)
       if (value < 0 || value > 1) {
-        throw new RangeError('updateElement: "opacity" must be between 0 and 1')
+        fail(
+          "invalid-field-value",
+          'updateElement: "opacity" must be between 0 and 1',
+          { field, max: 1, min: 0, reason: "range", value },
+        )
       }
       break
     }
     case "smoothing": {
       assertFiniteNumber(value, field)
       if (value < 0 || value > 1) {
-        throw new RangeError(
+        fail(
+          "invalid-field-value",
           'updateElement: "smoothing" must be between 0 and 1',
+          { field, max: 1, min: 0, reason: "range", value },
         )
       }
       break
@@ -446,8 +543,10 @@ function validateField(
       }
       assertFiniteNumber(value, field)
       if (value < 0 || value > 1) {
-        throw new RangeError(
+        fail(
+          "invalid-field-value",
           'updateElement: "labelPosition" must be between 0 and 1 or null',
+          { field, max: 1, min: 0, reason: "range", value },
         )
       }
       break
@@ -458,8 +557,10 @@ function validateField(
       }
       assertFiniteNumber(value, field)
       if (value <= 0) {
-        throw new RangeError(
+        fail(
+          "invalid-field-value",
           'updateElement: "wrapWidth" must be greater than 0 or null',
+          { field, reason: "not-positive", value },
         )
       }
       break
@@ -483,8 +584,15 @@ function validateField(
     }
     case "textAlign": {
       if (value !== "left" && value !== "center" && value !== "right") {
-        throw new TypeError(
+        fail(
+          "invalid-field-value",
           'updateElement: "textAlign" must be "left", "center" or "right"',
+          {
+            allowed: ["left", "center", "right"],
+            field,
+            reason: "enum",
+            value,
+          },
         )
       }
       break
@@ -494,27 +602,53 @@ function validateField(
         break
       }
       assertString(value, field)
-      const target = elements.get(value)
-      if (!target || !isBoundTextContainer(target)) {
-        throw new TypeError(
-          `updateElement: "containerId" target "${value}" does not exist or cannot own bound text`,
+      if (value === element.id) {
+        fail(
+          "invalid-reference",
+          "updateElement: text cannot be bound to itself",
+          {
+            elementId: value,
+            field,
+            reason: "self",
+          },
         )
       }
-      if (value === element.id) {
-        throw new TypeError("updateElement: text cannot be bound to itself")
+      const target = elements.get(value)
+      if (!target || !isBoundTextContainer(target)) {
+        fail(
+          "invalid-reference",
+          `updateElement: "containerId" target "${value}" does not exist or cannot own bound text`,
+          { elementId: value, field, reason: "missing-or-not-container" },
+          "Use a rectangle, ellipse, diamond or arrow id.",
+        )
       }
       break
     }
     case "points": {
-      if (!Array.isArray(value) || value.length < 2) {
-        throw new TypeError(
+      if (!Array.isArray(value)) {
+        fail(
+          "invalid-field-type",
           'updateElement: "points" must contain at least two points',
+          {
+            expected: "Point[]",
+            field,
+            value,
+          },
+        )
+      }
+      if (value.length < 2) {
+        fail(
+          "invalid-field-value",
+          'updateElement: "points" must contain at least two points',
+          { field, min: 2, reason: "min-length", value },
         )
       }
       for (const [index, point] of value.entries()) {
         if (!isRecord(point)) {
-          throw new TypeError(
+          fail(
+            "invalid-field-type",
             `updateElement: "points[${index}]" must be an { x, y } object`,
+            { expected: "{ x, y }", field: `points[${index}]`, value: point },
           )
         }
         assertFiniteNumber(point.x, `points[${index}].x`)
@@ -532,7 +666,9 @@ function validateField(
       break
     }
     default: {
-      throw new TypeError(`updateElement: "${field}" is not a valid field`)
+      fail("unknown-field", `updateElement: "${field}" is not a valid field`, {
+        field,
+      })
     }
   }
 }
@@ -548,20 +684,38 @@ export function validateElementPatch(
   patch: ElementPatch,
 ): void {
   if (!isRecord(patch)) {
-    throw new TypeError("updateElement: patch must be an object")
+    fail("invalid-argument", "updateElement: patch must be an object", {
+      argument: "patch",
+    })
   }
   if ("id" in patch) {
-    throw new TypeError('updateElement: "id" cannot be patched')
+    fail(
+      "immutable-field",
+      'updateElement: "id" cannot be patched',
+      {
+        field: "id",
+      },
+      "Create a new element instead.",
+    )
   }
   if ("type" in patch) {
-    throw new TypeError('updateElement: "type" cannot be patched')
+    fail(
+      "immutable-field",
+      'updateElement: "type" cannot be patched',
+      {
+        field: "type",
+      },
+      "Create a new element instead.",
+    )
   }
 
   const allowed = FIELDS[element.type]
   for (const field of Object.keys(patch)) {
     if (!allowed.has(field)) {
-      throw new TypeError(
+      fail(
+        "unknown-field",
         `updateElement: "${field}" is not a valid field for a ${element.type} element`,
+        { elementType: element.type, field },
       )
     }
   }
@@ -570,8 +724,11 @@ export function validateElementPatch(
   if (willBeBound(element, patch)) {
     for (const field of Object.keys(patch)) {
       if (record[field] !== undefined && BOUND_TEXT_DERIVED.has(field)) {
-        throw new TypeError(
+        fail(
+          "derived-field",
           `updateElement: "${field}" is derived from the text's container; update the container instead`,
+          { elementType: "text", field, reason: "bound-text" },
+          "Update the container instead.",
         )
       }
     }
@@ -581,7 +738,10 @@ export function validateElementPatch(
   if (derived) {
     for (const field of Object.keys(patch)) {
       if (record[field] !== undefined && derived.has(field)) {
-        throw new TypeError(derivedMessage(element, field))
+        fail("derived-field", derivedMessage(element, field), {
+          elementType: element.type,
+          field,
+        })
       }
     }
   }
@@ -591,8 +751,11 @@ export function validateElementPatch(
     record.width !== undefined &&
     record.autoSize === true
   ) {
-    throw new TypeError(
+    fail(
+      "invalid-field-value",
       'updateElement: "width" cannot be combined with "autoSize: true"',
+      { conflictsWith: "autoSize", field: "width", reason: "conflict" },
+      "Omit autoSize or width.",
     )
   }
 

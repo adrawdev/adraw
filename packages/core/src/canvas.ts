@@ -17,6 +17,7 @@ import {
   dispatchPointerUpAt,
 } from "./engine/internal"
 import { notifyState, runStateOperation } from "./engine/state-notifier"
+import { AdrawError } from "./errors"
 import type { AdrawCanvasOptions, ToImageOptions } from "./options"
 
 export type {
@@ -201,7 +202,10 @@ export class AdrawCanvas extends CanvasEngine {
    */
   async toImage(options: ToImageOptions = {}): Promise<Blob> {
     if (!this.mounted) {
-      throw new Error("toImage requires a mounted canvas")
+      throw new AdrawError("not-mounted", "toImage requires a mounted canvas", {
+        details: { method: "toImage" },
+        hint: "Mount the canvas with canvas.mount(container) first.",
+      })
     }
     return toImage(this.mounted.state, this, options)
   }

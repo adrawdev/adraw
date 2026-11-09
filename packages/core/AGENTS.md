@@ -39,6 +39,7 @@ src/
   groups.ts          group hierarchy, bounds sync, selection levels, group/ungroup math
   style.ts           style types and global defaults
   store.ts           AdrawStore / AdrawSnapshot: state snapshots for adapters
+  errors.ts          AdrawError / ADRAW_ERROR_CODES: stable public error codes
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, notifier, getToolContext, public API, @internal accessors
     scene.ts         Scene: elements, selection, history, binding sync, atomic commits
@@ -79,7 +80,7 @@ src/
 
 Rules: `dom/*` and `engine/*` never import each other cyclically. `engine/internal.ts` and `engine/pointer.ts` type against `CanvasEngine`; the engine stays DOM-free, and the adapter subscribes to the internal state notifier and renders.
 
-Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own), `AdrawStore` / `AdrawSnapshot` (adapter-facing state), and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
+Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own), `AdrawStore` / `AdrawSnapshot` (adapter-facing state), `AdrawError` / `ADRAW_ERROR_CODES` (structured public errors), and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
 
 ### Key methods
 
@@ -325,6 +326,7 @@ batch.test.ts                  — checkpoint coalescing, nested batches, error 
 duplicate.test.ts              — cloning, group/binding remap, offsets and history
 nudge.test.ts                  — element/group moves, bound text, arrow bindings
 align-distribute.test.ts       — six alignments, spacing, groups, locked/hidden rules
+errors.test.ts                 — AdrawError metadata and codes across the public API
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

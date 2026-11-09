@@ -1,6 +1,7 @@
 export * from "./canvas"
 export * from "./coordinates"
 export * from "./elements"
+export * from "./errors"
 export { CanvasEngine } from "./engine/engine"
 export {
   type ElementPatch,

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { createGroup, createRectangle } from "../elements"
+import { AdrawError } from "../errors"
 import { AdrawStore } from "../store"
 import type { RectangleElement } from "../types"
 
@@ -181,7 +182,7 @@ describe("setZIndex", () => {
     const canvas = new AdrawCanvas()
     canvas.addElement(makeRect("a", 3))
 
-    expect(() => canvas.setZIndex("a", Number.NaN)).toThrow(RangeError)
+    expect(() => canvas.setZIndex("a", Number.NaN)).toThrow(AdrawError)
   })
 })
 
@@ -207,7 +208,7 @@ describe("insertMedia z-index", () => {
       canvas.insertMedia(mediaDescriptor(), {
         zIndex: Number.POSITIVE_INFINITY,
       }),
-    ).toThrow(RangeError)
+    ).toThrow(AdrawError)
   })
 
   it("keeps a base image below existing annotations", () => {

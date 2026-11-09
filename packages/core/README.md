@@ -467,6 +467,44 @@ does not prevent later listeners from receiving the same snapshot.
 Pass `onReady` to `new AdrawStore(canvas, { onReady })` to run DOM-dependent
 setup once the canvas is mounted.
 
+## Errors
+
+Public API validation failures throw `AdrawError` instead of plain
+`TypeError` / `RangeError`. It carries a stable `code`, an optional `hint`,
+structured `details` and an optional `cause`:
+
+```ts
+import { AdrawError } from "@adraw/core"
+
+try {
+  canvas.updateElement("rect-1", { width: 0 })
+} catch (error) {
+  if (error instanceof AdrawError) {
+    console.log(error.code) // "invalid-field-value"
+    console.log(error.hint) // remediation hint
+    console.log(error.details) // { field: "width", min: 1, reason: "min", value: 0 }
+  }
+}
+```
+
+| Code                  | Meaning                                                                        |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `not-mounted`         | The operation needs a mounted DOM adapter.                                     |
+| `async-callback`      | A synchronous callback received a Promise.                                     |
+| `invalid-argument`    | An argument has the wrong shape.                                               |
+| `invalid-option`      | An option value is invalid.                                                    |
+| `immutable-field`     | A patch tried to change `id` or `type`.                                        |
+| `derived-field`       | A patch tried to change a derived field.                                       |
+| `unknown-field`       | A patch contains a field the element type does not own.                        |
+| `invalid-field-type`  | A field or option has the wrong primitive type.                                |
+| `invalid-field-value` | A field value is out of range or otherwise invalid.                            |
+| `invalid-reference`   | A referenced element is missing, invalid, self-referential or creates a cycle. |
+| `invalid-z-index`     | A z-index is not a finite number.                                              |
+| `unknown-alignment`   | `align()` received an unknown alignment.                                       |
+| `unknown-axis`        | `distribute()` received an unknown axis.                                       |
+
+`ADRAW_ERROR_CODES` exports the complete list for validation and agent tooling.
+
 ## Snapping
 
 Elements snap to other elements' edges and centers while moving, resizing or
