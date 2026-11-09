@@ -128,4 +128,6 @@ Detailed scaffolding, lifecycle, framework-specific exceptions, and verification
 
 - PR titles: `[package-name] Brief description`.
 - Add or update tests for changed code, and add a Changeset for any published package change (`examples/*` and `web` are ignored by Changesets).
+- Read [`docs/API_STABILITY.md`](docs/API_STABILITY.md) before changing a public API. Breaking changes need a migration guide and the correct changeset bump; public surface changes update [`docs/PUBLIC_API.md`](docs/PUBLIC_API.md).
+- Deprecated APIs use `@deprecated` JSDoc with a replacement and removal target.
 - Versioning, publishing, and tag-push steps are in `.agents/skills/adraw-release/SKILL.md`. Don't run `ci:version` or `ci:release` unless explicitly asked.

@@ -138,6 +138,8 @@ Vue, Svelte, Solid, Angular, and Web Components follow the same pattern: provide
 
 - [Core guide](packages/core/README.md) — canvas API, tools, state, history, export, and more.
 - [Roadmap](docs/ROADMAP.md) — impact/effort plan for the lightweight engine and agent surface.
+- [API stability](docs/API_STABILITY.md) — versioning, deprecation and breaking-change policy.
+- [Public API inventory](docs/PUBLIC_API.md) — the supported surface of every package.
 - Framework guides: [React](packages/react/README.md), [Vue](packages/vue/README.md), [Svelte](packages/svelte/README.md), [Solid](packages/solid/README.md), [Angular](packages/angular/README.md), [Web Components](packages/web-components/README.md).
 - [Examples](examples) — runnable Vite apps for every adapter.
 - [Glossary](GLOSSARY.md) — project vocabulary used in code and docs.
