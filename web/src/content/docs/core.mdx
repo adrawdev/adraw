@@ -414,6 +414,25 @@ text. Both methods record one history checkpoint unless `{ history: false }` is
 passed. Arrow bindings to hidden targets keep resolving from the target
 geometry.
 
+## Align and distribute
+
+```ts
+canvas.align(["rect-1", "rect-2"], "left")
+canvas.align(undefined, "middle") // current selection
+canvas.distribute(["rect-1", "rect-2", "rect-3"], "horizontal")
+```
+
+`align` accepts `left`, `center`, `right`, `top`, `middle` and `bottom` and
+aligns to the combined bounds of the targets. `distribute` accepts `horizontal`
+and `vertical`: the first and last targets stay fixed and the gaps between all
+targets are equalized.
+
+Bound text follows its container and is not an independent target. Locked or
+hidden elements are skipped, so they neither move nor contribute to the
+alignment bounds. Groups move as a unit, and arrow bindings whose targets stay
+outside the moving set detach like a direct drag. Both methods record one history
+checkpoint unless `{ history: false }` is passed.
+
 ## Z-order
 
 Elements render in ascending `zIndex` — higher values sit on top. Newly drawn

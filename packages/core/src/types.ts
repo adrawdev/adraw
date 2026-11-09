@@ -381,6 +381,23 @@ export interface CanvasDocument {
 }
 
 /**
+ * Edge or center used when aligning a selection. `center` and `middle` refer to
+ * the horizontal and vertical centers of the combined bounds.
+ */
+export type Alignment =
+  | "left"
+  | "center"
+  | "right"
+  | "top"
+  | "middle"
+  | "bottom"
+
+/**
+ * Axis used when distributing a selection evenly.
+ */
+export type DistributeAxis = "horizontal" | "vertical"
+
+/**
  * Anchor position used when resizing an element.
  */
 export type ResizeAnchor =

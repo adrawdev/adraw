@@ -13,6 +13,7 @@ import {
   resolveContextChain,
   syncGroupState,
   ungroupSelection,
+  type GroupIndex,
 } from "../groups"
 import { getNoteMinHeight } from "../note"
 import type { CanvasOptions, KeyboardScope, MediaInput } from "../options"
@@ -41,8 +42,10 @@ import {
 } from "../tools"
 import { type Tool, type ToolContext } from "../tools/base"
 import type {
+  Alignment,
   CanvasDocument,
   CanvasElement,
+  DistributeAxis,
   ElementId,
   GroupElement,
   MediaElement,
@@ -130,6 +133,71 @@ function sameSelection(a: Set<ElementId>, b: Set<ElementId>): boolean {
     }
   }
   return true
+}
+
+const ALIGNMENTS = new Set<Alignment>([
+  "left",
+  "center",
+  "right",
+  "top",
+  "middle",
+  "bottom",
+])
+
+const DISTRIBUTE_AXES = new Set<DistributeAxis>(["horizontal", "vertical"])
+
+const TRANSFORM_EPSILON = 1e-9
+
+function isZeroDelta(delta: Point): boolean {
+  return (
+    Math.abs(delta.x) < TRANSFORM_EPSILON &&
+    Math.abs(delta.y) < TRANSFORM_EPSILON
+  )
+}
+
+function hasSelectedAncestor(
+  index: GroupIndex,
+  id: ElementId,
+  selected: Set<ElementId>,
+): boolean {
+  const seen = new Set<ElementId>()
+  let current = index.parentById.get(id)
+  while (current && !seen.has(current)) {
+    if (selected.has(current)) {
+      return true
+    }
+    seen.add(current)
+    current = index.parentById.get(current)
+  }
+  return false
+}
+
+function getCombinedBounds(targets: CanvasElement[]): {
+  bottom: number
+  height: number
+  left: number
+  right: number
+  top: number
+  width: number
+} {
+  let left = Infinity
+  let right = -Infinity
+  let top = Infinity
+  let bottom = -Infinity
+  for (const target of targets) {
+    left = Math.min(left, target.x)
+    right = Math.max(right, target.x + target.width)
+    top = Math.min(top, target.y)
+    bottom = Math.max(bottom, target.y + target.height)
+  }
+  return {
+    bottom,
+    height: bottom - top,
+    left,
+    right,
+    top,
+    width: right - left,
+  }
 }
 
 // Reduce several styles to the fields they all share with the same value.
@@ -1950,6 +2018,143 @@ export class CanvasEngine {
   }
 
   /**
+   * Align visible, unlocked elements to an edge or center of their combined
+   * bounds.
+   *
+   * Bound text follows its container and is not an independent target; locked
+   * or hidden elements are skipped and do not contribute to the bounds. Groups
+   * move as a unit. Arrow bindings whose targets stay outside the moving set
+   * detach like a direct drag. One history checkpoint is recorded unless
+   * `{ history: false }` is passed.
+   *
+   * @param ids Element id or iterable of ids; defaults to the current selection.
+   * @param alignment Edge or center to align to.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targets after alignment.
+   * @example
+   * ```ts
+   * canvas.align(["rect-1", "rect-2"], "left")
+   * canvas.align(undefined, "middle") // current selection
+   * ```
+   */
+  align(
+    ids: ElementId | Iterable<ElementId> | undefined,
+    alignment: Alignment,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    if (!ALIGNMENTS.has(alignment)) {
+      throw new TypeError(`align: unknown alignment "${alignment}"`)
+    }
+
+    return this.transformTargets(ids, options, (targets) => {
+      const deltas = new Map<ElementId, Point>()
+      if (targets.length < 2) {
+        return deltas
+      }
+
+      const bounds = getCombinedBounds(targets)
+      for (const target of targets) {
+        let x = 0
+        let y = 0
+        switch (alignment) {
+          case "left": {
+            x = bounds.left - target.x
+            break
+          }
+          case "center": {
+            x = bounds.left + bounds.width / 2 - (target.x + target.width / 2)
+            break
+          }
+          case "right": {
+            x = bounds.right - (target.x + target.width)
+            break
+          }
+          case "top": {
+            y = bounds.top - target.y
+            break
+          }
+          case "middle": {
+            y = bounds.top + bounds.height / 2 - (target.y + target.height / 2)
+            break
+          }
+          case "bottom": {
+            y = bounds.bottom - (target.y + target.height)
+            break
+          }
+        }
+        deltas.set(target.id, { x, y })
+      }
+      return deltas
+    })
+  }
+
+  /**
+   * Distribute three or more elements evenly along an axis.
+   *
+   * The first and last targets by center on the axis stay fixed and the gaps
+   * between all targets are equalized. Bound text follows its container and is
+   * not an independent target; locked or hidden elements are skipped. Groups
+   * move as a unit. One history checkpoint is recorded unless
+   * `{ history: false }` is passed.
+   *
+   * @param ids Element id or iterable of ids; defaults to the current selection.
+   * @param axis Axis to distribute along.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targets after distribution.
+   * @example
+   * ```ts
+   * canvas.distribute(["rect-1", "rect-2", "rect-3"], "horizontal")
+   * ```
+   */
+  distribute(
+    ids: ElementId | Iterable<ElementId> | undefined,
+    axis: DistributeAxis,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    if (!DISTRIBUTE_AXES.has(axis)) {
+      throw new TypeError(`distribute: unknown axis "${axis}"`)
+    }
+
+    return this.transformTargets(ids, options, (targets) => {
+      const deltas = new Map<ElementId, Point>()
+      if (targets.length < 3) {
+        return deltas
+      }
+
+      const sorted = targets.toSorted((a, b) => {
+        const aCenter =
+          axis === "horizontal" ? a.x + a.width / 2 : a.y + a.height / 2
+        const bCenter =
+          axis === "horizontal" ? b.x + b.width / 2 : b.y + b.height / 2
+        return aCenter - bCenter
+      })
+      const first = sorted[0]
+      const last = sorted[sorted.length - 1]
+      const start = axis === "horizontal" ? first.x : first.y
+      const end =
+        axis === "horizontal" ? last.x + last.width : last.y + last.height
+      const total = sorted.reduce(
+        (sum, target) =>
+          sum + (axis === "horizontal" ? target.width : target.height),
+        0,
+      )
+      const gap = (end - start - total) / (sorted.length - 1)
+
+      let cursor = start
+      for (const target of sorted) {
+        if (axis === "horizontal") {
+          deltas.set(target.id, { x: cursor - target.x, y: 0 })
+          cursor += target.width + gap
+        } else {
+          deltas.set(target.id, { x: 0, y: cursor - target.y })
+          cursor += target.height + gap
+        }
+      }
+      return deltas
+    })
+  }
+
+  /**
    * Nudge the current selection by a delta. Used by the arrow-key shortcuts.
    * @internal
    */
@@ -1963,6 +2168,111 @@ export class CanvasEngine {
    */
   hasSelection(): boolean {
     return this.scene.getSelectedIds().size > 0
+  }
+
+  private transformTargets(
+    ids: ElementId | Iterable<ElementId> | undefined,
+    options: { history?: boolean },
+    compute: (targets: CanvasElement[]) => Map<ElementId, Point>,
+  ): CanvasElement[] {
+    return runStateOperation(this, () => {
+      const elements = this.scene.getElements()
+      const { index, targets } = this.resolveTransformTargets(ids, elements)
+      if (targets.length === 0) {
+        return []
+      }
+
+      const deltas = compute(targets)
+      let changed = false
+      for (const delta of deltas.values()) {
+        if (!isZeroDelta(delta)) {
+          changed = true
+          break
+        }
+      }
+      if (!changed) {
+        return targets
+      }
+
+      const targetIds = targets.map((target) => target.id)
+      const affected = getAffectedIds(index, targetIds)
+      const change = this.commitSceneWithHistory((draft) => {
+        detachArrowsOutsideSelection(draft.elements, affected)
+        this.applyTargetDeltas(draft, targetIds, deltas, index)
+      }, options.history)
+
+      this.publishSceneChange(change)
+
+      const next = this.scene.getElements()
+      return targetIds
+        .map((id) => next.get(id))
+        .filter((element): element is CanvasElement => Boolean(element))
+    })
+  }
+
+  private resolveTransformTargets(
+    ids: ElementId | Iterable<ElementId> | undefined,
+    elements: Map<ElementId, CanvasElement>,
+  ): { index: GroupIndex; targets: CanvasElement[] } {
+    const selected =
+      ids === undefined
+        ? this.scene.getSelectedIds()
+        : new Set(normalizeIds(ids))
+    const index = createGroupIndex(elements)
+    const targets: CanvasElement[] = []
+    for (const id of selected) {
+      const element = elements.get(id)
+      if (!element) {
+        continue
+      }
+      if (!isEffectivelyVisible(index, id) || isEffectivelyLocked(index, id)) {
+        continue
+      }
+      // Bound text follows its container and is not independently movable.
+      if (element.type === "text" && element.containerId) {
+        continue
+      }
+      if (hasSelectedAncestor(index, id, selected)) {
+        continue
+      }
+      targets.push(element)
+    }
+    return { index, targets }
+  }
+
+  private applyTargetDeltas(
+    draft: SceneDraft,
+    targetIds: ElementId[],
+    deltas: Map<ElementId, Point>,
+    index: GroupIndex,
+  ): void {
+    for (const id of targetIds) {
+      const delta = deltas.get(id)
+      if (!delta || isZeroDelta(delta)) {
+        continue
+      }
+      const element = draft.elements.get(id)
+      if (!element) {
+        continue
+      }
+      if (element.type === "group") {
+        for (const leafId of getLeafDescendantIds(index, [id])) {
+          const leaf = draft.elements.get(leafId)
+          if (!leaf) {
+            continue
+          }
+          if (leaf.type === "text" && leaf.containerId) {
+            continue
+          }
+          draft.elements.set(leafId, translateElement(leaf, delta))
+        }
+      } else {
+        if (element.type === "text" && element.containerId) {
+          continue
+        }
+        draft.elements.set(id, translateElement(element, delta))
+      }
+    }
   }
 
   // Paste the clipboard centered on `at`, defaulting to the last pointer

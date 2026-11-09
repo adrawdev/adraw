@@ -182,6 +182,49 @@ const operations: OperationCase[] = [
     run: (canvas) => canvas.nudge(undefined, { x: 1, y: 0 }),
   },
   {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "align",
+    run: (canvas) => canvas.align(["a", "b"], "left"),
+    setup: (canvas) => {
+      addRect(canvas, "a", 0)
+      addRect(canvas, "b", 1)
+      canvas.updateElement("b", { x: 40 }, { history: false })
+      canvas.setSelectedIds(new Set(["a", "b"]))
+    },
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "align no-op",
+    run: (canvas) => canvas.align("a", "left"),
+    setup: (canvas) => addRect(canvas),
+  },
+  {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "distribute",
+    run: (canvas) => canvas.distribute(["a", "b", "c"], "horizontal"),
+    setup: (canvas) => {
+      addRect(canvas, "a", 0)
+      addRect(canvas, "b", 1)
+      addRect(canvas, "c", 2)
+      canvas.updateElement("b", { x: 20 }, { history: false })
+      canvas.updateElement("c", { x: 60 }, { history: false })
+      canvas.setSelectedIds(new Set(["a", "b", "c"]))
+    },
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "distribute no-op",
+    run: (canvas) => canvas.distribute(["a", "b"], "horizontal"),
+    setup: (canvas) => {
+      addRect(canvas, "a", 0)
+      addRect(canvas, "b", 1)
+    },
+  },
+  {
     expectedKinds: ["elements", "history", "selection"],
     expectedSnapshots: 1,
     name: "setLocked",

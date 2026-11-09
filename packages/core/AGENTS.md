@@ -107,6 +107,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
 | `duplicate(ids?, options?)`                             | Clone elements; groups, bound text and bindings remapped  |
 | `nudge(ids, delta, options?)`                           | Move elements; arrow-key shortcut uses the selection      |
+| `align(ids, alignment, options?)`                       | Align targets to the combined left/center/right/top/...   |
+| `distribute(ids, axis, options?)`                       | Equalize gaps along the horizontal or vertical axis       |
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text              |
 | `undo()` / `redo()`                                     | History navigation                                        |
 | `canUndo()` / `canRedo()`                               | History stack state                                       |
@@ -322,6 +324,7 @@ element-flags.test.ts          — lock/visibility flags, group inheritance, sel
 batch.test.ts                  — checkpoint coalescing, nested batches, error semantics
 duplicate.test.ts              — cloning, group/binding remap, offsets and history
 nudge.test.ts                  — element/group moves, bound text, arrow bindings
+align-distribute.test.ts       — six alignments, spacing, groups, locked/hidden rules
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry
