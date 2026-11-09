@@ -116,6 +116,18 @@ function normalizeUpdates(
   return [...updates]
 }
 
+function sameSelection(a: Set<ElementId>, b: Set<ElementId>): boolean {
+  if (a.size !== b.size) {
+    return false
+  }
+  for (const id of a) {
+    if (!b.has(id)) {
+      return false
+    }
+  }
+  return true
+}
+
 // Reduce several styles to the fields they all share with the same value.
 function getCommonStyle(styles: StyleOptions[]): StyleOptions {
   const first = styles[0]
@@ -1537,6 +1549,70 @@ export class CanvasEngine {
       notifyState(this, "history")
       return result
     })
+  }
+
+  /**
+   * Run several mutations as one undo step.
+   *
+   * The callback runs as one canvas operation: nested engine calls record no
+   * intermediate history checkpoints, and the store publishes one coherent
+   * snapshot when the outermost batch finishes. Nested `batch` calls join the
+   * outer batch. The callback must be synchronous.
+   *
+   * With `{ history: false }`, the batch records no checkpoint and folds its
+   * changes into existing checkpoints, like
+   * {@link CanvasEngine.withoutHistory}. This only applies to the outermost
+   * batch: a nested batch inherits the outer batch's history mode. If the
+   * callback throws, changes made so far stay on the canvas, are recorded as
+   * one checkpoint when history is enabled, and are published before the error
+   * is rethrown. There is no rollback.
+   *
+   * @param fn Callback containing the mutations.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The callback's return value.
+   * @example
+   * ```ts
+   * canvas.batch(() => {
+   *   const [rect] = canvas.addElement(rectangle)
+   *   canvas.updateElement(rect.id, { fillColor: "#ffd43b" })
+   *   canvas.setLocked(rect.id, true)
+   * })
+   * ```
+   */
+  batch<T>(fn: () => T, options: { history?: boolean } = {}): T {
+    return runStateOperation(this, () => {
+      if (options.history === false && !this.scene.isBatching()) {
+        return this.scene.withoutHistory(() => this.runBatch(fn))
+      }
+      return this.runBatch(fn)
+    })
+  }
+
+  // Run a synchronous callback with intermediate checkpoints suppressed and
+  // record one checkpoint for the outermost batch if anything observable
+  // changed. Errors still record the partial work so undo can revert it.
+  private runBatch<T>(fn: () => T): T {
+    const beforeElements = this.scene.getElements()
+    const beforeSelection = new Set(this.scene.getSelectedIds())
+    this.scene.beginBatch()
+    try {
+      const result = fn()
+      if (isPromiseLike(result)) {
+        throw new TypeError("batch: callback must be synchronous")
+      }
+      return result
+    } finally {
+      const isOuter = this.scene.endBatch()
+      if (isOuter) {
+        const selectionChanged = !sameSelection(
+          beforeSelection,
+          this.scene.getSelectedIds(),
+        )
+        if (this.scene.getElements() !== beforeElements || selectionChanged) {
+          this.publishSceneChange(this.scene.checkpoint())
+        }
+      }
+    }
   }
 
   /**

@@ -143,6 +143,7 @@ export class Scene {
   private selectedIds = new Set<ElementId>()
   private history: HistoryState
   private historySuppressionDepth = 0
+  private batchDepth = 0
   private committing = false
   private readonly getTextMeasurer: () => TextMeasurer
 
@@ -286,11 +287,11 @@ export class Scene {
 
   /**
    * Record the current state as an undo checkpoint. No-op while inside
-   * {@link Scene.withoutHistory}.
+   * {@link Scene.withoutHistory} or an open batch.
    */
   checkpoint(): SceneChange {
     this.assertNotCommitting()
-    if (this.historySuppressionDepth > 0) {
+    if (this.historySuppressionDepth > 0 || this.batchDepth > 0) {
       return this.noChange()
     }
     this.history = pushHistoryState(
@@ -303,6 +304,33 @@ export class Scene {
       historyChanged: true,
       selectionChanged: false,
     }
+  }
+
+  /**
+   * Start grouping history checkpoints into one outer batch.
+   * @internal
+   */
+  beginBatch(): void {
+    this.assertNotCommitting()
+    this.batchDepth += 1
+  }
+
+  /**
+   * Finish one batch level. Returns `true` when the outermost batch closed.
+   * @internal
+   */
+  endBatch(): boolean {
+    this.assertNotCommitting()
+    this.batchDepth = Math.max(0, this.batchDepth - 1)
+    return this.batchDepth === 0
+  }
+
+  /**
+   * Whether a history batch is currently open.
+   * @internal
+   */
+  isBatching(): boolean {
+    return this.batchDepth > 0
   }
 
   /**
@@ -428,7 +456,7 @@ export class Scene {
   }
 
   private maybeCheckpoint(history: boolean | undefined): boolean {
-    if (!history || this.historySuppressionDepth > 0) {
+    if (!history || this.historySuppressionDepth > 0 || this.batchDepth > 0) {
       return false
     }
     this.history = pushHistoryState(

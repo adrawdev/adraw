@@ -137,6 +137,25 @@ const operations: OperationCase[] = [
     run: (canvas) => canvas.updateElement("missing", { x: 10 }),
   },
   {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "batch",
+    run: (canvas) => {
+      canvas.batch(() => {
+        canvas.addElement(makeRect("a"))
+        canvas.addElement(makeRect("b", 1))
+      })
+    },
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "batch no-op",
+    run: (canvas) => {
+      canvas.batch(() => {})
+    },
+  },
+  {
     expectedKinds: ["elements", "history", "selection"],
     expectedSnapshots: 1,
     name: "setLocked",

@@ -235,6 +235,26 @@ canvas.insertMedia(image, { history: false })
 canvas.clearHistory() // make the loaded state the undo baseline
 ```
 
+### Batching mutations
+
+`batch(fn)` groups multiple mutations into one undo step and one store
+publication. Nested batches join the outer batch, and explicit checkpoints
+inside the callback are suppressed:
+
+```ts
+canvas.batch(() => {
+  const [rect] = canvas.addElement(rectangle)
+  canvas.updateElement(rect.id, { fillColor: "#ffd43b" })
+  canvas.setLocked(rect.id, true)
+})
+```
+
+The callback must be synchronous. With `{ history: false }`, the outermost batch
+records no checkpoint and folds its changes into existing checkpoints, like
+`withoutHistory`; nested batches inherit the outer batch's history mode. If the
+callback throws, the changes made so far remain on the canvas and are recorded
+as one checkpoint before the error is rethrown; there is no rollback.
+
 Keyboard shortcuts are scoped to the canvas by default: the SVG is focusable and
 takes focus on pointer down, so shortcuts never leak into forms, dialogs or
 other widgets on the page. `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) undo and redo,

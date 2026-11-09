@@ -108,6 +108,7 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text              |
 | `undo()` / `redo()`                                     | History navigation                                        |
 | `canUndo()` / `canRedo()`                               | History stack state                                       |
+| `batch(fn, options?)`                                   | Run mutations as one undo step and one publication        |
 | `pushHistory()`                                         | Record an explicit undo checkpoint                        |
 | `clearHistory()`                                        | Reset history with the current state as new baseline      |
 | `withoutHistory(fn)`                                    | Run `fn` without recording checkpoints                    |
@@ -276,6 +277,8 @@ File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the curre
 
 Programmatic changes can stay out of history: `addElement`, `insertMedia`, `updateElement`, `updateElements`, `setLocked`, `setVisible`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
 
+`batch(fn, { history })` groups multiple mutations into one undo step and one publication. Nested batches join the outer batch; explicit `pushHistory()` calls inside are suppressed. The callback must be synchronous. With `{ history: false }`, the outermost batch behaves like `withoutHistory`; nested batches inherit the outer history mode. If the callback throws, partial changes are kept and recorded as one checkpoint before the error propagates (no rollback).
+
 ## Clipboard
 
 `src/engine/clipboard.ts`. Each engine owns an in-memory `ClipboardManager`. `copy()`/`cut()` snapshot the selected elements — recursively including group children — and `paste(point?)` inserts fresh-ID clones (group references remapped) centered on `point`, defaulting to the last pointer position and then the viewport center. Pasting is a single undo step and selects the clones. `Ctrl/Cmd+C/X/V` map to the same operations. `serializeClipboard()` / `deserializeClipboard(text)` bridge the buffer to the system clipboard: the default format is an `{ type: "adraw/clipboard", version: 1, elements }` JSON envelope, replaceable via `new AdrawCanvas({ clipboard: { serialize, deserialize } })`.
@@ -314,6 +317,7 @@ scene.test.ts                  — atomic scene commits, history, binding sync, 
 store.test.ts                  — AdrawStore snapshots, slice reuse, readiness and disposal
 update-element.test.ts         — partial element patches, derived-field checks, groups, batches
 element-flags.test.ts          — lock/visibility flags, group inheritance, selection clamping
+batch.test.ts                  — checkpoint coalescing, nested batches, error semantics
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry
