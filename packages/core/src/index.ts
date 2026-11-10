@@ -1,5 +1,13 @@
 export * from "./canvas"
 export * from "./coordinates"
+export {
+  DOCUMENT_VERSION,
+  migrateDocument,
+  validateDocument,
+  type DocumentIssue,
+  type DocumentIssueCode,
+  type DocumentValidationResult,
+} from "./document"
 export * from "./elements"
 export * from "./errors"
 export { CanvasEngine } from "./engine/engine"

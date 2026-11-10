@@ -40,6 +40,7 @@ src/
   style.ts           style types and global defaults
   store.ts           AdrawStore / AdrawSnapshot: state snapshots for adapters
   errors.ts          AdrawError / ADRAW_ERROR_CODES: stable public error codes
+  document.ts        CanvasDocument validation, migrations and DOCUMENT_VERSION
   engine/            headless core (no DOM imports)
     engine.ts        CanvasEngine: state, notifier, getToolContext, public API, @internal accessors
     scene.ts         Scene: elements, selection, history, binding sync, atomic commits
@@ -80,7 +81,7 @@ src/
 
 Rules: `dom/*` and `engine/*` never import each other cyclically. `engine/internal.ts` and `engine/pointer.ts` type against `CanvasEngine`; the engine stays DOM-free, and the adapter subscribes to the internal state notifier and renders.
 
-Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own), `AdrawStore` / `AdrawSnapshot` (adapter-facing state), `AdrawError` / `ADRAW_ERROR_CODES` (structured public errors), and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
+Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine` (headless core, usable on its own), `AdrawStore` / `AdrawSnapshot` (adapter-facing state), `AdrawError` / `ADRAW_ERROR_CODES` (structured public errors), `validateDocument` / `migrateDocument` / `DOCUMENT_VERSION` (document contract), and the tool contracts `Tool` / `ToolContext` — exported because `AdrawCanvas extends CanvasEngine` puts them in the public class signature.
 
 ### Key methods
 
@@ -161,6 +162,9 @@ Passed to constructor as `CanvasOptions`:
 
 - `container?: HTMLElement`
 - `initialViewport?: ViewportState`
+- `initialElements?: CanvasElement[]`
+- `initialDocument?: CanvasDocument` — takes precedence over `initialElements` and seeds the history baseline
+- `validateDocuments?: boolean` — validate `initialDocument` and `loadDocument()` by default; `loadDocument` accepts a per-call `validate` override
 - `viewport?: Partial<ViewportConfig>` — `{ minZoom, maxZoom, zoomSensitivity, fitPadding, constrainToContent }`; applies to wheel zoom, `zoomIn`/`zoomOut`, `resetZoom`, `setViewport` and `zoomToFit`. `constrainToContent` clamps panning to the content and floors zoom at the last `zoomToFit()` level
 - `hideOverlayWhileTransforming?: boolean`
 - `isToolLocked?: boolean` — lock the rectangle/ellipse/diamond/line/arrow/text/note tool so it stays active after creating an element instead of switching to `select`; created elements are left unselected. Toggle at runtime with `setIsToolLocked()` / read with `getIsToolLocked()`, or press `Q` while the canvas is focused
@@ -327,6 +331,7 @@ duplicate.test.ts              — cloning, group/binding remap, offsets and his
 nudge.test.ts                  — element/group moves, bound text, arrow bindings
 align-distribute.test.ts       — six alignments, spacing, groups, locked/hidden rules
 errors.test.ts                 — AdrawError metadata and codes across the public API
+document-contract.test.ts      — schema/version validation, references, migrations
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

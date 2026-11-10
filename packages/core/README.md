@@ -269,6 +269,41 @@ new AdrawCanvas({ container, keyboard: "document" }) // anywhere on the page
 new AdrawCanvas({ container, keyboard: "none" }) // call canvas.handleKeyDown yourself
 ```
 
+## Documents
+
+`toDocument()` returns a serializable `CanvasDocument` with `version` and
+`elements`; selection and history are excluded. `loadDocument(doc)` replaces the
+current content.
+
+```ts
+const doc = canvas.toDocument()
+canvas.loadDocument(doc)
+```
+
+`DOCUMENT_VERSION` is the current schema version (currently `1`). Validate
+parsed documents with `validateDocument(value)`, which returns `{ valid, issues }`
+instead of throwing:
+
+```ts
+import { validateDocument } from "@adraw/core"
+
+const result = validateDocument(JSON.parse(json))
+if (!result.valid) console.log(result.issues)
+```
+
+Each issue has `path`, `code` and `message`. Validation rejects duplicate ids,
+malformed elements and numbers, dangling group/binding/bound-text references,
+shared group children and group cycles.
+
+Older documents can be migrated with `migrateDocument(value)`, which applies the
+pure migration registry and validates the result. Pass
+`validateDocuments: true` to `new AdrawCanvas()` to validate `initialDocument`
+and `loadDocument()` by default; `loadDocument(doc, { validate: true })`
+overrides per call and `validate: false` disables it.
+
+The JSON Schema for the document is published at
+[`@adraw/core/schema.json`](schema.json) (draft 2020-12).
+
 ## Selection
 
 ```ts
@@ -502,6 +537,9 @@ try {
 | `invalid-z-index`     | A z-index is not a finite number.                                              |
 | `unknown-alignment`   | `align()` received an unknown alignment.                                       |
 | `unknown-axis`        | `distribute()` received an unknown axis.                                       |
+| `invalid-document`    | A canvas document is malformed or failed validation.                           |
+| `unsupported-version` | A document version is newer than this package supports.                        |
+| `migration-missing`   | No migration path exists from the document version.                            |
 
 `ADRAW_ERROR_CODES` exports the complete list for validation and agent tooling.
 

@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adraw.dev/schema/canvas-document-v1.json",
+  "title": "adraw canvas document",
+  "description": "Serialized content of an adraw canvas. Selection and history are not included.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "elements"],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/rectangle" },
+          { "$ref": "#/$defs/ellipse" },
+          { "$ref": "#/$defs/diamond" },
+          { "$ref": "#/$defs/line" },
+          { "$ref": "#/$defs/arrow" },
+          { "$ref": "#/$defs/path" },
+          { "$ref": "#/$defs/media" },
+          { "$ref": "#/$defs/text" },
+          { "$ref": "#/$defs/note" },
+          { "$ref": "#/$defs/group" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "arrowBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elementId"],
+      "properties": {
+        "elementId": { "type": "string", "minLength": 1 },
+        "focus": { "type": "number" }
+      }
+    },
+    "baseElement": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "x",
+        "y",
+        "width",
+        "height",
+        "rotation",
+        "zIndex",
+        "locked",
+        "visible"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "rotation": { "type": "number" },
+        "zIndex": { "type": "number" },
+        "locked": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "rectangle": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["cornerRadius", "strokeWidth", "strokeColor"],
+          "properties": {
+            "type": { "const": "rectangle" },
+            "cornerRadius": { "type": "number", "minimum": 0 },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" },
+            "fillColor": { "type": "string" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ellipse": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["strokeWidth", "strokeColor"],
+          "properties": {
+            "type": { "const": "ellipse" },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" },
+            "fillColor": { "type": "string" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "diamond": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["strokeWidth", "strokeColor"],
+          "properties": {
+            "type": { "const": "diamond" },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" },
+            "fillColor": { "type": "string" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "line": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": [
+            "startX",
+            "startY",
+            "endX",
+            "endY",
+            "strokeWidth",
+            "strokeColor"
+          ],
+          "properties": {
+            "type": { "const": "line" },
+            "startX": { "type": "number" },
+            "startY": { "type": "number" },
+            "endX": { "type": "number" },
+            "endY": { "type": "number" },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "arrow": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": [
+            "startX",
+            "startY",
+            "endX",
+            "endY",
+            "strokeWidth",
+            "strokeColor"
+          ],
+          "properties": {
+            "type": { "const": "arrow" },
+            "startX": { "type": "number" },
+            "startY": { "type": "number" },
+            "endX": { "type": "number" },
+            "endY": { "type": "number" },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" },
+            "startArrowhead": { "type": "boolean" },
+            "endArrowhead": { "type": "boolean" },
+            "startBinding": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/arrowBinding" }]
+            },
+            "endBinding": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/arrowBinding" }]
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "path": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["points", "strokeWidth", "strokeColor"],
+          "properties": {
+            "type": { "const": "path" },
+            "points": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/point" }
+            },
+            "strokeWidth": { "type": "number", "minimum": 0 },
+            "strokeColor": { "type": "string" },
+            "smoothing": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "media": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["src", "mimeType", "naturalWidth", "naturalHeight"],
+          "properties": {
+            "type": { "const": "media" },
+            "src": { "type": "string" },
+            "mimeType": { "type": "string" },
+            "naturalWidth": { "type": "number", "exclusiveMinimum": 0 },
+            "naturalHeight": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "text": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["text", "fontSize", "strokeColor"],
+          "properties": {
+            "type": { "const": "text" },
+            "text": { "type": "string" },
+            "fontSize": { "type": "number", "exclusiveMinimum": 0 },
+            "strokeColor": { "type": "string" },
+            "fontFamily": { "type": "string" },
+            "textAlign": { "enum": ["left", "center", "right"] },
+            "lineHeight": { "type": "number", "exclusiveMinimum": 0 },
+            "autoSize": { "type": "boolean" },
+            "containerId": {
+              "oneOf": [
+                { "type": "string", "minLength": 1 },
+                { "type": "null" }
+              ]
+            },
+            "labelPosition": {
+              "oneOf": [
+                { "type": "number", "minimum": 0, "maximum": 1 },
+                { "type": "null" }
+              ]
+            },
+            "wrapWidth": {
+              "oneOf": [
+                { "type": "number", "exclusiveMinimum": 0 },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "note": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": [
+            "text",
+            "fontSize",
+            "strokeColor",
+            "fillColor",
+            "padding",
+            "cornerRadius"
+          ],
+          "properties": {
+            "type": { "const": "note" },
+            "text": { "type": "string" },
+            "fontSize": { "type": "number", "exclusiveMinimum": 0 },
+            "strokeColor": { "type": "string" },
+            "fillColor": { "type": "string" },
+            "fontFamily": { "type": "string" },
+            "textAlign": { "enum": ["left", "center", "right"] },
+            "lineHeight": { "type": "number", "exclusiveMinimum": 0 },
+            "padding": { "type": "number", "minimum": 0 },
+            "cornerRadius": { "type": "number", "minimum": 0 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "group": {
+      "allOf": [
+        { "$ref": "#/$defs/baseElement" },
+        {
+          "type": "object",
+          "required": ["children"],
+          "properties": {
+            "type": { "const": "group" },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { detachArrowsOutsideSelection } from "../arrow-bindings"
 import { clamp } from "../coordinates"
+import { DOCUMENT_VERSION, validateDocument } from "../document"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import { AdrawError } from "../errors"
 import {
@@ -92,8 +93,6 @@ import {
   sendElementsToBack,
   setElementZIndex,
 } from "./z-order"
-
-const DOCUMENT_VERSION = 1
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -296,6 +295,7 @@ export class CanvasEngine {
   private style: StyleOptions = {}
   private hideOverlayWhileTransforming: boolean
   private isToolLocked: boolean
+  private validateDocuments: boolean
   // Group the select tool is currently inside. Transient interaction state, not
   // part of the document or the store snapshot.
   private groupContextId: ElementId | null = null
@@ -326,6 +326,7 @@ export class CanvasEngine {
     this.hideOverlayWhileTransforming =
       options.hideOverlayWhileTransforming ?? false
     this.isToolLocked = options.isToolLocked ?? false
+    this.validateDocuments = options.validateDocuments ?? false
     this.scene = new Scene({ getTextMeasurer: () => this.textMeasurer })
 
     this.tools.set("select", createSelectTool())
@@ -345,6 +346,11 @@ export class CanvasEngine {
 
     // Load initial content before seeding the history baseline so the first
     // undo cannot remove the document the engine was created with.
+    if (options.initialDocument) {
+      if (this.validateDocuments) {
+        this.assertValidDocument(options.initialDocument, "AdrawCanvas")
+      }
+    }
     const initial = options.initialDocument
       ? (options.initialDocument.elements ?? [])
       : options.initialElements
@@ -863,10 +869,17 @@ export class CanvasEngine {
   /**
    * Replace the element set with the contents of a document.
    * @param doc Document to load.
-   * @param options `{ history }` to skip the checkpoint.
+   * @param options `{ history }` to skip the checkpoint; `{ validate }` to
+   * override the `validateDocuments` constructor setting.
    */
-  loadDocument(doc: CanvasDocument, options: { history?: boolean } = {}): void {
+  loadDocument(
+    doc: CanvasDocument,
+    options: { history?: boolean; validate?: boolean } = {},
+  ): void {
     runStateOperation(this, () => {
+      if (options.validate ?? this.validateDocuments) {
+        this.assertValidDocument(doc, "loadDocument")
+      }
       const next = new Map<ElementId, CanvasElement>()
       for (const element of doc?.elements ?? []) {
         next.set(element.id, element)
@@ -883,6 +896,23 @@ export class CanvasEngine {
         notifyState(this, "selection")
       }
     })
+  }
+
+  private assertValidDocument(
+    value: unknown,
+    method: string,
+  ): asserts value is CanvasDocument {
+    const result = validateDocument(value)
+    if (!result.valid) {
+      throw new AdrawError(
+        "invalid-document",
+        `${method}: document validation failed`,
+        {
+          details: { issues: result.issues },
+          hint: "Call validateDocument(doc) to inspect the issues.",
+        },
+      )
+    }
   }
 
   // Serialize the current document. `exclude` filters which elements are

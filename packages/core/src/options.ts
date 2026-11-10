@@ -71,6 +71,12 @@ export interface CanvasOptions {
    */
   initialDocument?: CanvasDocument
   /**
+   * Validate `initialDocument` and `loadDocument()` inputs before applying
+   * them. Defaults to `false`; `loadDocument` accepts a per-call `validate`
+   * override.
+   */
+  validateDocuments?: boolean
+  /**
    * Zoom/pan behavior. Defaults: `minZoom` 0.1, `maxZoom` 10,
    * `zoomSensitivity` 0.001, `fitPadding` 32 and `constrainToContent` false.
    *

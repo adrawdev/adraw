@@ -64,6 +64,18 @@ part of the public API. This includes `commitScene`, `getGroupContext`,
   `isToolLocked`, `hideWhileTransforming`, `isReady`, `revision`.
 - `AdrawStoreOptions` — `onReady(engine)`.
 
+### Documents
+
+- `DOCUMENT_VERSION` — current `CanvasDocument` schema version.
+- `validateDocument(value)` — returns `{ valid, issues }`; never throws on
+  malformed input.
+- `migrateDocument(value)` — applies the built-in migration registry and
+  validates the result.
+- `DocumentIssue`, `DocumentIssueCode`, `DocumentValidationResult`.
+- JSON Schema: `@adraw/core/schema.json` (package export `./schema.json`).
+- `CanvasOptions.validateDocuments` — validate `initialDocument` and
+  `loadDocument()` by default; defaults to `false`.
+
 ### Errors
 
 - `AdrawError` — `code`, `message`, `hint?`, `details?`, `cause?`.

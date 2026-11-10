@@ -22,7 +22,8 @@
     "directory": "packages/core"
   },
   "files": [
-    "dist"
+    "dist",
+    "schema.json"
   ],
   "type": "module",
   "main": "./dist/index.cjs",
@@ -38,7 +39,8 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
-    }
+    },
+    "./schema.json": "./schema.json"
   },
   "scripts": {
     "build": "tsdown --minify",

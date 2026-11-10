@@ -15,6 +15,9 @@
  * - `invalid-z-index` — a z-index is not a finite number.
  * - `unknown-alignment` — `align()` received an unknown alignment.
  * - `unknown-axis` — `distribute()` received an unknown axis.
+ * - `invalid-document` — a canvas document is malformed or failed validation.
+ * - `unsupported-version` — a document version is newer than this package supports.
+ * - `migration-missing` — no migration path exists from the document version.
  */
 export type AdrawErrorCode =
   | "not-mounted"
@@ -30,6 +33,9 @@ export type AdrawErrorCode =
   | "invalid-z-index"
   | "unknown-alignment"
   | "unknown-axis"
+  | "invalid-document"
+  | "unsupported-version"
+  | "migration-missing"
 
 /**
  * Every stable error code currently emitted by adraw. Useful for validation,
@@ -49,6 +55,9 @@ export const ADRAW_ERROR_CODES: readonly AdrawErrorCode[] = [
   "invalid-z-index",
   "unknown-alignment",
   "unknown-axis",
+  "invalid-document",
+  "unsupported-version",
+  "migration-missing",
 ]
 
 /**
