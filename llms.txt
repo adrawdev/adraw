@@ -1,0 +1,64 @@
+# adraw
+
+> Headless-first infinite SVG canvas engine for whiteboards and diagramming UIs. TypeScript, zero runtime dependencies, optional DOM adapter, and adapters for React, Vue, Svelte, Solid, Angular and Web Components.
+
+adraw separates a DOM-free engine from an optional SVG adapter. The engine owns
+elements, selection, history, snapping, documents and validation. The DOM adapter
+handles pointer, touch, keyboard and rendering. State is observed through an
+immutable `AdrawStore` snapshot.
+
+## Start here
+
+- [Agent guide](https://github.com/adrawdev/adraw/blob/main/docs/agents.md) — headless workflows, documents, validation, errors and testing without a DOM.
+- [Core guide](https://github.com/adrawdev/adraw/blob/main/packages/core/README.md) — tools, elements, state, history, export and CSS variables.
+- [Public API inventory](https://github.com/adrawdev/adraw/blob/main/docs/PUBLIC_API.md) — the supported surface.
+- [API stability policy](https://github.com/adrawdev/adraw/blob/main/docs/API_STABILITY.md) — SemVer, deprecation and breaking changes.
+- [JSON Schema](https://github.com/adrawdev/adraw/blob/main/packages/core/schema.json) — `CanvasDocument` draft 2020-12.
+- [Roadmap](https://github.com/adrawdev/adraw/blob/main/docs/ROADMAP.md) — impact/effort plan.
+- [Bundle budget](https://github.com/adrawdev/adraw/blob/main/docs/BUNDLE_BUDGET.md) — size limits and tree-shaking guardrails.
+
+## Packages
+
+- [`@adraw/core`](https://github.com/adrawdev/adraw/tree/main/packages/core) — headless engine, DOM adapter, store, documents and errors.
+- [`@adraw/react`](https://github.com/adrawdev/adraw/tree/main/packages/react)
+- [`@adraw/vue`](https://github.com/adrawdev/adraw/tree/main/packages/vue)
+- [`@adraw/svelte`](https://github.com/adrawdev/adraw/tree/main/packages/svelte)
+- [`@adraw/solid`](https://github.com/adrawdev/adraw/tree/main/packages/solid)
+- [`@adraw/angular`](https://github.com/adrawdev/adraw/tree/main/packages/angular)
+- [`@adraw/web-components`](https://github.com/adrawdev/adraw/tree/main/packages/web-components)
+
+## Minimal headless example
+
+```ts
+import { AdrawCanvas, createRectangle } from "@adraw/core"
+
+const canvas = new AdrawCanvas()
+canvas.addElement(
+  createRectangle({
+    id: "rect-1",
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 120,
+    cornerRadius: 8,
+    strokeWidth: 2,
+    strokeColor: "#111111",
+    fillColor: "#ffd43b",
+    rotation: 0,
+    zIndex: 1,
+    locked: false,
+    visible: true,
+  }),
+)
+```
+
+## Rules for agents
+
+- Do not mutate maps or sets returned by `getElements()` / `getSelectedIds()`; use the public methods.
+- Prefer `updateElement`, `updateElements`, `batch`, `setLocked`, `setVisible`, `align`, `distribute`, `duplicate` and `nudge`.
+- Validate untrusted JSON with `validateDocument` and migrate it with `migrateDocument`.
+- Use `toDocument({ deterministic: true })` and `serializeDocument` for stable diffs.
+- Branch on `AdrawError.code`; never parse error messages.
+- Use explicit element ids when reproducible output matters.
+- Headless text measurement is approximate; pass `measureText` for custom metrics.
+- Image export (`toImage`) requires a mounted DOM adapter; serialize the document in headless runs.

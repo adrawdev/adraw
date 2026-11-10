@@ -1,0 +1,84 @@
+---
+title: "Agents"
+description: "Headless workflows, documents, validation and errors for coding agents"
+---
+
+adraw is headless-first: the full editing API works without a DOM. This page is
+the short entry point for coding agents and automation. The canonical,
+copy-pasteable guide lives in
+[`docs/agents.md`](https://github.com/adrawdev/adraw/blob/main/docs/agents.md).
+
+## Install
+
+```bash
+pnpm add @adraw/core
+```
+
+## Headless quick start
+
+```ts
+import { AdrawCanvas, createRectangle } from "@adraw/core"
+
+const canvas = new AdrawCanvas()
+canvas.addElement(
+  createRectangle({
+    id: "rect-1",
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 120,
+    cornerRadius: 8,
+    strokeWidth: 2,
+    strokeColor: "#111111",
+    fillColor: "#ffd43b",
+    rotation: 0,
+    zIndex: 1,
+    locked: false,
+    visible: true,
+  }),
+)
+```
+
+## Documents
+
+```ts
+import {
+  migrateDocument,
+  serializeDocument,
+  validateDocument,
+} from "@adraw/core"
+
+const json = serializeDocument(canvas.toDocument({ deterministic: true }))
+const parsed: unknown = JSON.parse(json)
+const result = validateDocument(parsed)
+if (!result.valid) console.error(result.issues)
+
+const doc = migrateDocument(parsed)
+canvas.loadDocument(doc, { validate: true })
+```
+
+The JSON Schema is published as `@adraw/core/schema.json`.
+
+## Errors
+
+```ts
+import { AdrawError } from "@adraw/core"
+
+try {
+  canvas.updateElement("rect-1", { width: 0 })
+} catch (error) {
+  if (error instanceof AdrawError) {
+    console.error(error.code, error.hint, error.details)
+  }
+}
+```
+
+## For agents
+
+- Use `updateElement`, `updateElements` and `batch` instead of mutating
+  `getElements()`.
+- Validate untrusted documents and branch on `AdrawError.code`.
+- Use explicit ids and `serializeDocument` for reproducible output.
+- Read the full [agent guide](https://github.com/adrawdev/adraw/blob/main/docs/agents.md),
+  the [public API inventory](https://github.com/adrawdev/adraw/blob/main/docs/PUBLIC_API.md)
+  and `/llms.txt`.

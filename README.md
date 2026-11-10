@@ -137,6 +137,8 @@ Vue, Svelte, Solid, Angular, and Web Components follow the same pattern: provide
 ## Documentation
 
 - [Core guide](packages/core/README.md) — canvas API, tools, state, history, export, and more.
+- [Agent guide](docs/agents.md) — headless workflows, documents, validation and errors for coding agents.
+- [llms.txt](llms.txt) — compact machine-readable entry point for agents.
 - [Roadmap](docs/ROADMAP.md) — impact/effort plan for the lightweight engine and agent surface.
 - [API stability](docs/API_STABILITY.md) — versioning, deprecation and breaking-change policy.
 - [Public API inventory](docs/PUBLIC_API.md) — the supported surface of every package.

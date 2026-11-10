@@ -26,6 +26,16 @@ const frameworks = [
         </a>
       </li>
     ))}
+    <li>
+      <a href="/docs/agents" aria-current={Astro.url.pathname == "/docs/agents" ? "page" : undefined} class="docs-nav-link">
+        <span class="docs-nav-icon">AI</span> Agent guide
+      </a>
+    </li>
+    <li>
+      <a href="/llms.txt" class="docs-nav-link">
+        <span class="docs-nav-icon">llms</span> llms.txt
+      </a>
+    </li>
   </ul>
 </aside>
 
@@ -51,5 +61,17 @@ const frameworks = [
       background: var(--color-primary);
       color: var(--color-background);
     }
+  }
+  .docs-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 </style>

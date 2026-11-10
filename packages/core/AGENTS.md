@@ -334,6 +334,7 @@ align-distribute.test.ts       — six alignments, spacing, groups, locked/hidde
 errors.test.ts                 — AdrawError metadata and codes across the public API
 document-contract.test.ts      — schema/version validation, references, migrations
 deterministic-serialization.test.ts — canonical ordering, key order, round-trips
+agent-guide.test.ts            — documented headless workflow and structured errors
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry
