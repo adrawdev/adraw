@@ -76,7 +76,7 @@ Review-time judgement calls live in `CODING_STANDARDS.md`.
 
 `AdrawCanvas` (`src/canvas.ts`) extends the headless `CanvasEngine`. `new AdrawCanvas({ container })` mounts immediately; `new AdrawCanvas()` stays headless until `mount(container)`; `destroy()` removes the DOM adapter.
 
-- `src/engine/` — DOM-free state, scene operations, tools, history, snapping, clipboard and global styles.
+- `src/engine/` — DOM-free state, scene operations, tools, history, snapping, grid config, clipboard and global styles.
 - `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
 - `src/arrow-bindings.ts` — arrow-to-element binding/synchronization math.
@@ -84,16 +84,16 @@ Review-time judgement calls live in `CODING_STANDARDS.md`.
 
 `AdrawStore` is the adapter contract. It exposes an immutable `AdrawSnapshot` through `getSnapshot()` / `subscribe()`:
 
-| Snapshot field                             | Contents                                |
-| ------------------------------------------ | --------------------------------------- |
-| `elements`                                 | `ReadonlyMap<ElementId, CanvasElement>` |
-| `selectedIds`                              | `ReadonlySet<ElementId>`                |
-| `selectedElements`                         | Selected elements in selection order    |
-| `viewport` / `tool`                        | Viewport and active tool                |
-| `canUndo` / `canRedo`                      | History availability                    |
-| `style`                                    | Selection style, else global style      |
-| `snapping` / `isSnapMode` / `isToolLocked` | Tool configuration                      |
-| `hideWhileTransforming` / `isReady`        | Overlay visibility and mount readiness  |
+| Snapshot field                                      | Contents                                |
+| --------------------------------------------------- | --------------------------------------- |
+| `elements`                                          | `ReadonlyMap<ElementId, CanvasElement>` |
+| `selectedIds`                                       | `ReadonlySet<ElementId>`                |
+| `selectedElements`                                  | Selected elements in selection order    |
+| `viewport` / `tool`                                 | Viewport and active tool                |
+| `canUndo` / `canRedo`                               | History availability                    |
+| `style`                                             | Selection style, else global style      |
+| `snapping` / `grid` / `isSnapMode` / `isToolLocked` | Tool configuration                      |
+| `hideWhileTransforming` / `isReady`                 | Overlay visibility and mount readiness  |
 
 The engine has no public `on`/`off`/`emit`; adapters and consumers read snapshots and subscribe through the store. One completed canvas operation publishes at most one coherent snapshot. Snapshots copy changed slices, reuse unchanged ones, and increment `revision` only when something observable changed. Nested calls fold into the outer operation; listener errors do not block later listeners.
 

@@ -1,4 +1,5 @@
 import { FILL_COLOR, STROKE_COLOR, STROKE_WIDTH } from "../constants"
+import type { GridConfig } from "../grid"
 import type { SnappingConfig } from "../snapping"
 import type { StyleOptions } from "../style"
 import type { TextMeasurer } from "../text"
@@ -45,6 +46,11 @@ export interface ToolContext {
    */
   measureText?: TextMeasurer
   getSnappingConfig: () => SnappingConfig
+  /**
+   * Grid configuration. Optional so standalone tool factories can run without
+   * engine grid state; omitted means grid snapping is off.
+   */
+  getGridConfig?: () => GridConfig
   getIsSnapMode: () => boolean
   setSnapGuides: (guides: SnapGuide[]) => void
   pushHistory: () => void

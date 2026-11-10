@@ -5,6 +5,7 @@ import { setupEventListeners, updateCursor } from "./events"
 import { cancelTextGesture } from "./pointer"
 import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
+import { createGridLayer, renderGrid } from "./render/grid"
 import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
 import { planStateRender } from "./render/plan"
@@ -49,6 +50,10 @@ export function mountDom(
         }
         case "renderSelectElements": {
           renderSelectElements(state, engine)
+          break
+        }
+        case "renderGrid": {
+          renderGrid(state, engine)
           break
         }
         case "renderGuides": {
@@ -105,6 +110,12 @@ function initDom(state: DomState, engine: CanvasEngine): void {
   state.elementsGroup = document.createElementNS(svgNamespaceURI, "g")
   state.elementsGroup.classList.add(elementsGroupClass)
 
+  const grid = createGridLayer(state.svgElement)
+  state.gridGroup = grid.group
+  state.gridPattern = grid.pattern
+  state.gridPatternLine = grid.patternLine
+  state.gridRect = grid.rect
+
   state.guidesGroup = document.createElementNS(svgNamespaceURI, "g")
   state.guidesGroup.classList.add(guidesGroupClass)
 
@@ -122,6 +133,7 @@ function initDom(state: DomState, engine: CanvasEngine): void {
   state.pathPointSigs.clear()
   state.renderedGeometry.clear()
 
+  state.svgElement.appendChild(state.gridGroup)
   state.svgElement.appendChild(state.elementsGroup)
   state.svgElement.appendChild(state.guidesGroup)
   state.svgElement.appendChild(state.transformOverlay)

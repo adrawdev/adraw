@@ -56,6 +56,11 @@ describe("DOM render plan", () => {
     ])
   })
 
+  it("repaints the grid without a full render", () => {
+    expect(plan("grid")).toEqual(["renderGrid"])
+    expect(plan("grid", "viewport")).toEqual(["renderAll"])
+  })
+
   it("does no DOM work for store-only changes", () => {
     expect(plan("style", "history", "snapping", "toolLock", "mount")).toEqual(
       [],

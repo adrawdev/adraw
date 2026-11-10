@@ -53,6 +53,7 @@ describe("AdrawStore snapshots", () => {
     expect(snapshot.canRedo).toBe(false)
     expect(snapshot.isReady).toBe(false)
     expect(snapshot.snapping.threshold).toBe(5)
+    expect(snapshot.grid).toEqual({ enabled: false, size: 20, snap: false })
     expect(store.getSnapshot()).toBe(snapshot)
 
     store.dispose()
@@ -119,7 +120,7 @@ describe("AdrawStore snapshots", () => {
     store.dispose()
   })
 
-  it("publishes style, snapping and tool options", () => {
+  it("publishes style, snapping, grid and tool options", () => {
     const canvas = new AdrawCanvas()
     const store = new AdrawStore(canvas)
     const listener = vi.fn()
@@ -127,6 +128,7 @@ describe("AdrawStore snapshots", () => {
 
     canvas.setStyle({ strokeColor: "#f00" })
     canvas.setSnappingConfig({ threshold: 12 })
+    canvas.setGridConfig({ enabled: true, size: 32, snap: true })
     canvas.setIsSnapMode(true)
     canvas.setIsToolLocked(true)
     canvas.setHideOverlayWhileTransforming(true)
@@ -134,6 +136,7 @@ describe("AdrawStore snapshots", () => {
     const snapshot = store.getSnapshot()
     expect(snapshot.style.strokeColor).toBe("#f00")
     expect(snapshot.snapping.threshold).toBe(12)
+    expect(snapshot.grid).toEqual({ enabled: true, size: 32, snap: true })
     expect(snapshot.isSnapMode).toBe(true)
     expect(snapshot.isToolLocked).toBe(true)
     expect(snapshot.hideWhileTransforming).toBe(true)
@@ -180,7 +183,7 @@ describe("AdrawStore snapshots", () => {
     store.dispose()
   })
 
-  it("suppresses no-op viewport and selection changes", () => {
+  it("suppresses no-op viewport, selection and grid changes", () => {
     const canvas = new AdrawCanvas()
     const store = new AdrawStore(canvas)
     const listener = vi.fn()
@@ -189,6 +192,7 @@ describe("AdrawStore snapshots", () => {
 
     canvas.setViewport(canvas.getViewport())
     canvas.clearSelection()
+    canvas.setGridConfig({ enabled: false, size: 20, snap: false })
 
     expect(listener).not.toHaveBeenCalled()
     expect(store.getSnapshot().revision).toBe(revision)

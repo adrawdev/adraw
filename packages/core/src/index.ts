@@ -12,6 +12,7 @@ export {
 export * from "./elements"
 export * from "./errors"
 export { CanvasEngine } from "./engine/engine"
+export { createGridConfig, DEFAULT_GRID_CONFIG, type GridConfig } from "./grid"
 export {
   type ElementPatch,
   type ElementUpdate,

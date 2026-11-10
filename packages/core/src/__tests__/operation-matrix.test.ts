@@ -315,6 +315,13 @@ const operations: OperationCase[] = [
     run: (canvas) => canvas.setIsSnapMode(true),
   },
   {
+    expectedKinds: ["grid"],
+    expectedSnapshots: 1,
+    name: "setGridConfig",
+    run: (canvas) =>
+      canvas.setGridConfig({ enabled: true, size: 32, snap: true }),
+  },
+  {
     expectedKinds: ["elements", "selection"],
     expectedSnapshots: 1,
     name: "setTextMeasurer",

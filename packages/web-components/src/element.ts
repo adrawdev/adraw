@@ -5,6 +5,7 @@ import {
   type CanvasElement,
   type CanvasOptions,
   type ElementId,
+  type GridConfig,
   type SnappingConfig,
   type StyleOptions,
   type ToolType,
@@ -56,6 +57,7 @@ export class AdrawCanvasElement extends HTMLElement {
   hideWhileTransforming = false
   style: StyleOptions = {}
   snapping: SnappingConfig = { threshold: 5 }
+  grid: GridConfig = { enabled: false, size: 20, snap: false }
   isSnapMode = false
   isToolLocked = false
   canUndo = false
@@ -139,6 +141,7 @@ export class AdrawCanvasElement extends HTMLElement {
     this.hideWhileTransforming = next.hideWhileTransforming
     this.style = next.style
     this.snapping = next.snapping
+    this.grid = next.grid
     this.isSnapMode = next.isSnapMode
     this.isToolLocked = next.isToolLocked
     this.canUndo = next.canUndo

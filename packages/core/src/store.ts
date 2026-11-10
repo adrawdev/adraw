@@ -1,6 +1,7 @@
 import type { AdrawCanvas } from "./canvas"
 import type { CanvasEngine } from "./engine/engine"
 import { subscribeState, type StateChangeKind } from "./engine/state-notifier"
+import type { GridConfig } from "./grid"
 import type { SnappingConfig } from "./snapping"
 import type { StyleOptions } from "./style"
 import type { CanvasElement, ElementId, ToolType, ViewportState } from "./types"
@@ -29,6 +30,8 @@ export interface AdrawSnapshot {
   /** Selection style when there is a selection, otherwise the global style. */
   readonly style: StyleOptions
   readonly snapping: SnappingConfig
+  /** Grid visibility, spacing and snapping. */
+  readonly grid: GridConfig
   readonly isSnapMode: boolean
   readonly isToolLocked: boolean
   readonly hideWhileTransforming: boolean
@@ -118,6 +121,14 @@ function sameSnapping(left: SnappingConfig, right: SnappingConfig): boolean {
   return left.threshold === right.threshold
 }
 
+function sameGrid(left: GridConfig, right: GridConfig): boolean {
+  return (
+    left.enabled === right.enabled &&
+    left.size === right.size &&
+    left.snap === right.snap
+  )
+}
+
 /**
  * Adapter-facing state source. It projects an engine into an {@link AdrawSnapshot},
  * copies changed slices, suppresses no-op changes and notifies framework
@@ -159,6 +170,7 @@ export class AdrawStore {
       canRedo: engine.canRedo(),
       canUndo: engine.canUndo(),
       elements,
+      grid: { ...engine.getGridConfig() },
       hideWhileTransforming: engine.getHideOverlayWhileTransforming(),
       isReady: engine.isMounted(),
       isSnapMode: engine.getIsSnapMode(),
@@ -333,6 +345,14 @@ export class AdrawStore {
       isSnapMode = currentSnapMode
     }
 
+    let grid = previous.grid
+    if (kinds.has("grid")) {
+      const currentGrid = { ...this.engine.getGridConfig() }
+      if (!sameGrid(previous.grid, currentGrid)) {
+        grid = currentGrid
+      }
+    }
+
     let isToolLocked = previous.isToolLocked
     if (kinds.has("toolLock")) {
       isToolLocked = this.engine.getIsToolLocked()
@@ -358,6 +378,7 @@ export class AdrawStore {
       viewport !== previous.viewport ||
       tool !== previous.tool ||
       snapping !== previous.snapping ||
+      grid !== previous.grid ||
       isSnapMode !== previous.isSnapMode ||
       isToolLocked !== previous.isToolLocked ||
       hideWhileTransforming !== previous.hideWhileTransforming ||
@@ -372,6 +393,7 @@ export class AdrawStore {
       canRedo,
       canUndo,
       elements,
+      grid,
       hideWhileTransforming,
       isReady,
       isSnapMode,

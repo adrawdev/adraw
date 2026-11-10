@@ -31,22 +31,22 @@ public method, element field, event or CSS custom property changes.
 
 `CanvasEngine` public methods by area:
 
-| Area                 | Methods                                                                                                                                                                                                                                                                           |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lifecycle            | `setCanvasSize(width, height)`, `setActiveTool(tool)`, `getActiveTool()`, `isMounted()`                                                                                                                                                                                           |
-| Viewport             | `getViewport()`, `setViewport(viewport)`, `getViewportConfig()`, `zoomIn()`, `zoomOut()`, `resetZoom()`, `zoomToFit(options?)`                                                                                                                                                    |
-| Tools and keyboard   | `getTemporaryElement()`, `getKeyboardScope()`, `handleKeyDown(event)`                                                                                                                                                                                                             |
-| Elements             | `getElements()`, `addElement(elements, options?)`, `insertMedia(input, options?)`, `setElements(elements, options?)`                                                                                                                                                              |
-| Partial updates      | `updateElement(id, patch, options?)`, `updateElements(updates, options?)`                                                                                                                                                                                                         |
-| Flags                | `setLocked(ids, locked, options?)`, `setVisible(ids, visible, options?)`, `toggleLocked(ids, options?)`, `toggleVisible(ids, options?)`                                                                                                                                           |
-| Document             | `loadDocument(doc, options?)`, `toDocument(options?)`, `toJSON(options?)`                                                                                                                                                                                                         |
-| Z-order              | `bringToFront(ids, options?)`, `sendToBack(ids, options?)`, `setZIndex(id, zIndex, options?)`                                                                                                                                                                                     |
-| Selection and groups | `getSelectedIds()`, `selectAll()`, `clearSelection()`, `escapeSelection()`, `deleteSelected()`, `group()`, `ungroup()`                                                                                                                                                            |
-| Layout               | `nudge(ids, delta, options?)`, `align(ids, alignment, options?)`, `distribute(ids, axis, options?)`                                                                                                                                                                               |
-| Clipboard            | `copy()`, `cut()`, `paste(point?)`, `duplicate(ids?, options?)`, `serializeClipboard()`, `deserializeClipboard(data)`                                                                                                                                                             |
-| History              | `undo()`, `redo()`, `canUndo()`, `canRedo()`, `pushHistory()`, `clearHistory()`, `withoutHistory(fn)`, `batch(fn, options?)`                                                                                                                                                      |
-| Style and snapping   | `getStyle()`, `setStyle(options)`, `getSnappingConfig()`, `setSnappingConfig(config)`, `getIsSnapMode()`, `setIsSnapMode(value)`, `getSnapGuides()`, `getHideOverlayWhileTransforming()`, `setHideOverlayWhileTransforming(value)`, `getIsToolLocked()`, `setIsToolLocked(value)` |
-| Text                 | `getTextMeasurer()`, `measureText(text, options)`, `setTextMeasurer(measurer)`, `refreshTextMetrics()`                                                                                                                                                                            |
+| Area                 | Methods                                                                                                                                                                                                                                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lifecycle            | `setCanvasSize(width, height)`, `setActiveTool(tool)`, `getActiveTool()`, `isMounted()`                                                                                                                                                                                                                                       |
+| Viewport             | `getViewport()`, `setViewport(viewport)`, `getViewportConfig()`, `zoomIn()`, `zoomOut()`, `resetZoom()`, `zoomToFit(options?)`                                                                                                                                                                                                |
+| Tools and keyboard   | `getTemporaryElement()`, `getKeyboardScope()`, `handleKeyDown(event)`                                                                                                                                                                                                                                                         |
+| Elements             | `getElements()`, `addElement(elements, options?)`, `insertMedia(input, options?)`, `setElements(elements, options?)`                                                                                                                                                                                                          |
+| Partial updates      | `updateElement(id, patch, options?)`, `updateElements(updates, options?)`                                                                                                                                                                                                                                                     |
+| Flags                | `setLocked(ids, locked, options?)`, `setVisible(ids, visible, options?)`, `toggleLocked(ids, options?)`, `toggleVisible(ids, options?)`                                                                                                                                                                                       |
+| Document             | `loadDocument(doc, options?)`, `toDocument(options?)`, `toJSON(options?)`                                                                                                                                                                                                                                                     |
+| Z-order              | `bringToFront(ids, options?)`, `sendToBack(ids, options?)`, `setZIndex(id, zIndex, options?)`                                                                                                                                                                                                                                 |
+| Selection and groups | `getSelectedIds()`, `selectAll()`, `clearSelection()`, `escapeSelection()`, `deleteSelected()`, `group()`, `ungroup()`                                                                                                                                                                                                        |
+| Layout               | `nudge(ids, delta, options?)`, `align(ids, alignment, options?)`, `distribute(ids, axis, options?)`                                                                                                                                                                                                                           |
+| Clipboard            | `copy()`, `cut()`, `paste(point?)`, `duplicate(ids?, options?)`, `serializeClipboard()`, `deserializeClipboard(data)`                                                                                                                                                                                                         |
+| History              | `undo()`, `redo()`, `canUndo()`, `canRedo()`, `pushHistory()`, `clearHistory()`, `withoutHistory(fn)`, `batch(fn, options?)`                                                                                                                                                                                                  |
+| Style and snapping   | `getStyle()`, `setStyle(options)`, `getSnappingConfig()`, `setSnappingConfig(config)`, `getGridConfig()`, `setGridConfig(config)`, `getIsSnapMode()`, `setIsSnapMode(value)`, `getSnapGuides()`, `getHideOverlayWhileTransforming()`, `setHideOverlayWhileTransforming(value)`, `getIsToolLocked()`, `setIsToolLocked(value)` |
+| Text                 | `getTextMeasurer()`, `measureText(text, options)`, `setTextMeasurer(measurer)`, `refreshTextMetrics()`                                                                                                                                                                                                                        |
 
 Methods marked `@internal` in JSDoc are adapter/tool plumbing and are **not**
 part of the public API. This includes `commitScene`, `getGroupContext`,
@@ -60,8 +60,8 @@ part of the public API. This includes `commitScene`, `getGroupContext`,
 - `AdrawStore` — `new AdrawStore(canvas, options?)`, `getSnapshot()`,
   `subscribe(listener)`, `dispose()`.
 - `AdrawSnapshot` fields: `elements`, `selectedIds`, `selectedElements`,
-  `viewport`, `tool`, `canUndo`, `canRedo`, `style`, `snapping`, `isSnapMode`,
-  `isToolLocked`, `hideWhileTransforming`, `isReady`, `revision`.
+  `viewport`, `tool`, `canUndo`, `canRedo`, `style`, `snapping`, `grid`,
+  `isSnapMode`, `isToolLocked`, `hideWhileTransforming`, `isReady`, `revision`.
 - `AdrawStoreOptions` — `onReady(engine)`.
 
 ### Documents
@@ -112,11 +112,14 @@ Type-specific fields:
 ### Options and geometry
 
 - `CanvasOptions`, `AdrawCanvasOptions`, `ToImageOptions`, `MediaInput`
+- `CanvasOptions.grid` — grid visibility, spacing and snapping; defaults to
+  `{ enabled: false, size: 20, snap: false }`.
 - `ClipboardOptions`, `KeyboardScope`
 - `Point`, `Size`, `BoundingBox`, `ElementId`, `ElementType`, `ToolType`
 - `ViewportState`, `ViewportConfig`, `ViewportBounds`, `ZoomToFitOptions`
 - `CanvasElementStyle`, `StyleOptions`, `DEFAULT_STYLE`
 - `SnappingConfig`, `SnapModifiers`, `SnapPoint`, `SnapGuide`, `SnapResult`
+- `GridConfig`, `DEFAULT_GRID_CONFIG`
 - `CanvasDocument`, `CanvasConfig`, `Transform`, `ResizeAnchor`, `Alignment`,
   `DistributeAxis`
 - `EditableTextElement`, `TextAlign`, `TextLayoutOptions`, `TextLayout`,
@@ -139,6 +142,7 @@ Exported helper functions are public:
 - Snapping: `createSnappingConfig`, `isSnapActive`, `getElementSnapPoints`,
   `getAllSnapPoints`, `calculateSnap`, `snapPointToGuides`,
   `snapBoundsToElements`, `snapPointToElements`.
+- Grid: `createGridConfig`, `DEFAULT_GRID_CONFIG`.
 - Text: `approximateLineWidth`, `measureTextLayout`, `approximateTextMeasurer`,
   `measureTextElement`, `getTextLines`, `getTextLineHeightPx`,
   `getTextLeading`, `getTextAnchor`, `getTextLineX`.
@@ -158,6 +162,8 @@ Exported helper functions are public:
 - `--adraw-fill`
 - `--adraw-selection`
 - `--adraw-note`
+- `--adraw-grid`
+- `--adraw-grid-opacity`
 
 CSS class names and DOM structure are internal.
 
@@ -179,9 +185,9 @@ Web Component events: `adraw:ready`, `adraw:change`, `adraw:viewportchange`,
 
 `AdrawCanvasElement` also mirrors snapshots as public fields: `elements`,
 `selectedElements`, `viewport`, `activeTool`, `selectedIds`,
-`hideWhileTransforming`, `style`, `snapping`, `isSnapMode`, `isToolLocked`,
-`canUndo`, `canRedo`, `isReady`, plus `options`, `onReady`, `canvas` and
-`store`.
+`hideWhileTransforming`, `style`, `snapping`, `grid`, `isSnapMode`,
+`isToolLocked`, `canUndo`, `canRedo`, `isReady`, plus `options`, `onReady`,
+`canvas` and `store`.
 
 ## Not public
 

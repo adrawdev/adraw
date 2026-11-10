@@ -556,26 +556,41 @@ try {
 
 `ADRAW_ERROR_CODES` exports the complete list for validation and agent tooling.
 
-## Snapping
+## Snapping and grid
 
 Elements snap to other elements' edges and centers while moving, resizing or
-drawing; alignment guides are shown while snapped.
+drawing; alignment guides are shown while snapped. Element snapping is active
+while Ctrl (or Cmd) is held, or all the time when `isSnapMode` is on.
+
+The grid is independent: choosing whether it is visible (`enabled`) and whether
+gestures snap to it (`snap`) are separate settings. Grid snapping applies
+whenever `snap` is on, with or without a modifier, and never draws alignment
+guides. Grid lines stay at least 8 screen pixels apart at low zoom by doubling
+the visual step.
 
 ```ts
 const canvas = new AdrawCanvas({
   container: el,
   snapping: { threshold: 8 },
-  // Snap without holding a modifier. When false/omitted, snapping only
-  // activates while Ctrl (or Cmd) is held during the gesture.
   isSnapMode: false,
+  grid: { enabled: true, size: 20, snap: true },
 })
 
 // update at runtime
 canvas.setSnappingConfig({ threshold: 12 })
 canvas.setIsSnapMode(true)
+canvas.setGridConfig({ enabled: false, size: 40, snap: true })
 canvas.getSnappingConfig()
 canvas.getIsSnapMode()
+canvas.getGridConfig()
 ```
+
+Grid and element snapping have per-axis precedence: an element guide wins on
+the axis where it appears, and the grid fills the other axis. This lets a
+selection align to another element horizontally while still landing on a grid
+line vertically. Grid snapping snaps the creation point, the dragged resize
+handle, and the top-left corner of a moved selection. The grid is painted behind
+the elements and is excluded from `toImage()` exports.
 
 ## Headless usage
 
@@ -601,12 +616,14 @@ DOM and engine event listeners. Safe to call before mounting or more than once.
 
 ## CSS variables
 
-| Variable             | Default                                                 | Description          |
-| -------------------- | ------------------------------------------------------- | -------------------- |
-| `--adraw-background` | `light-dark(#fff, #000)`                                | Canvas background    |
-| `--adraw-stroke`     | `light-dark(#000, #fff)`                                | Default stroke color |
-| `--adraw-fill`       | `transparent`                                           | Default fill color   |
-| `--adraw-selection`  | `light-dark(oklch(0.44 0.14 248), oklch(0.84 0.1 248))` | Selection handles    |
+| Variable               | Default                                                 | Description          |
+| ---------------------- | ------------------------------------------------------- | -------------------- |
+| `--adraw-background`   | `light-dark(#fff, #000)`                                | Canvas background    |
+| `--adraw-stroke`       | `light-dark(#000, #fff)`                                | Default stroke color |
+| `--adraw-fill`         | `transparent`                                           | Default fill color   |
+| `--adraw-selection`    | `light-dark(oklch(0.44 0.14 248), oklch(0.84 0.1 248))` | Selection handles    |
+| `--adraw-grid`         | `light-dark(#000, #fff)`                                | Grid line color      |
+| `--adraw-grid-opacity` | `0.08`                                                  | Grid line opacity    |
 
 ## License
 

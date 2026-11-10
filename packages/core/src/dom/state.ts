@@ -44,6 +44,13 @@ export interface DomState {
   // Persistent snap-guide lines rendered into `guidesGroup`, reused across
   // renders (usually at most two: one vertical, one horizontal).
   guideNodes: SVGLineElement[]
+  // Grid layer, painted behind elements. The pattern lives in `<defs>`; its
+  // tile size and line width are updated on every render so the grid stays
+  // readable at any zoom level.
+  gridGroup: SVGGElement | null
+  gridPattern: SVGPatternElement | null
+  gridPatternLine: SVGPathElement | null
+  gridRect: SVGRectElement | null
   transformOverlay: SVGGElement | null
   // Persistent transform-overlay nodes. Built once and updated in place on every
   // render (rather than wiping `transformOverlay` and recreating ~10 SVG nodes
@@ -94,6 +101,10 @@ export function createDomState(): DomState {
     bindingHighlightId: null,
     container: null,
     elementsGroup: null,
+    gridGroup: null,
+    gridPattern: null,
+    gridPatternLine: null,
+    gridRect: null,
     groupContextBox: null,
     guideNodes: [],
     guidesGroup: null,

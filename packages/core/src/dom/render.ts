@@ -11,6 +11,7 @@ import type { CanvasEngine } from "../engine/engine"
 import { getNoteContentWidth, getNoteTextTop, measureNoteText } from "../note"
 import { approximateTextMeasurer, type TextMeasurer } from "../text"
 import type { BoundingBox, CanvasElement } from "../types"
+import { renderGrid } from "./render/grid"
 import { renderGuides } from "./render/guides"
 import { renderTransformOverlay } from "./render/overlay"
 import { renderSelectionBox } from "./render/overlay-nodes"
@@ -41,6 +42,7 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
   const transform = `translate(${state.container.clientWidth / 2}, ${state.container.clientHeight / 2}) scale(${viewport.zoom}) translate(${-viewport.x}, ${-viewport.y})`
 
   for (const group of [
+    state.gridGroup,
     state.elementsGroup,
     state.guidesGroup,
     state.transformOverlay,
@@ -48,6 +50,7 @@ export function renderAll(state: DomState, engine: CanvasEngine): void {
     group?.setAttribute("transform", transform)
   }
 
+  renderGrid(state, engine)
   renderTemporary(state, engine)
   setTextElementVisibility(state, engine, !state.textEditor)
   renderBindingHighlight(state, engine)

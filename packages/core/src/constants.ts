@@ -15,6 +15,17 @@ export const FILL_COLOR = "var(--adraw-fill, transparent)"
 export const SELECTION_COLOR = "var(--adraw-selection, #228be6)"
 
 /**
+ * Grid line color. Override with the `--adraw-grid` CSS custom property.
+ */
+export const GRID_COLOR = "var(--adraw-grid, light-dark(#000, #fff))"
+
+/**
+ * Grid line opacity. Override with the `--adraw-grid-opacity` CSS custom
+ * property.
+ */
+export const GRID_OPACITY = "var(--adraw-grid-opacity, 0.08)"
+
+/**
  * Default stroke color for drawn elements.
  */
 export const STROKE_COLOR = "var(--adraw-stroke, light-dark(#000, #fff))"

@@ -347,6 +347,9 @@ select-transform-state.test.ts — isResizing, isRotating
 snapping.test.ts               — snapping math
 snapping-dom.test.ts           — snap guide DOM rendering
 snapping-gestures.test.ts      — move/resize/create snapping via headless canvas
+grid.test.ts                   — grid defaults, validation, step and snap math
+grid-snapping.test.ts          — grid creation/move/resize and element precedence
+grid-dom.test.ts               — grid layer rendering, zoom steps and export exclusion
 text.test.ts                  — text tool, measurement, hit-testing, resize
 text-layout.test.ts           — measureTextLayout, wrapping, alignment helpers
 text-bindings.test.ts         — bound text, growth, clipboard, z-order

@@ -8,6 +8,7 @@ import type { StateChangeKind } from "../../engine/state-notifier"
 export type DomRenderAction =
   | "reconcileElements"
   | "renderSelectElements"
+  | "renderGrid"
   | "renderGuides"
   | "renderTransformOverlay"
   | "renderAll"
@@ -33,6 +34,9 @@ export function planStateRender(
   }
   if (selection && !elements) {
     plan.push("renderSelectElements")
+  }
+  if (kinds.has("grid") && !full) {
+    plan.push("renderGrid")
   }
   if (full) {
     plan.push("renderAll")

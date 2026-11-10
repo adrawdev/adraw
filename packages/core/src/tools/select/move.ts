@@ -1,7 +1,7 @@
 import { detachArrowsOutsideSelection } from "../../arrow-bindings"
-import { isSnapActive, snapBoundsToElements } from "../../snapping"
 import type { Point, SnapGuide } from "../../types"
 import { type ToolContext } from "../base"
+import { snapToolBounds } from "../snap"
 import type { SelectToolState } from "./state"
 
 // Move selected elements by the pointer delta since drag start, optionally
@@ -28,19 +28,22 @@ export function moveSelection(
   let guides: SnapGuide[] = []
 
   const bounds = state.originalBounds
-  if (event && bounds && isSnapActive(context.getIsSnapMode(), event)) {
-    const snapped = snapBoundsToElements(
+  if (bounds) {
+    const snapped = snapToolBounds(
+      context,
       {
         height: bounds.height,
         width: bounds.width,
         x: bounds.x + delta.x,
         y: bounds.y + delta.y,
       },
-      elements,
+      event,
       state.affectedIds,
-      context.getSnappingConfig().threshold,
     )
-    delta = { x: snapped.x - bounds.x, y: snapped.y - bounds.y }
+    delta = {
+      x: snapped.bounds.x - bounds.x,
+      y: snapped.bounds.y - bounds.y,
+    }
     guides = snapped.guides
   }
   context.setSnapGuides(guides)

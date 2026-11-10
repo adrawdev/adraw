@@ -7,6 +7,7 @@ import {
 } from "../document"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import { AdrawError } from "../errors"
+import { createGridConfig, type GridConfig } from "../grid"
 import {
   collectSubtreeIds,
   createGroupIndex,
@@ -287,6 +288,7 @@ export class CanvasEngine {
   } | null = null
   private activeTool: Tool
   private snappingConfig: SnappingConfig
+  private grid: GridConfig
   private isSnapMode: boolean
   private keyboardScope: KeyboardScope
   // Text layout measurer. The DOM adapter installs a canvas-backed one on
@@ -323,6 +325,7 @@ export class CanvasEngine {
     this.viewport = createViewport(options.initialViewport, this.viewportConfig)
     this.clipboard = new ClipboardManager(options.clipboard)
     this.snappingConfig = createSnappingConfig(options.snapping)
+    this.grid = createGridConfig(options.grid)
     this.isSnapMode = options.isSnapMode ?? false
     this.keyboardScope = options.keyboard ?? "canvas"
     this.textMeasurer = options.measureText ?? approximateTextMeasurer
@@ -381,6 +384,7 @@ export class CanvasEngine {
       },
       getCanvasSize: () => this.canvasSize,
       getElements: () => this.scene.getElements(),
+      getGridConfig: () => this.grid,
       getGroupContext: () => this.groupContextId,
       getIsSnapMode: () => this.isSnapMode,
       getSelectedIds: () => this.scene.getSelectedIds(),
@@ -1278,6 +1282,34 @@ export class CanvasEngine {
     runStateOperation(this, () => {
       this.snappingConfig = { ...this.snappingConfig, ...config }
       notifyState(this, "snapping")
+    })
+  }
+
+  /**
+   * Get the grid configuration.
+   *
+   * @returns The current visibility, spacing and snapping settings.
+   */
+  getGridConfig(): GridConfig {
+    return this.grid
+  }
+
+  /**
+   * Merge partial grid configuration. Visibility (`enabled`) and snapping
+   * (`snap`) are independent: a grid can be visible without snapping, or snap
+   * while hidden.
+   *
+   * @param config Partial configuration to merge with the current settings.
+   * @throws {AdrawError} `invalid-option` when `size` is not a finite number
+   * greater than zero.
+   */
+  setGridConfig(config: Partial<GridConfig>): void {
+    runStateOperation(this, () => {
+      const defined = Object.fromEntries(
+        Object.entries(config).filter(([, value]) => value !== undefined),
+      )
+      this.grid = createGridConfig({ ...this.grid, ...defined })
+      notifyState(this, "grid")
     })
   }
 

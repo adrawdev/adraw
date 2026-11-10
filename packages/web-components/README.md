@@ -66,6 +66,7 @@ Mounts the drawing surface. Owns one core `AdrawCanvas` and `AdrawStore`, create
 | `selectedIds`         | `ReadonlySet<ElementId>`                | Latest mirrored selection                                        |
 | `style`               | `StyleOptions`                          | Latest effective style                                           |
 | `snapping`            | `SnappingConfig`                        | Latest snapping config                                           |
+| `grid`                | `GridConfig`                            | Latest grid config                                               |
 | `isSnapMode`          | `boolean`                               | Latest snap mode                                                 |
 | `isToolLocked`        | `boolean`                               | Latest tool lock                                                 |
 | `canUndo` / `canRedo` | `boolean`                               | Latest history availability                                      |
@@ -78,7 +79,10 @@ Configure it before the element connects (e.g. right after `createElement`):
 
 ```ts
 const canvas = document.createElement("adraw-canvas")
-canvas.options = { snapping: { threshold: 8 } }
+canvas.options = {
+  snapping: { threshold: 8 },
+  grid: { enabled: true, snap: true },
+}
 container.appendChild(canvas) // connect → mounts with these options
 ```
 

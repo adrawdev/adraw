@@ -59,6 +59,7 @@ describe("adraw-canvas element lifecycle", () => {
     expect(element.store).not.toBeNull()
     expect([...element.elements.keys()]).toEqual(["a", "b"])
     expect(element.canvas?.getElements().size).toBe(2)
+    expect(element.grid).toEqual({ enabled: false, size: 20, snap: false })
     expect(onReady).toHaveBeenCalledOnce()
     expect(onReady).toHaveBeenCalledWith(element.canvas)
     expect(readyEvent).toHaveBeenCalledOnce()

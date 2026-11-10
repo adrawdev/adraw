@@ -14,6 +14,7 @@ export type StateChangeKind =
   | "tool"
   | "style"
   | "snapping"
+  | "grid"
   | "toolLock"
   | "overlay"
   | "history"

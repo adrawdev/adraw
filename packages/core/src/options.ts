@@ -1,3 +1,4 @@
+import type { GridConfig } from "./grid"
 import type { SnappingConfig } from "./snapping"
 import type { TextMeasurer } from "./text"
 import type { CanvasDocument, CanvasElement, ViewportState } from "./types"
@@ -91,6 +92,8 @@ export interface CanvasOptions {
   viewport?: Partial<ViewportConfig>
   /** Snapping configuration (threshold in pixels). */
   snapping?: Partial<SnappingConfig>
+  /** Grid visibility and snapping configuration. Defaults to hidden, 20 units, snapping off. */
+  grid?: Partial<GridConfig>
   /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `false` in the core; the framework adapters default to `true`. */
   hideOverlayWhileTransforming?: boolean
   /**
