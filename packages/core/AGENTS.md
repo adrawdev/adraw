@@ -9,6 +9,7 @@ Framework-agnostic core canvas engine. Pure logic (elements, viewport, tools, hi
 ```bash
 pnpm core:build    # build
 pnpm core:dev      # watch mode
+pnpm size          # from root, after build — bundle budget + tree-shaking smoke test
 pnpm test run      # from root — Vitest includes packages/**/*
 pnpm test run packages/core/src/__tests__/coordinates.test.ts  # single file
 ```

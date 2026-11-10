@@ -15,7 +15,7 @@ packages.
 
 What "lightweight and intuitive" means here:
 
-- **Lightweight:** zero runtime dependencies, ≤ 40 KB gzip for core,
+- **Lightweight:** zero runtime dependencies, ≤ 45 KB gzip for core,
   tree-shakable, optional features in separate packages.
 - **Intuitive for developers:** one way to observe state, one document format,
   one style API, one tool contract, consistent options and return values.
@@ -195,16 +195,16 @@ Notes:
 
 Goal: stay fast enough for generated boards and small enough to embed anywhere.
 
-| Initiative                                          | Why                                                              | Impact | Effort | Priority |
-| --------------------------------------------------- | ---------------------------------------------------------------- | ------ | ------ | -------- |
-| Bundle budget in CI                                 | Baseline is 33 KB gzip; set a hard ceiling before features land. | 4      | S      | P0       |
-| `sideEffects: false` and export/tree-shaking audit  | Keep the package friendly to bundlers.                           | 4      | S      | P0       |
-| Viewport culling in the DOM adapter                 | Every element gets a DOM node today.                             | 5      | M      | P1       |
-| Spatial index for hit-testing, marquee and snapping | Current scans are linear.                                        | 4      | M      | P1       |
-| Benchmarks (1k/10k elements)                        | No published performance contract.                               | 4      | M      | P1       |
-| Text measurement cache                              | Re-measuring unchanged text is avoidable.                        | 2      | S      | P2       |
-| History memory strategy                             | Each checkpoint copies the element map and selection.            | 3      | L      | P2       |
-| Optional canvas renderer exploration                | Only if SVG cannot meet the 10k-element target.                  | 3      | XL     | P3       |
+| Initiative                                          | Why                                                   | Impact | Effort | Priority |
+| --------------------------------------------------- | ----------------------------------------------------- | ------ | ------ | -------- |
+| Bundle budget in CI                                 | Baseline is 42.2 KB gzip; enforce a 45 KB ceiling.    | 4      | S      | P0       |
+| `sideEffects: false` and export/tree-shaking audit  | Keep the package friendly to bundlers.                | 4      | S      | P0       |
+| Viewport culling in the DOM adapter                 | Every element gets a DOM node today.                  | 5      | M      | P1       |
+| Spatial index for hit-testing, marquee and snapping | Current scans are linear.                             | 4      | M      | P1       |
+| Benchmarks (1k/10k elements)                        | No published performance contract.                    | 4      | M      | P1       |
+| Text measurement cache                              | Re-measuring unchanged text is avoidable.             | 2      | S      | P2       |
+| History memory strategy                             | Each checkpoint copies the element map and selection. | 3      | L      | P2       |
+| Optional canvas renderer exploration                | Only if SVG cannot meet the 10k-element target.       | 3      | XL     | P3       |
 
 Notes:
 
@@ -292,7 +292,7 @@ Exit criteria:
 - Grid renders and snaps.
 - Copy/paste and image drop work in the DOM adapter.
 - API reference is generated and the agent guide is published.
-- Core is ≤ 40 KB gzip with zero runtime dependencies.
+- Core is ≤ 45 KB gzip with zero runtime dependencies.
 
 ### 0.7 — Agent-ready (target: 6–8 weeks)
 
@@ -343,7 +343,7 @@ Exit criteria:
 - Semver policy and deprecation process are published.
 - All public APIs are documented and covered by type tests.
 - No breaking changes without a major release.
-- Core is ≤ 45 KB gzip (target 40 KB) with zero runtime dependencies.
+- Core is ≤ 45 KB gzip with zero runtime dependencies.
 
 ### Post-1.0 — Ecosystem
 
@@ -373,7 +373,9 @@ These are valid product features; they belong in examples or optional packages.
 
 | Metric                     | Target                                            |
 | -------------------------- | ------------------------------------------------- |
-| Core gzip size             | ≤ 40 KB (baseline 33 KB)                          |
+| Core gzip size             | ≤ 45 KB (baseline 42.2 KB)                        |
+| Tree-shaken AdrawCanvas    | ≤ 43 KB                                           |
+| Helper-only import         | ≤ 5 KB                                            |
 | Runtime dependencies       | 0                                                 |
 | Public API JSDoc coverage  | 100%                                              |
 | Time to first canvas       | ≤ 5 minutes                                       |

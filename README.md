@@ -140,6 +140,7 @@ Vue, Svelte, Solid, Angular, and Web Components follow the same pattern: provide
 - [Roadmap](docs/ROADMAP.md) — impact/effort plan for the lightweight engine and agent surface.
 - [API stability](docs/API_STABILITY.md) — versioning, deprecation and breaking-change policy.
 - [Public API inventory](docs/PUBLIC_API.md) — the supported surface of every package.
+- [Bundle budget](docs/BUNDLE_BUDGET.md) — size limits and tree-shaking guardrails.
 - Framework guides: [React](packages/react/README.md), [Vue](packages/vue/README.md), [Svelte](packages/svelte/README.md), [Solid](packages/solid/README.md), [Angular](packages/angular/README.md), [Web Components](packages/web-components/README.md).
 - [Examples](examples) — runnable Vite apps for every adapter.
 - [Glossary](GLOSSARY.md) — project vocabulary used in code and docs.
@@ -204,6 +205,7 @@ pnpm install
 pnpm build      # all workspace packages
 pnpm core:build # or react:build / vue:build / svelte:build / solid:build / angular:build / web-components:build
 pnpm web:build  # core + Astro docs site
+pnpm size       # bundle budget + tree-shaking smoke test (after build)
 
 pnpm dev        # all packages, examples, and docs in parallel
 pnpm core:dev   # watch mode; same per-package suffix convention

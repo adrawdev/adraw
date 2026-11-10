@@ -166,6 +166,7 @@ release note.
 ## References
 
 - [Public API inventory](PUBLIC_API.md)
+- [Bundle budget](BUNDLE_BUDGET.md)
 - [Roadmap](ROADMAP.md)
 - [Architecture decisions](adr/)
 - [Changesets](https://github.com/changesets/changesets)

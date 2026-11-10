@@ -30,6 +30,7 @@ pnpm install
 pnpm build      # all packages
 pnpm core:build # or react:build / vue:build / svelte:build / solid:build / angular:build / web-components:build
 pnpm web:build  # Astro docs site
+pnpm size       # bundle budget + tree-shaking smoke test (after build)
 
 pnpm dev        # all packages + web in parallel
 pnpm core:dev   # watch mode; same per-package suffix convention
