@@ -3,6 +3,7 @@ export * from "./coordinates"
 export {
   DOCUMENT_VERSION,
   migrateDocument,
+  serializeDocument,
   validateDocument,
   type DocumentIssue,
   type DocumentIssueCode,

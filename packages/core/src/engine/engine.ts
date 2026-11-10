@@ -1,6 +1,10 @@
 import { detachArrowsOutsideSelection } from "../arrow-bindings"
 import { clamp } from "../coordinates"
-import { DOCUMENT_VERSION, validateDocument } from "../document"
+import {
+  canonicalizeDocument,
+  DOCUMENT_VERSION,
+  validateDocument,
+} from "../document"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import { AdrawError } from "../errors"
 import {
@@ -919,12 +923,16 @@ export class CanvasEngine {
   // included without mutating canvas state. Returns a fresh, decoupled copy.
   /**
    * Serialize the current document. Returns a decoupled copy.
-   * @param options `{ exclude }` filter.
+   * @param options `{ exclude, deterministic }` filter and ordering.
+   * `deterministic` sorts elements by `zIndex` then `id` and canonicalizes
+   * object keys; the default keeps map insertion order until 1.0.
    */
-  toDocument(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
-    version: number
-    elements: CanvasElement[]
-  } {
+  toDocument(
+    options: {
+      deterministic?: boolean
+      exclude?: (element: CanvasElement) => boolean
+    } = {},
+  ): CanvasDocument {
     const elements = new Map<ElementId, CanvasElement>()
     for (const element of this.scene.getElements().values()) {
       if (!options.exclude?.(element)) {
@@ -935,20 +943,23 @@ export class CanvasEngine {
     // document, so prune the cloned copy before returning it.
     syncGroupState(elements)
 
-    return {
+    const doc: CanvasDocument = {
       elements: [...elements.values()],
       version: DOCUMENT_VERSION,
     }
+    return options.deterministic ? canonicalizeDocument(doc) : doc
   }
 
   // Alias for `toDocument`; kept for symmetry with the original toJSON proposal.
   /**
    * Alias for {@link CanvasEngine.toDocument}.
    */
-  toJSON(options: { exclude?: (element: CanvasElement) => boolean } = {}): {
-    version: number
-    elements: CanvasElement[]
-  } {
+  toJSON(
+    options: {
+      deterministic?: boolean
+      exclude?: (element: CanvasElement) => boolean
+    } = {},
+  ): CanvasDocument {
     return this.toDocument(options)
   }
 

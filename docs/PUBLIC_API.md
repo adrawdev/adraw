@@ -71,6 +71,10 @@ part of the public API. This includes `commitScene`, `getGroupContext`,
   malformed input.
 - `migrateDocument(value)` — applies the built-in migration registry and
   validates the result.
+- `serializeDocument(doc)` — deterministic JSON: elements sorted by `zIndex`
+  then `id`, group children sorted by id, keys sorted recursively.
+- `toDocument({ deterministic: true })` — sorted and canonicalized document;
+  the default keeps map insertion order until 1.0.
 - `DocumentIssue`, `DocumentIssueCode`, `DocumentValidationResult`.
 - JSON Schema: `@adraw/core/schema.json` (package export `./schema.json`).
 - `CanvasOptions.validateDocuments` — validate `initialDocument` and

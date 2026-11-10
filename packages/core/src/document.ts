@@ -75,6 +75,64 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function canonicalizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeValue)
+  }
+  if (isRecord(value)) {
+    const sorted: Record<string, unknown> = {}
+    for (const key of Object.keys(value).toSorted()) {
+      sorted[key] = canonicalizeValue(value[key])
+    }
+    return sorted
+  }
+  return value
+}
+
+/**
+ * Return a canonical copy of a document: elements sorted by `zIndex` and then
+ * `id`, group children sorted by id, and object keys sorted recursively. Arrays
+ * otherwise keep their order.
+ *
+ * @internal
+ */
+export function canonicalizeDocument(doc: CanvasDocument): CanvasDocument {
+  const elements = doc.elements
+    .map((element) =>
+      element.type === "group"
+        ? { ...element, children: [...element.children].toSorted() }
+        : element,
+    )
+    .toSorted((a, b) => {
+      if (a.zIndex !== b.zIndex) {
+        return a.zIndex - b.zIndex
+      }
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+    })
+
+  return canonicalizeValue({
+    elements,
+    version: doc.version,
+  }) as CanvasDocument
+}
+
+/**
+ * Serialize a document to deterministic JSON. Elements are ordered by
+ * `zIndex` and then `id`, group children are sorted by id, and object keys are
+ * sorted recursively, so two documents with the same content produce the same
+ * string regardless of map insertion order or object construction order.
+ *
+ * @param doc Document to serialize.
+ * @returns Stable JSON text.
+ * @example
+ * ```ts
+ * const json = serializeDocument(canvas.toDocument())
+ * ```
+ */
+export function serializeDocument(doc: CanvasDocument): string {
+  return JSON.stringify(canonicalizeDocument(doc))
+}
+
 function push(
   issues: DocumentIssue[],
   path: string,

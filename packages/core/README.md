@@ -301,6 +301,19 @@ pure migration registry and validates the result. Pass
 and `loadDocument()` by default; `loadDocument(doc, { validate: true })`
 overrides per call and `validate: false` disables it.
 
+For stable diffs and agent output, use deterministic serialization:
+
+```ts
+import { serializeDocument } from "@adraw/core"
+
+const doc = canvas.toDocument({ deterministic: true })
+const json = serializeDocument(doc) // same content -> same string
+```
+
+Deterministic mode sorts elements by `zIndex` and then `id`, sorts group child
+ids, and canonicalizes object key order. `serializeDocument(doc)` always
+canonicalizes. The default keeps map insertion order until 1.0.
+
 The JSON Schema for the document is published at
 [`@adraw/core/schema.json`](schema.json) (draft 2020-12).
 
