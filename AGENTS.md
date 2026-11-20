@@ -77,7 +77,7 @@ Review-time judgement calls live in `CODING_STANDARDS.md`.
 `AdrawCanvas` (`src/canvas.ts`) extends the headless `CanvasEngine`. `new AdrawCanvas({ container })` mounts immediately; `new AdrawCanvas()` stays headless until `mount(container)`; `destroy()` removes the DOM adapter.
 
 - `src/engine/` — DOM-free state, scene operations, tools, history, snapping, grid config, clipboard and global styles.
-- `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, native clipboard integration, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
+- `src/dom/` — SVG mount lifecycle, pointer/wheel/touch/keyboard handling, native clipboard and file-drop integration, incremental rendering, inline text editing, image export. Dependency direction is `dom/* → engine/*` only.
 - `src/tools/<tool>/` — one factory per tool. Adding a tool means updating `ToolType` (`src/types.ts`), exporting the factory from `tools/index.ts`, registering it in `engine/engine.ts`, and adding shortcuts in `engine/shortcuts.ts`.
 - `src/arrow-bindings.ts` — arrow-to-element binding/synchronization math.
 - `src/groups.ts` — group hierarchy, derived group bounds, selection levels and group/ungroup math. Grouping is exposed through `group()` / `ungroup()` and `Ctrl/Cmd+G` / `Ctrl/Cmd+Shift+G`.

@@ -3,6 +3,7 @@ import type { CanvasEngine } from "../engine/engine"
 import { subscribeState, type StateChangeKind } from "../engine/state-notifier"
 import { setupClipboardListeners } from "./clipboard"
 import { setupEventListeners, updateCursor } from "./events"
+import { setupMediaListeners } from "./media"
 import { cancelTextGesture } from "./pointer"
 import { renderAll } from "./render"
 import { reconcileElements, renderSelectElements } from "./render/elements"
@@ -36,6 +37,7 @@ export function mountDom(
   initDom(state, engine)
   const removeEventListeners = setupEventListeners(state, engine)
   const removeClipboardListeners = setupClipboardListeners(state, engine)
+  const removeMediaListeners = setupMediaListeners(state, engine)
 
   engine.onToolWillChange = () => {
     commitTextEditing(state, engine, { switchTool: false })
@@ -84,6 +86,7 @@ export function mountDom(
     destroy: () => {
       removeEventListeners()
       removeClipboardListeners()
+      removeMediaListeners()
       unsubscribeState()
       engine.onToolWillChange = null
       state.resizeObserver?.disconnect()

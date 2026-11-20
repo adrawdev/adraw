@@ -53,7 +53,8 @@ part of the public API. This includes `commitScene`, `getGroupContext`,
 `setGroupContext`, `getActiveToolInstance`, `getCanvasSize`, `getToolContext`,
 `getPointerPoint`, `setSelectedIds`, `setPointerPoint`, `setSnapGuides`,
 `setAdapterTextMeasurer`, `resetTextMeasurer`, `usesDefaultTextMeasurer`,
-`nudgeSelection`, `hasSelection` and `handlesSystemClipboard`.
+`nudgeSelection`, `hasSelection`, `handlesSystemClipboard` and
+`getMediaOptions`.
 
 ### State
 
@@ -114,6 +115,9 @@ Type-specific fields:
 - `CanvasOptions`, `AdrawCanvasOptions`, `ToImageOptions`, `MediaInput`
 - `CanvasOptions.grid` — grid visibility, spacing and snapping; defaults to
   `{ enabled: false, size: 20, snap: false }`.
+- `CanvasOptions.media` — `MediaOptions` for file drop and clipboard image
+  insertion: `enabled`, `accept` (MIME types/wildcards, default `image/*`) and
+  `onRejected(file, reason, error?)`.
 - `ClipboardOptions` — `serialize`, `deserialize`, and `system` (native
   copy/cut/paste handling in the DOM adapter; defaults to `true`).
 - `KeyboardScope`
@@ -126,6 +130,7 @@ Type-specific fields:
   `DistributeAxis`
 - `EditableTextElement`, `TextAlign`, `TextLayoutOptions`, `TextLayout`,
   `LineMeasurer`, `TextMeasurer`, `ArrowBinding`, `ElementFactory`
+- `MediaOptions`, `MediaRejectionReason`
 - `HistoryEntry`, `HistoryState`
 
 ### Helpers

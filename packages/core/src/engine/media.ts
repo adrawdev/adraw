@@ -5,7 +5,8 @@ import type { MediaElement, ViewportState } from "../types"
 // Sizing rules for `insertMedia`: explicit dimensions win, then a single
 // explicit dimension keeps the aspect ratio, then fit within the visible
 // viewport (minus padding), then fall back to the natural size.
-function computeMediaSize(
+/** @internal */
+export function computeMediaSize(
   input: MediaInput,
   viewport: ViewportState,
   canvasSize: { width: number; height: number },

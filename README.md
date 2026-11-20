@@ -173,6 +173,7 @@ Vue, Svelte, Solid, Angular, and Web Components follow the same pattern: provide
 - Free text, sticky notes, and bound text inside shapes and arrows.
 - Copy, cut, paste, z-order controls, undo/redo, and erasing.
 - Native system clipboard integration across canvases and tabs, with structured JSON payloads.
+- Drag-and-drop or clipboard image insertion with MIME filtering and rejection messages.
 - Snapping to element edges and centers, with alignment guides.
 - Optional background grid with independent visibility and snap-to-grid for creation, move, and resize.
 - Image/media elements and PNG, JPEG, WebP, or SVG export.

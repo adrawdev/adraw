@@ -26,6 +26,8 @@ export type {
   ClipboardOptions,
   KeyboardScope,
   MediaInput,
+  MediaOptions,
+  MediaRejectionReason,
   ToImageOptions,
 } from "./options"
 export { createElementGroup, pointsToPath } from "./dom/svg"

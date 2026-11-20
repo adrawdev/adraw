@@ -103,6 +103,11 @@ export interface CanvasOptions {
   snapping?: Partial<SnappingConfig>
   /** Grid visibility and snapping configuration. Defaults to hidden, 20 units, snapping off. */
   grid?: Partial<GridConfig>
+  /**
+   * File drop and clipboard image handling in the DOM adapter. Enabled by
+   * default with `image/*` accepted.
+   */
+  media?: MediaOptions
   /** Hide the selection bounding box + resize/rotation handles while a resize/rotation gesture is in progress, reappearing on pointer up. Defaults to `false` in the core; the framework adapters default to `true`. */
   hideOverlayWhileTransforming?: boolean
   /**
@@ -170,4 +175,54 @@ export interface MediaInput {
   y?: number
   width?: number
   height?: number
+}
+
+/**
+ * Why a dropped or pasted file was not inserted.
+ *
+ * - `unsupported-type` — the file's MIME type is not in `MediaOptions.accept`.
+ * - `read-error` — the browser could not read the file.
+ * - `invalid-image` — the file could not be decoded or has no dimensions.
+ */
+export type MediaRejectionReason =
+  | "unsupported-type"
+  | "read-error"
+  | "invalid-image"
+
+/**
+ * File drop and clipboard image handling for the DOM adapter.
+ */
+export interface MediaOptions {
+  /**
+   * Whether dropping image files and pasting images from the system clipboard
+   * inserts media elements. Defaults to `true`.
+   */
+  enabled?: boolean
+  /**
+   * Accepted MIME types. Supports exact types and wildcards such as `image/*`
+   * (the default).
+   */
+  accept?: readonly string[]
+  /**
+   * Called for each file that cannot be inserted. Use it to show a toast or
+   * status message. When omitted, adraw reports the rejection with
+   * `console.warn`.
+   *
+   * @example
+   * ```ts
+   * const canvas = new AdrawCanvas({
+   *   container,
+   *   media: {
+   *     onRejected: (file, reason) => {
+   *       showToast(`Could not add ${file.name}: ${reason}`)
+   *     },
+   *   },
+   * })
+   * ```
+   */
+  onRejected?: (
+    file: File,
+    reason: MediaRejectionReason,
+    error?: unknown,
+  ) => void
 }

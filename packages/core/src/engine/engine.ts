@@ -23,7 +23,12 @@ import {
   type GroupIndex,
 } from "../groups"
 import { getNoteMinHeight } from "../note"
-import type { CanvasOptions, KeyboardScope, MediaInput } from "../options"
+import type {
+  CanvasOptions,
+  KeyboardScope,
+  MediaInput,
+  MediaOptions,
+} from "../options"
 import { createSnappingConfig, type SnappingConfig } from "../snapping"
 import { DEFAULT_STYLE, type StyleOptions } from "../style"
 import {
@@ -307,6 +312,7 @@ export class CanvasEngine {
   private groupContextId: ElementId | null = null
   private clipboard: ClipboardManager
   private readonly systemClipboard: boolean
+  private readonly mediaOptions: MediaOptions
   // Last pointer position in canvas space, tracked by the dispatch helpers so
   // keyboard paste can land at the cursor.
   private pointerPoint: Point | null = null
@@ -326,6 +332,7 @@ export class CanvasEngine {
     this.viewport = createViewport(options.initialViewport, this.viewportConfig)
     this.clipboard = new ClipboardManager(options.clipboard)
     this.systemClipboard = options.clipboard?.system ?? true
+    this.mediaOptions = options.media ?? {}
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.grid = createGridConfig(options.grid)
     this.isSnapMode = options.isSnapMode ?? false
@@ -1819,6 +1826,15 @@ export class CanvasEngine {
    */
   handlesSystemClipboard(): boolean {
     return this.systemClipboard
+  }
+
+  /**
+   * Resolved file drop and image paste options for the DOM adapter.
+   *
+   * @internal
+   */
+  getMediaOptions(): MediaOptions {
+    return this.mediaOptions
   }
 
   /**

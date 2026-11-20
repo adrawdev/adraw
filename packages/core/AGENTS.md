@@ -336,6 +336,7 @@ document-contract.test.ts      — schema/version validation, references, migrat
 deterministic-serialization.test.ts — canonical ordering, key order, round-trips
 agent-guide.test.ts            — documented headless workflow and structured errors
 clipboard-dom.test.ts          — native copy/cut/paste, MIME preference and denied-access fallback
+media-dom.test.ts              — file drop, clipboard image paste, filters and rejection messages
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

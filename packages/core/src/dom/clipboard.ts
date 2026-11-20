@@ -1,4 +1,5 @@
 import type { CanvasEngine } from "../engine/engine"
+import { isEditableTarget } from "./editable-target"
 import type { DomState } from "./state"
 
 /**
@@ -7,17 +8,6 @@ import type { DomState } from "./state"
  */
 const ADRAW_CLIPBOARD_TYPE = "application/x-adraw+json"
 const TEXT_CLIPBOARD_TYPE = "text/plain"
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  ) {
-    return true
-  }
-  return target instanceof HTMLElement && target.isContentEditable
-}
 
 function writeCopyPayload(
   event: ClipboardEvent,

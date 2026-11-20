@@ -468,6 +468,35 @@ canvas.paste()
 Custom `serialize` / `deserialize` hooks also apply to the built-in native
 integration, so a custom envelope works across tabs when `system` stays enabled.
 
+## Images from files
+
+The DOM adapter inserts image files dropped onto the canvas or pasted from the
+system clipboard. Every dropped image is centered on the pointer with its
+aspect ratio preserved; multiple files are inserted together at that point.
+Pasted images use the last pointer position, then the viewport center. Each file is
+stored as a data URL and becomes a regular `media` element, so it participates
+in selection, transforms, history, documents and export.
+
+```ts
+const canvas = new AdrawCanvas({
+  container: el,
+  media: {
+    // Defaults to ["image/*"]. Exact types and wildcards are supported.
+    accept: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"],
+    onRejected: (file, reason) => {
+      console.warn(file.name, reason) // "unsupported-type" | "read-error" | "invalid-image"
+    },
+    // enabled: false disables drop and clipboard image paste.
+  },
+})
+```
+
+Unsupported or unreadable files are ignored. Without `onRejected`, adraw reports
+them with `console.warn`, including the file name and accepted types. File drops
+and image-URL drops are prevented from navigating the page, while the inline text
+editor and form fields keep native paste behavior. Programmatic insertion still
+uses `insertMedia` with `MediaInput` descriptors.
+
 ## Exporting
 
 `toImage()` returns a `Blob` with the visible content cropped to its bounds.
