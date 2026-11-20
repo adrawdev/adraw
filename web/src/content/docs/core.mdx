@@ -567,8 +567,8 @@ integration, so a custom envelope works across tabs when `system` stays enabled.
 The DOM adapter inserts image files dropped onto the canvas or pasted from the
 system clipboard. Every dropped image is centered on the pointer with its
 aspect ratio preserved; multiple files are inserted together at that point.
-Pasted images use the last pointer position, then the viewport center. Each file is
-stored as a data URL and becomes a regular `media` element, so it participates
+Pasted images use the last pointer position, then the viewport center. Each file
+is stored as a data URL and becomes a regular `media` element, so it participates
 in selection, transforms, history, documents and export.
 
 ```ts
@@ -577,19 +577,40 @@ const canvas = new AdrawCanvas({
   media: {
     // Defaults to ["image/*"]. Exact types and wildcards are supported.
     accept: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"],
-    onRejected: (file, reason) => {
-      console.warn(file.name, reason) // "unsupported-type" | "read-error" | "invalid-image"
-    },
     // enabled: false disables drop and clipboard image paste.
   },
 })
 ```
 
-Unsupported or unreadable files are ignored. Without `onRejected`, adraw reports
-them with `console.warn`, including the file name and accepted types. File drops
+Unsupported or unreadable files are ignored and reported with `console.warn`,
+including the file name and rejection reason. File drops
 and image-URL drops are prevented from navigating the page, while the inline text
 editor and form fields keep native paste behavior. Programmatic insertion still
 uses `insertMedia` with `MediaInput` descriptors.
+
+## Exporting
+
+`toImage()` returns a `Blob` cropped to the visible content, including rotation,
+stroke overhang and arrowheads. Locked elements are exported; hidden elements
+are skipped.
+
+```ts
+const blob = await canvas.toImage({
+  format: "png", // "png" | "jpeg" | "webp" | "svg"
+  background: "#ffffff", // or `true` to use --adraw-background
+  padding: 24,
+  scale: 2,
+  quality: 0.92,
+})
+
+// Export only the selection:
+const selected = await canvas.toImage({ selection: true, background: true })
+```
+
+`selection: true` expands selected groups, includes bound text and arrow labels,
+exports locked selected elements and skips hidden ones. An empty selection
+produces a 1×1 image. Use `exclude` to leave additional elements out of the
+drawing and the cropped bounds.
 
 ## State observation
 

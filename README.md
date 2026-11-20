@@ -176,7 +176,7 @@ Vue, Svelte, Solid, Angular, and Web Components follow the same pattern: provide
 - Drag-and-drop or clipboard image insertion with MIME filtering and rejection messages.
 - Snapping to element edges and centers, with alignment guides.
 - Optional background grid with independent visibility and snap-to-grid for creation, move, and resize.
-- Image/media elements and PNG, JPEG, WebP, or SVG export.
+- Image/media elements and PNG, JPEG, WebP, or SVG export, including selection-only export.
 - Infinite pan and zoom, zoom-to-fit, and wheel or pinch gestures.
 - Headless engine and immutable `AdrawStore` snapshots for custom UIs.
 - Keyboard shortcuts for tools, clipboard, history, grouping, and deletion.

@@ -1,13 +1,15 @@
 import type { CanvasEngine } from "../engine/engine"
 import { toCanvasPoint } from "../engine/internal"
 import { computeMediaSize } from "../engine/media"
-import type { MediaInput, MediaOptions, MediaRejectionReason } from "../options"
+import type { MediaInput } from "../options"
 import type { Point } from "../types"
 import { isEditableTarget } from "./editable-target"
 import { getRelativePoint } from "./pointer"
 import type { DomState } from "./state"
 
 const DEFAULT_ACCEPT = ["image/*"]
+
+type RejectionReason = "unsupported-type" | "read-error" | "invalid-image"
 
 function getFiles(data: DataTransfer | null): File[] {
   return data ? [...(data.files ?? [])] : []
@@ -19,25 +21,13 @@ function isAcceptedMimeType(
 ): boolean {
   return accept.some(
     (pattern) =>
-      pattern === "*/*" ||
       pattern === mimeType ||
       (pattern.endsWith("/*") && mimeType.startsWith(pattern.slice(0, -1))),
   )
 }
 
-function reportRejection(
-  options: MediaOptions,
-  file: File,
-  reason: MediaRejectionReason,
-  error?: unknown,
-): void {
-  if (options.onRejected) {
-    options.onRejected(file, reason, error)
-    return
-  }
-  const name = file.name || "clipboard image"
-  const type = file.type ? `, ${file.type}` : ""
-  console.warn(`adraw: ignored "${name}" (${reason}${type}).`)
+function reportRejection(file: File, reason: RejectionReason): void {
+  console.warn(`adraw: ignored "${file.name}" (${reason}).`)
 }
 
 function readFileAsDataURL(file: File): Promise<string> {
@@ -58,35 +48,27 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-async function readMediaFile(
-  file: File,
-  options: MediaOptions,
-): Promise<MediaInput | null> {
+async function readMediaFile(file: File): Promise<MediaInput | null> {
   let src: string
   try {
     src = await readFileAsDataURL(file)
-  } catch (error) {
-    reportRejection(options, file, "read-error", error)
+  } catch {
+    reportRejection(file, "read-error")
     return null
   }
 
   let image: HTMLImageElement
   try {
     image = await loadImage(src)
-  } catch (error) {
-    reportRejection(options, file, "invalid-image", error)
+  } catch {
+    reportRejection(file, "invalid-image")
     return null
   }
 
   const naturalWidth = image.naturalWidth || image.width
   const naturalHeight = image.naturalHeight || image.height
   if (!(naturalWidth > 0) || !(naturalHeight > 0)) {
-    reportRejection(
-      options,
-      file,
-      "invalid-image",
-      new Error("Image has no intrinsic dimensions"),
-    )
+    reportRejection(file, "invalid-image")
     return null
   }
 
@@ -94,7 +76,6 @@ async function readMediaFile(
 }
 
 async function insertMediaFiles(
-  state: DomState,
   engine: CanvasEngine,
   files: File[],
   at: Point,
@@ -106,14 +87,12 @@ async function insertMediaFiles(
     if (isAcceptedMimeType(file.type, accept)) {
       accepted.push(file)
     } else {
-      reportRejection(options, file, "unsupported-type")
+      reportRejection(file, "unsupported-type")
     }
   }
 
-  const results = await Promise.all(
-    accepted.map((file) => readMediaFile(file, options)),
-  )
-  if (!state.svgElement?.isConnected) {
+  const results = await Promise.all(accepted.map((file) => readMediaFile(file)))
+  if (!engine.isMounted()) {
     return
   }
 
@@ -154,30 +133,19 @@ export function setupMediaListeners(
     return () => {}
   }
 
-  const shouldPreventDrop = (data: DataTransfer | null): boolean => {
-    const types = data ? [...data.types] : []
-    return types.includes("Files") || types.includes("text/uri-list")
-  }
-
   const onDragOver = (event: DragEvent): void => {
-    if (!shouldPreventDrop(event.dataTransfer)) {
-      return
-    }
     event.preventDefault()
   }
 
   const onDrop = (event: DragEvent): void => {
-    if (!shouldPreventDrop(event.dataTransfer)) {
-      return
-    }
-    // Stop the browser from navigating to dropped files or image URLs.
+    // Stop the browser from navigating to dropped files or URLs.
     event.preventDefault()
     const files = getFiles(event.dataTransfer)
     if (files.length === 0) {
       return
     }
     const { x, y } = getRelativePoint(state, event)
-    void insertMediaFiles(state, engine, files, toCanvasPoint(engine, x, y))
+    void insertMediaFiles(engine, files, toCanvasPoint(engine, x, y))
   }
 
   container.addEventListener("dragover", onDragOver)
@@ -202,7 +170,7 @@ export function setupMediaListeners(
     event.preventDefault()
     const viewport = engine.getViewport()
     const at = engine.getPointerPoint() ?? { x: viewport.x, y: viewport.y }
-    void insertMediaFiles(state, engine, files, at)
+    void insertMediaFiles(engine, files, at)
   }
   pasteTarget.addEventListener("paste", onPaste as EventListener)
 

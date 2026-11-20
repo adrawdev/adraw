@@ -113,11 +113,12 @@ Type-specific fields:
 ### Options and geometry
 
 - `CanvasOptions`, `AdrawCanvasOptions`, `ToImageOptions`, `MediaInput`
+- `ToImageOptions.selection` — export only the current selection (groups,
+  bound text and arrow labels included); defaults to `false`.
 - `CanvasOptions.grid` — grid visibility, spacing and snapping; defaults to
   `{ enabled: false, size: 20, snap: false }`.
 - `CanvasOptions.media` — `MediaOptions` for file drop and clipboard image
-  insertion: `enabled`, `accept` (MIME types/wildcards, default `image/*`) and
-  `onRejected(file, reason, error?)`.
+  insertion: `enabled` and `accept` (MIME types/wildcards, default `image/*`).
 - `ClipboardOptions` — `serialize`, `deserialize`, and `system` (native
   copy/cut/paste handling in the DOM adapter; defaults to `true`).
 - `KeyboardScope`
@@ -130,7 +131,7 @@ Type-specific fields:
   `DistributeAxis`
 - `EditableTextElement`, `TextAlign`, `TextLayoutOptions`, `TextLayout`,
   `LineMeasurer`, `TextMeasurer`, `ArrowBinding`, `ElementFactory`
-- `MediaOptions`, `MediaRejectionReason`
+- `MediaOptions`
 - `HistoryEntry`, `HistoryState`
 
 ### Helpers

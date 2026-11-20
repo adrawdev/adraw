@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
 import { NOTE_SHADOW_OVERHANG } from "../constants"
-import { createLine, createNote, createRectangle } from "../elements"
+import {
+  createArrow,
+  createGroup,
+  createLine,
+  createNote,
+  createRectangle,
+  createText,
+} from "../elements"
 import type { RectangleElement } from "../types"
 
 function makeRect(overrides: Partial<RectangleElement> = {}): RectangleElement {
@@ -173,6 +180,137 @@ describe("toImage", () => {
     const svg = await exportSvg(canvas)
 
     expect(svg.getAttribute("viewBox")).toBe("-2 -2 104 4")
+  })
+
+  it("exports only the selection, its bounds and stroke overhang", async () => {
+    const { canvas } = mount()
+    const selected = makeRect({
+      id: "selected",
+      locked: true,
+      strokeWidth: 2,
+    })
+    const other = makeRect({
+      id: "other",
+      strokeWidth: 0,
+      x: 500,
+      y: 500,
+      zIndex: 1,
+    })
+    canvas.addElement([selected, other], { history: false })
+    canvas.setSelectedIds(new Set(["selected"]))
+
+    const svg = await exportSvg(canvas, { selection: true })
+
+    expect(childElementIds(svg)).toEqual(["selected"])
+    expect(svg.getAttribute("viewBox")).toBe("-1 -1 102 52")
+  })
+
+  it("includes bound text and arrow labels of selected elements", async () => {
+    const { canvas } = mount()
+    const rect = makeRect({ height: 100, id: "rect", strokeWidth: 0 })
+    const label = createText({
+      autoSize: true,
+      containerId: rect.id,
+      fontSize: 20,
+      height: 20,
+      id: "label",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      text: "hello",
+      visible: true,
+      width: 40,
+      x: 30,
+      y: 40,
+      zIndex: 1,
+    })
+    const arrow = createArrow({
+      endX: 300,
+      endY: 10,
+      height: 1,
+      id: "arrow",
+      locked: false,
+      rotation: 0,
+      startX: 200,
+      startY: 10,
+      strokeColor: "#000",
+      strokeWidth: 2,
+      visible: true,
+      width: 100,
+      x: 200,
+      y: 10,
+      zIndex: 2,
+    })
+    const arrowLabel = createText({
+      autoSize: true,
+      containerId: arrow.id,
+      fontSize: 20,
+      height: 15,
+      id: "arrow-label",
+      locked: false,
+      rotation: 0,
+      strokeColor: "#000",
+      text: "arrow",
+      visible: true,
+      width: 30,
+      x: 235,
+      y: 0,
+      zIndex: 3,
+    })
+    const other = makeRect({ id: "other", x: 500, y: 500, zIndex: 4 })
+    canvas.addElement([rect, label, arrow, arrowLabel, other], {
+      history: false,
+    })
+    canvas.setSelectedIds(new Set([rect.id, arrow.id]))
+
+    const svg = await exportSvg(canvas, { selection: true })
+
+    expect(childElementIds(svg)).toEqual([
+      "rect",
+      "label",
+      "arrow",
+      "arrow-label",
+    ])
+  })
+
+  it("expands a selected group to its children", async () => {
+    const { canvas } = mount()
+    const first = makeRect({ id: "first", strokeWidth: 0 })
+    const second = makeRect({ id: "second", strokeWidth: 0, x: 200, zIndex: 1 })
+    const group = createGroup({
+      children: [first.id, second.id],
+      height: 50,
+      id: "group",
+      locked: false,
+      rotation: 0,
+      visible: true,
+      width: 300,
+      x: 0,
+      y: 0,
+      zIndex: 2,
+    })
+    canvas.addElement([first, second, group], { history: false })
+    canvas.setSelectedIds(new Set([group.id]))
+
+    const svg = await exportSvg(canvas, { selection: true })
+
+    expect(childElementIds(svg)).toEqual(["first", "second"])
+    expect(svg.getAttribute("viewBox")).toBe("0 0 300 50")
+  })
+
+  it("returns a 1x1 image when the selection has no visible elements", async () => {
+    const { canvas } = mount()
+    const hidden = makeRect({ id: "hidden", visible: false })
+    canvas.addElement(hidden, { history: false })
+
+    const empty = await exportSvg(canvas, { selection: true })
+    expect(childElementIds(empty)).toEqual([])
+    expect(empty.getAttribute("viewBox")).toBe("0 0 1 1")
+
+    canvas.setSelectedIds(new Set([hidden.id]))
+    const hiddenOnly = await exportSvg(canvas, { selection: true })
+    expect(childElementIds(hiddenOnly)).toEqual([])
+    expect(hiddenOnly.getAttribute("viewBox")).toBe("0 0 1 1")
   })
 
   it("paints an explicit background color", async () => {

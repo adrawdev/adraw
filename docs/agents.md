@@ -171,8 +171,11 @@ Image export needs the DOM adapter:
 ```ts
 const canvas = new AdrawCanvas({ container: document.querySelector("#app")! })
 const blob = await canvas.toImage({ format: "png", scale: 2 })
+const selected = await canvas.toImage({ format: "png", selection: true })
 ```
 
+`selection: true` exports only the current selection, including selected groups,
+bound text and arrow labels. With no visible selection it returns a 1×1 image.
 Headless automation should serialize the document instead.
 
 ## Testing without a DOM

@@ -473,8 +473,8 @@ integration, so a custom envelope works across tabs when `system` stays enabled.
 The DOM adapter inserts image files dropped onto the canvas or pasted from the
 system clipboard. Every dropped image is centered on the pointer with its
 aspect ratio preserved; multiple files are inserted together at that point.
-Pasted images use the last pointer position, then the viewport center. Each file is
-stored as a data URL and becomes a regular `media` element, so it participates
+Pasted images use the last pointer position, then the viewport center. Each file
+is stored as a data URL and becomes a regular `media` element, so it participates
 in selection, transforms, history, documents and export.
 
 ```ts
@@ -483,16 +483,13 @@ const canvas = new AdrawCanvas({
   media: {
     // Defaults to ["image/*"]. Exact types and wildcards are supported.
     accept: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"],
-    onRejected: (file, reason) => {
-      console.warn(file.name, reason) // "unsupported-type" | "read-error" | "invalid-image"
-    },
     // enabled: false disables drop and clipboard image paste.
   },
 })
 ```
 
-Unsupported or unreadable files are ignored. Without `onRejected`, adraw reports
-them with `console.warn`, including the file name and accepted types. File drops
+Unsupported or unreadable files are ignored and reported with `console.warn`,
+including the file name and rejection reason. File drops
 and image-URL drops are prevented from navigating the page, while the inline text
 editor and form fields keep native paste behavior. Programmatic insertion still
 uses `insertMedia` with `MediaInput` descriptors.
@@ -519,7 +516,21 @@ const clean = await canvas.toImage({
   background: true,
   exclude: (element) => element.id === gridId,
 })
+
+// Export only the current selection:
+const selected = await canvas.toImage({
+  selection: true,
+  background: true,
+  padding: 16,
+})
 ```
+
+`selection: true` uses the selected elements, expands selected groups to their
+children, and includes bound text and arrow labels. Selected locked elements are
+exported; hidden elements are skipped. With no visible selection the result is a
+1×1 image, like exporting an empty canvas. `exclude` still applies to the
+selected content, and the default (`selection: false`) exports every visible
+element.
 
 Without `background`, PNG/WebP/SVG exports are transparent. JPEG has no alpha
 channel, so it always paints the background: the `--adraw-background` color, or

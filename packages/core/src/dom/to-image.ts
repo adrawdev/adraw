@@ -1,5 +1,6 @@
 import { BACKGROUND_COLOR, NOTE_SHADOW_OVERHANG } from "../constants"
 import { getElementBounds } from "../coordinates"
+import { collectClipboardElements } from "../engine/clipboard"
 import type { CanvasEngine } from "../engine/engine"
 import { createGroupIndex, isEffectivelyVisible } from "../groups"
 import type { ToImageOptions } from "../options"
@@ -96,6 +97,7 @@ export async function toImage(
     padding = 0,
     quality = 0.92,
     scale = 1,
+    selection = false,
   } = options
 
   // Same order as the DOM adapter: ascending z-index, stable for equal
@@ -105,7 +107,10 @@ export async function toImage(
   // the exported region.
   const allElements = engine.getElements()
   const index = createGroupIndex(allElements)
-  const elements = [...allElements.values()]
+  const candidates = selection
+    ? collectClipboardElements(allElements, engine.getSelectedIds())
+    : [...allElements.values()]
+  const elements = candidates
     .filter(
       (element) =>
         element.type !== "group" &&
@@ -158,7 +163,7 @@ export async function toImage(
   for (const element of elements) {
     const arrowBoundTextBox =
       element.type === "arrow"
-        ? getBoundTextBounds(engine.getElements(), element.id)
+        ? getBoundTextBounds(allElements, element.id)
         : null
     svg.appendChild(
       createElementGroup(element, engine.getTextMeasurer(), arrowBoundTextBox),

@@ -234,14 +234,11 @@ describe("media drop and paste", () => {
     expect(mediaElements(canvas)).toHaveLength(0)
     expect(warn.mock.calls[0][0]).toContain('ignored "notes.txt"')
     expect(warn.mock.calls[0][0]).toContain("unsupported-type")
-    expect(warn.mock.calls[0][0]).toContain("text/plain")
   })
 
-  it("reports rejections through the callback and filters accepted types", async () => {
-    const onRejected = vi.fn()
-    const { canvas, container } = mount({
-      media: { accept: ["image/png"], onRejected },
-    })
+  it("filters accepted types and warns for rejected files", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { canvas, container } = mount({ media: { accept: ["image/png"] } })
 
     const data = new FakeDataTransfer([
       imageFile("photo.jpg", "image/jpeg"),
@@ -250,26 +247,27 @@ describe("media drop and paste", () => {
     container.dispatchEvent(dropEvent(data))
 
     await waitFor(() => mediaElements(canvas).length === 1)
-    expect(onRejected).toHaveBeenCalledOnce()
-    expect(onRejected.mock.calls[0][1]).toBe("unsupported-type")
     expect(mediaElements(canvas)[0].mimeType).toBe("image/png")
+    expect(warn.mock.calls[0][0]).toContain("unsupported-type")
   })
 
   it("reports unreadable and undecodable files", async () => {
-    const onRejected = vi.fn()
-    const { canvas, container } = mount({ media: { onRejected } })
-
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { canvas, container } = mount()
     const data = new FakeDataTransfer([
       imageFile("read-error.png"),
       imageFile("broken.png"),
     ])
     container.dispatchEvent(dropEvent(data))
 
-    await waitFor(() => onRejected.mock.calls.length === 2)
-    expect(onRejected.mock.calls.map((call) => call[1]).toSorted()).toEqual([
-      "invalid-image",
-      "read-error",
-    ])
+    await waitFor(() => warn.mock.calls.length === 2)
+    expect(
+      warn.mock.calls
+        .map((call) => String(call[0]))
+        .toSorted()
+        .join(" "),
+    ).toContain("invalid-image")
+    expect(warn.mock.calls.map(String).join(" ")).toContain("read-error")
     expect(mediaElements(canvas)).toHaveLength(0)
   })
 

@@ -161,6 +161,14 @@ export interface ToImageOptions {
   scale?: number
   /** Image quality (0–1) for lossy formats. */
   quality?: number
+  /**
+   * Export only the current selection instead of every visible element.
+   * Selected group descendants and bound text (including arrow labels) are
+   * included; locked selected elements are exported and hidden elements are
+   * skipped. With no visible selection the result is a 1×1 image, like an
+   * empty canvas. Defaults to `false`.
+   */
+  selection?: boolean
 }
 
 /**
@@ -178,18 +186,6 @@ export interface MediaInput {
 }
 
 /**
- * Why a dropped or pasted file was not inserted.
- *
- * - `unsupported-type` — the file's MIME type is not in `MediaOptions.accept`.
- * - `read-error` — the browser could not read the file.
- * - `invalid-image` — the file could not be decoded or has no dimensions.
- */
-export type MediaRejectionReason =
-  | "unsupported-type"
-  | "read-error"
-  | "invalid-image"
-
-/**
  * File drop and clipboard image handling for the DOM adapter.
  */
 export interface MediaOptions {
@@ -200,29 +196,7 @@ export interface MediaOptions {
   enabled?: boolean
   /**
    * Accepted MIME types. Supports exact types and wildcards such as `image/*`
-   * (the default).
+   * (the default). Rejected files are reported with `console.warn`.
    */
   accept?: readonly string[]
-  /**
-   * Called for each file that cannot be inserted. Use it to show a toast or
-   * status message. When omitted, adraw reports the rejection with
-   * `console.warn`.
-   *
-   * @example
-   * ```ts
-   * const canvas = new AdrawCanvas({
-   *   container,
-   *   media: {
-   *     onRejected: (file, reason) => {
-   *       showToast(`Could not add ${file.name}: ${reason}`)
-   *     },
-   *   },
-   * })
-   * ```
-   */
-  onRejected?: (
-    file: File,
-    reason: MediaRejectionReason,
-    error?: unknown,
-  ) => void
 }

@@ -17,14 +17,13 @@ const canvas = new AdrawCanvas({
   media: {
     enabled: true,
     accept: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"],
-    onRejected: (file, reason, error) => showToast(file.name, reason),
   },
 })
 ```
 
 `accept` defaults to `image/*` and supports exact MIME types and wildcards.
-Unsupported, unreadable or undecodable files are ignored; `onRejected` receives
-`"unsupported-type"`, `"read-error"` or `"invalid-image"`, and a console warning
-is used when no callback is provided. Dropped files and image URLs are prevented
+Unsupported, unreadable or undecodable files are ignored and reported with
+`console.warn` (`"unsupported-type"`, `"read-error"` or `"invalid-image"`).
+Dropped files and image URLs are prevented
 from navigating the page, the inline text editor and form fields keep native
 paste behavior, and `enabled: false` disables the feature.
