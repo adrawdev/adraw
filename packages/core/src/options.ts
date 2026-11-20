@@ -5,8 +5,7 @@ import type { CanvasDocument, CanvasElement, ViewportState } from "./types"
 import type { ViewportConfig } from "./viewport"
 
 /**
- * Serialization hooks bridging the in-memory clipboard to the system clipboard
- * (or any other transport).
+ * Serialization hooks and native system clipboard integration.
  */
 export interface ClipboardOptions {
   /**
@@ -20,6 +19,16 @@ export interface ClipboardOptions {
    * `adraw/clipboard` JSON envelope.
    */
   serialize?: (elements: CanvasElement[]) => string
+  /**
+   * Whether the DOM adapter handles native `copy`, `cut` and `paste` events.
+   * Defaults to `true`. Set to `false` when you wire the system clipboard
+   * yourself, for example from an application menu or a custom toolbar.
+   *
+   * Copy writes both `application/x-adraw+json` and `text/plain`; paste prefers
+   * the structured type and falls back to the in-memory clipboard when the
+   * browser denies clipboard access.
+   */
+  system?: boolean
 }
 
 /**

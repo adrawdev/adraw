@@ -212,6 +212,19 @@ export function setupEventListeners(
   )
 
   const handleKeyDown = (event: KeyboardEvent): void => {
+    // Native copy/cut/paste events carry the system payload. Defer to the
+    // browser when the adapter handles them; otherwise the shortcut's
+    // preventDefault would suppress the clipboard event.
+    if (
+      event.isTrusted &&
+      engine.handlesSystemClipboard() &&
+      (event.ctrlKey || event.metaKey) &&
+      !event.altKey &&
+      ["c", "v", "x"].includes(event.key.toLowerCase())
+    ) {
+      return
+    }
+
     runStateOperation(engine, () => {
       const target = event.target
       const isEditable =

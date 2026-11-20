@@ -306,6 +306,7 @@ export class CanvasEngine {
   // part of the document or the store snapshot.
   private groupContextId: ElementId | null = null
   private clipboard: ClipboardManager
+  private readonly systemClipboard: boolean
   // Last pointer position in canvas space, tracked by the dispatch helpers so
   // keyboard paste can land at the cursor.
   private pointerPoint: Point | null = null
@@ -324,6 +325,7 @@ export class CanvasEngine {
     this.viewportConfig = resolveViewportConfig(options.viewport)
     this.viewport = createViewport(options.initialViewport, this.viewportConfig)
     this.clipboard = new ClipboardManager(options.clipboard)
+    this.systemClipboard = options.clipboard?.system ?? true
     this.snappingConfig = createSnappingConfig(options.snapping)
     this.grid = createGridConfig(options.grid)
     this.isSnapMode = options.isSnapMode ?? false
@@ -1808,6 +1810,15 @@ export class CanvasEngine {
    */
   getKeyboardScope(): KeyboardScope {
     return this.keyboardScope
+  }
+
+  /**
+   * Whether the DOM adapter should handle native copy/cut/paste events.
+   *
+   * @internal
+   */
+  handlesSystemClipboard(): boolean {
+    return this.systemClipboard
   }
 
   /**

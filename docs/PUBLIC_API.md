@@ -53,7 +53,7 @@ part of the public API. This includes `commitScene`, `getGroupContext`,
 `setGroupContext`, `getActiveToolInstance`, `getCanvasSize`, `getToolContext`,
 `getPointerPoint`, `setSelectedIds`, `setPointerPoint`, `setSnapGuides`,
 `setAdapterTextMeasurer`, `resetTextMeasurer`, `usesDefaultTextMeasurer`,
-`nudgeSelection` and `hasSelection`.
+`nudgeSelection`, `hasSelection` and `handlesSystemClipboard`.
 
 ### State
 
@@ -114,7 +114,9 @@ Type-specific fields:
 - `CanvasOptions`, `AdrawCanvasOptions`, `ToImageOptions`, `MediaInput`
 - `CanvasOptions.grid` — grid visibility, spacing and snapping; defaults to
   `{ enabled: false, size: 20, snap: false }`.
-- `ClipboardOptions`, `KeyboardScope`
+- `ClipboardOptions` — `serialize`, `deserialize`, and `system` (native
+  copy/cut/paste handling in the DOM adapter; defaults to `true`).
+- `KeyboardScope`
 - `Point`, `Size`, `BoundingBox`, `ElementId`, `ElementType`, `ToolType`
 - `ViewportState`, `ViewportConfig`, `ViewportBounds`, `ZoomToFitOptions`
 - `CanvasElementStyle`, `StyleOptions`, `DEFAULT_STYLE`

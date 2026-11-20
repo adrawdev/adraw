@@ -530,16 +530,27 @@ bindings to targets inside the duplicated set are remapped; bindings to targets
 outside it are dropped. The clones stack above the existing content, become the
 selection, and the whole call is one undo step.
 
-The clipboard is an in-memory buffer per canvas. Use
-`serializeClipboard()` / `deserializeClipboard(text)` to bridge it to the system
-clipboard, or pass custom hooks:
+The clipboard has an in-memory buffer per canvas plus system integration in the
+DOM adapter. While the canvas is focused, native copy, cut and paste write both
+`application/x-adraw+json` and a `text/plain` JSON fallback, so selections move
+between canvases and browser tabs. Paste prefers the structured type, validates
+it through the same clipboard parser, and falls back to the in-memory buffer
+when the browser denies clipboard access. Groups, bound text and arrow bindings
+round-trip because the payload is the serialized clipboard.
+
+The inline text editor and form fields keep their native clipboard behavior.
+Disable the built-in integration when you want to handle the system clipboard
+yourself:
 
 ```ts
 const canvas = new AdrawCanvas({
   container: el,
   clipboard: {
+    // Keep custom serialization if you need it.
     serialize: (elements) => JSON.stringify(elements),
     deserialize: (data) => JSON.parse(data),
+    // Do not listen to native copy/cut/paste. Defaults to true.
+    system: false,
   },
 })
 
@@ -547,6 +558,9 @@ await navigator.clipboard.writeText(canvas.serializeClipboard()!)
 canvas.deserializeClipboard(await navigator.clipboard.readText())
 canvas.paste()
 ```
+
+Custom `serialize` / `deserialize` hooks also apply to the built-in native
+integration, so a custom envelope works across tabs when `system` stays enabled.
 
 ## State observation
 

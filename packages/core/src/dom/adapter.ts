@@ -1,6 +1,7 @@
 import { BACKGROUND_COLOR } from "../constants"
 import type { CanvasEngine } from "../engine/engine"
 import { subscribeState, type StateChangeKind } from "../engine/state-notifier"
+import { setupClipboardListeners } from "./clipboard"
 import { setupEventListeners, updateCursor } from "./events"
 import { cancelTextGesture } from "./pointer"
 import { renderAll } from "./render"
@@ -34,6 +35,7 @@ export function mountDom(
   state.container = container
   initDom(state, engine)
   const removeEventListeners = setupEventListeners(state, engine)
+  const removeClipboardListeners = setupClipboardListeners(state, engine)
 
   engine.onToolWillChange = () => {
     commitTextEditing(state, engine, { switchTool: false })
@@ -81,6 +83,7 @@ export function mountDom(
   return {
     destroy: () => {
       removeEventListeners()
+      removeClipboardListeners()
       unsubscribeState()
       engine.onToolWillChange = null
       state.resizeObserver?.disconnect()

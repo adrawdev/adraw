@@ -48,4 +48,31 @@ test.describe("clipboard", () => {
     const state = await snapshot(page)
     expect(state.elementCount).toBe(2)
   })
+
+  test("pastes content copied in another tab", async ({ context, page }) => {
+    const svg = await openCanvas(page)
+    await pickTool(page, "rectangle")
+    await drag(page, svg, { x: 120, y: 120 }, { x: 220, y: 200 })
+
+    await page.keyboard.press("Control+c")
+
+    const target = await context.newPage()
+    const targetSvg = await openCanvas(target)
+    const targetBox = await targetSvg.boundingBox()
+    if (!targetBox) {
+      throw new Error("target canvas has no bounding box")
+    }
+    await target.mouse.click(targetBox.x + 600, targetBox.y + 400)
+    await target.keyboard.press("Control+v")
+
+    await expect
+      .poll(async () => {
+        const targetState = await snapshot(target)
+        return targetState.elementCount
+      })
+      .toBe(1)
+    const state = await snapshot(target)
+    expect(state.elementTypes).toEqual(["rectangle"])
+    await target.close()
+  })
 })
